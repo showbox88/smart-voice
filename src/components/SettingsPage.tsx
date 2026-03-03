@@ -1779,6 +1779,30 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                 </SettingsPanelRow>
               </SettingsPanel>
             </div>
+
+            {/* Dictionary */}
+            <div>
+              <SectionHeader
+                title={t("settingsPage.dictionary.autoLearnTitle", {
+                  defaultValue: "Auto-learn from corrections",
+                })}
+              />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.dictionary.autoLearnTitle", {
+                      defaultValue: "Auto-learn from corrections",
+                    })}
+                    description={t("settingsPage.dictionary.autoLearnDescription", {
+                      defaultValue:
+                        "When you correct a transcription in the target app, the corrected word is automatically added to your dictionary.",
+                    })}
+                  >
+                    <Toggle checked={autoLearnCorrections} onChange={setAutoLearnCorrections} />
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
           </div>
         );
 
