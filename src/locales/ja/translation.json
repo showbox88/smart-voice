@@ -920,11 +920,7 @@
         "enterprise": {
           "name": "Enterprise",
           "price": "カスタム",
-          "features": [
-            "クラウド同期",
-            "チーム機能（近日公開）",
-            "SSO & コンプライアンス"
-          ],
+          "features": ["クラウド同期", "チーム機能（近日公開）", "SSO & コンプライアンス"],
           "cta": "お問い合わせ"
         },
         "currentPlan": "現在のプラン"
@@ -1162,9 +1158,7 @@
     },
     "privacy": {
       "cloudBackup": "クラウドバックアップ",
-      "cloudBackupDescription": "文字起こしをクラウドに保存してデータを失わないようにします。",
-      "cloudNotesBackup": "ノートをクラウドにバックアップ",
-      "cloudNotesBackupDescription": "ノートをクラウドに同期してセマンティック検索と複数デバイスでのアクセスを有効にします。",
+      "cloudBackupDescription": "文字起こしとノートをクラウドにバックアップして、すべてのデバイスからシームレスにアクセスできます。",
       "cloudNotesMigration": "ノートをバックアップ中… {{done}} / {{total}}",
       "cloudNotesMigrationDone": "すべてのノートがバックアップされました",
       "description": "デバイスからのデータ送信を管理します。初期設定ではすべてオフです。",

@@ -940,11 +940,7 @@
         "enterprise": {
           "name": "企業版",
           "price": "自訂",
-          "features": [
-            "雲端同步",
-            "團隊功能（即將推出）",
-            "SSO 與合規"
-          ],
+          "features": ["雲端同步", "團隊功能（即將推出）", "SSO 與合規"],
           "cta": "聯絡我們"
         },
         "currentPlan": "目前方案"
@@ -1162,9 +1158,7 @@
     },
     "privacy": {
       "cloudBackup": "雲端備份",
-      "cloudBackupDescription": "將轉錄記錄儲存至雲端，確保不會遺失。",
-      "cloudNotesBackup": "將筆記備份至雲端",
-      "cloudNotesBackupDescription": "將筆記同步至雲端，啟用語義搜尋及跨裝置存取。",
+      "cloudBackupDescription": "將轉錄記錄和筆記備份至雲端，實現跨裝置無縫存取。",
       "cloudNotesMigration": "正在備份筆記… {{done}} / {{total}}",
       "cloudNotesMigrationDone": "所有筆記已備份",
       "description": "控制哪些資料會離開你的裝置。預設全部關閉。",

@@ -1162,9 +1162,7 @@
     },
     "privacy": {
       "cloudBackup": "Respaldo en la nube",
-      "cloudBackupDescription": "Guarda tus transcripciones en la nube para no perderlas nunca.",
-      "cloudNotesBackup": "Respaldar notas en la nube",
-      "cloudNotesBackupDescription": "Sincroniza tus notas con la nube para habilitar búsqueda semántica y acceso desde cualquier dispositivo.",
+      "cloudBackupDescription": "Respalda tus transcripciones y notas en la nube para acceder desde cualquier dispositivo.",
       "cloudNotesMigration": "Respaldando notas… {{done}} / {{total}}",
       "cloudNotesMigrationDone": "Todas las notas respaldadas",
       "description": "Controla qué datos salen de tu dispositivo. Todo está desactivado por defecto.",

@@ -1158,9 +1158,7 @@
     },
     "privacy": {
       "cloudBackup": "Cloud backup",
-      "cloudBackupDescription": "Save your transcriptions to the cloud so you never lose them.",
-      "cloudNotesBackup": "Back up notes to the cloud",
-      "cloudNotesBackupDescription": "Sync your notes to the cloud to enable semantic search and cross-device access.",
+      "cloudBackupDescription": "Back up your transcriptions and notes to the cloud for seamless access across devices.",
       "cloudNotesMigration": "Backing up notes… {{done}} / {{total}}",
       "cloudNotesMigrationDone": "All notes backed up",
       "description": "Control what data leaves your device. Everything is off by default.",

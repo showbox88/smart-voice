@@ -680,8 +680,6 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
     setFloatingIconAutoHide,
     cloudBackupEnabled,
     setCloudBackupEnabled,
-    cloudNotesEnabled,
-    setCloudNotesEnabled,
     telemetryEnabled,
     setTelemetryEnabled,
     customDictionary,
@@ -2355,18 +2353,10 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                         label={t("settingsPage.privacy.cloudBackup")}
                         description={t("settingsPage.privacy.cloudBackupDescription")}
                       >
-                        <Toggle checked={cloudBackupEnabled} onChange={setCloudBackupEnabled} />
-                      </SettingsRow>
-                    </SettingsPanelRow>
-                    <SettingsPanelRow>
-                      <SettingsRow
-                        label={t("settingsPage.privacy.cloudNotesBackup")}
-                        description={t("settingsPage.privacy.cloudNotesBackupDescription")}
-                      >
                         <Toggle
-                          checked={cloudNotesEnabled}
+                          checked={cloudBackupEnabled}
                           onChange={(v) => {
-                            setCloudNotesEnabled(v);
+                            setCloudBackupEnabled(v);
                             if (v) startMigration().catch(console.error);
                           }}
                         />
@@ -2393,7 +2383,7 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
                       </div>
                     </div>
                   )}
-                  {!migration && cloudNotesEnabled && isSignedIn && (
+                  {!migration && cloudBackupEnabled && isSignedIn && (
                     <p className="mt-1 text-xs text-muted-foreground">
                       {t("settingsPage.privacy.cloudNotesMigrationDone")}
                     </p>

@@ -1162,9 +1162,7 @@
     },
     "privacy": {
       "cloudBackup": "Sauvegarde cloud",
-      "cloudBackupDescription": "Sauvegardez vos transcriptions dans le cloud pour ne jamais les perdre.",
-      "cloudNotesBackup": "Sauvegarder les notes dans le cloud",
-      "cloudNotesBackupDescription": "Synchronisez vos notes avec le cloud pour activer la recherche sémantique et l'accès multi-appareils.",
+      "cloudBackupDescription": "Sauvegardez vos transcriptions et notes dans le cloud pour un accès fluide sur tous vos appareils.",
       "cloudNotesMigration": "Sauvegarde des notes… {{done}} / {{total}}",
       "cloudNotesMigrationDone": "Toutes les notes sauvegardées",
       "description": "Contrôlez quelles données quittent votre appareil. Tout est désactivé par défaut.",

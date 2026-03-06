@@ -920,11 +920,7 @@
         "enterprise": {
           "name": "Enterprise",
           "price": "Individuell",
-          "features": [
-            "Cloud-Synchronisation",
-            "Team-Funktionen (demnächst)",
-            "SSO & Compliance"
-          ],
+          "features": ["Cloud-Synchronisation", "Team-Funktionen (demnächst)", "SSO & Compliance"],
           "cta": "Kontakt aufnehmen"
         },
         "currentPlan": "Aktueller Tarif"
@@ -1162,9 +1158,7 @@
     },
     "privacy": {
       "cloudBackup": "Cloud-Backup",
-      "cloudBackupDescription": "Speichern Sie Ihre Transkriptionen in der Cloud, damit sie nicht verloren gehen.",
-      "cloudNotesBackup": "Notizen in der Cloud sichern",
-      "cloudNotesBackupDescription": "Synchronisieren Sie Ihre Notizen mit der Cloud für semantische Suche und geräteübergreifenden Zugriff.",
+      "cloudBackupDescription": "Sichern Sie Ihre Transkriptionen und Notizen in der Cloud für nahtlosen Zugriff auf allen Geräten.",
       "cloudNotesMigration": "Notizen werden gesichert… {{done}} / {{total}}",
       "cloudNotesMigrationDone": "Alle Notizen gesichert",
       "description": "Steuern Sie, welche Daten Ihr Gerät verlassen. Standardmäßig ist alles deaktiviert.",

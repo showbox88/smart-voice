@@ -52,7 +52,6 @@ const BOOLEAN_SETTINGS = new Set([
   "useReasoningModel",
   "preferBuiltInMic",
   "cloudBackupEnabled",
-  "cloudNotesEnabled",
   "telemetryEnabled",
   "audioCuesEnabled",
   "floatingIconAutoHide",
@@ -123,7 +122,6 @@ export interface SettingsState
 
   setTheme: (value: "light" | "dark" | "auto") => void;
   setCloudBackupEnabled: (value: boolean) => void;
-  setCloudNotesEnabled: (value: boolean) => void;
   setTelemetryEnabled: (value: boolean) => void;
   setAudioCuesEnabled: (value: boolean) => void;
   setFloatingIconAutoHide: (enabled: boolean) => void;
@@ -235,7 +233,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     return "auto" as const;
   })(),
   cloudBackupEnabled: readBoolean("cloudBackupEnabled", false),
-  cloudNotesEnabled: readBoolean("cloudNotesEnabled", false),
   telemetryEnabled: readBoolean("telemetryEnabled", false),
   audioCuesEnabled: readBoolean("audioCuesEnabled", true),
   floatingIconAutoHide: readBoolean("floatingIconAutoHide", false),
@@ -360,7 +357,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   },
 
   setCloudBackupEnabled: createBooleanSetter("cloudBackupEnabled"),
-  setCloudNotesEnabled: createBooleanSetter("cloudNotesEnabled"),
   setTelemetryEnabled: createBooleanSetter("telemetryEnabled"),
   setAudioCuesEnabled: createBooleanSetter("audioCuesEnabled"),
 
