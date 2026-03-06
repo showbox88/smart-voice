@@ -88,7 +88,7 @@ export function AgentInput({ agentState, partialTranscript }: AgentInputProps) {
     <div
       className={cn(
         "flex items-center gap-3 h-12 px-3 py-2 shrink-0",
-        "bg-surface-1/50 backdrop-blur-xl border-t border-border/20"
+        "bg-surface-1 border-t border-border/30"
       )}
     >
       {agentState === "idle" && (

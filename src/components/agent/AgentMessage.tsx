@@ -49,7 +49,7 @@ export function AgentMessage({ role, content, isStreaming }: AgentMessageProps) 
       <div
         className={cn(
           "relative max-w-[85%] px-3 py-2 rounded-lg rounded-bl-sm",
-          "bg-surface-2/80 backdrop-blur-lg border border-border/40 text-foreground",
+          "bg-surface-2 border border-border/30 text-foreground",
           "text-[13px] leading-relaxed"
         )}
       >
