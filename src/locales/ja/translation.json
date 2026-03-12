@@ -152,14 +152,17 @@
     "permissions": {
       "title": "権限",
       "microphoneTitle": "マイク",
-      "microphoneDescription": "音声のキャプチャに使用",
+      "microphoneDescription": "文字起こしのためにあなたの声を録音します",
       "grant": "許可",
       "accessibilityTitle": "アクセシビリティ",
       "accessibilityDescription": "システム設定でオンに切り替えてください",
       "testAndGrant": "テストして許可",
       "requiredForApp": "OpenWhispr の動作に必要です",
       "microphoneRequired": "マイクへのアクセスが必要です",
-      "openSystemSettings": "システム設定を開く"
+      "openSystemSettings": "システム設定を開く",
+      "screenRecordingTitle": "システムオーディオ",
+      "screenRecordingDescription": "通話や会議で他の参加者の音声を録音します。画面を録画することはありません。",
+      "optional": "任意"
     },
     "transcription": {
       "title": "文字起こし設定",
@@ -1228,7 +1231,7 @@
       "accessibilityDescription": "文字起こし後の自動貼り付けに必要",
       "accessibilityTitle": "アクセシビリティ",
       "description": "OpenWhispr の正常動作に必要なシステム権限をテスト・管理",
-      "microphoneDescription": "音声録音とディクテーションに必要",
+      "microphoneDescription": "ディクテーションと文字起こしのためにあなたの声を録音します",
       "microphoneTitle": "マイク",
       "resetAccessibility": {
         "description": "OpenWhispr をアクセシビリティの権限から削除します。システム設定 > プライバシーとセキュリティ > アクセシビリティ で再度許可する必要があります。",
@@ -1236,6 +1239,9 @@
         "rowDescription": "アプリの再インストールや再ビルド後の問題を修正するために、システム設定で OpenWhispr を削除してから再追加",
         "title": "アクセシビリティの権限をリセット"
       },
+      "optional": "任意",
+      "screenRecordingTitle": "システムオーディオ",
+      "screenRecordingDescription": "通話や会議で他の参加者の音声を録音します",
       "test": "テスト",
       "testAndGrant": "テストして許可",
       "title": "権限",
@@ -1753,7 +1759,10 @@
       "addAnother": "別のカレンダーを追加",
       "disconnect": "切断",
       "disconnectConfirm": "{{email}} を切断しますか？",
-      "disconnectDescription": "このカレンダーからの会議メモは記録されなくなります。"
+      "disconnectDescription": "このカレンダーからの会議メモは記録されなくなります。",
+      "screenRecordingRequired": "システムオーディオの権限が必要です",
+      "screenRecordingDescription": "会議を文字起こしするには、OpenWhispr に他の参加者の音声を録音するためのシステムオーディオの権限が必要です。画面を録画することはありません。システム設定に移動して有効にします。",
+      "openSettings": "システム設定を開く"
     },
     "plan": {
       "title": "プラン",
@@ -1786,6 +1795,8 @@
     "now": "進行中",
     "join": "参加",
     "untitledEvent": "無題のイベント",
+    "screenRecordingRequired": "他の参加者の音声を録音するには、システムオーディオの権限が必要です。",
+    "openSettings": "システム設定を開く",
     "signInRequired": "会議録音を使用するにはログインしてください",
     "signInDescription": "アカウントを作成またはログインして、会議を録音・文字起こしできます。",
     "connectCalendar": "カレンダーを接続",

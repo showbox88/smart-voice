@@ -152,14 +152,17 @@
     "permissions": {
       "title": "Permessi",
       "microphoneTitle": "Microfono",
-      "microphoneDescription": "Per acquisire la tua voce",
+      "microphoneDescription": "Cattura la tua voce per la trascrizione",
       "grant": "Concedi",
       "accessibilityTitle": "Accessibilità",
       "accessibilityDescription": "Attiva nelle Impostazioni di Sistema",
       "testAndGrant": "Testa e concedi",
       "requiredForApp": "Necessario per usare OpenWhispr",
       "microphoneRequired": "Accesso al microfono richiesto",
-      "openSystemSettings": "Apri Impostazioni di Sistema"
+      "openSystemSettings": "Apri Impostazioni di Sistema",
+      "screenRecordingTitle": "Audio di Sistema",
+      "screenRecordingDescription": "Cattura l'audio degli altri partecipanti durante chiamate e riunioni. Non registriamo mai il tuo schermo.",
+      "optional": "Facoltativo"
     },
     "transcription": {
       "title": "Configurazione trascrizione",
@@ -1232,7 +1235,7 @@
       "accessibilityDescription": "Necessario per l'incollaggio automatico dopo la trascrizione",
       "accessibilityTitle": "Accessibilità",
       "description": "Testa e gestisci i permessi di sistema necessari per il corretto funzionamento di OpenWhispr",
-      "microphoneDescription": "Necessario per la registrazione vocale e la dettatura",
+      "microphoneDescription": "Cattura la tua voce per la dettatura e la trascrizione",
       "microphoneTitle": "Microfono",
       "resetAccessibility": {
         "description": "Questa operazione rimuoverà OpenWhispr dai permessi di accessibilità. Dovrai concedere nuovamente l'accesso in Impostazioni di sistema > Privacy e sicurezza > Accessibilità.",
@@ -1240,6 +1243,9 @@
         "rowDescription": "Risolvi i problemi dopo la reinstallazione o ricompilazione dell'app rimuovendo e riaggiungendo OpenWhispr nelle Impostazioni di sistema",
         "title": "Reimposta permessi di accessibilità"
       },
+      "optional": "Facoltativo",
+      "screenRecordingTitle": "Audio di Sistema",
+      "screenRecordingDescription": "Cattura l'audio degli altri partecipanti durante chiamate e riunioni",
       "test": "Test",
       "testAndGrant": "Testa e concedi",
       "title": "Permessi",
@@ -1757,7 +1763,10 @@
       "addAnother": "Aggiungi un altro calendario",
       "disconnect": "Disconnetti",
       "disconnectConfirm": "Disconnettere {{email}}?",
-      "disconnectDescription": "Le note delle riunioni non saranno più registrate da questo calendario."
+      "disconnectDescription": "Le note delle riunioni non saranno più registrate da questo calendario.",
+      "screenRecordingRequired": "Autorizzazione Audio di Sistema richiesta",
+      "screenRecordingDescription": "Per trascrivere le riunioni, OpenWhispr necessita dell'autorizzazione Audio di Sistema per catturare l'audio degli altri partecipanti. Non registriamo mai il tuo schermo. Verrai reindirizzato alle Impostazioni di Sistema per attivarla.",
+      "openSettings": "Apri Impostazioni di Sistema"
     },
     "plan": {
       "title": "Il tuo Piano",
@@ -1790,6 +1799,8 @@
     "now": "In corso",
     "join": "Partecipa",
     "untitledEvent": "Evento senza titolo",
+    "screenRecordingRequired": "L'autorizzazione Audio di Sistema è necessaria per catturare l'audio degli altri partecipanti.",
+    "openSettings": "Apri Impostazioni di Sistema",
     "signInRequired": "Accedi per utilizzare la registrazione delle riunioni",
     "signInDescription": "Crea un account o accedi per registrare e trascrivere le riunioni.",
     "connectCalendar": "Collega il tuo calendario",

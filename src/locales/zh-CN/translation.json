@@ -152,14 +152,17 @@
     "permissions": {
       "title": "权限",
       "microphoneTitle": "麦克风",
-      "microphoneDescription": "用于捕捉你的声音",
+      "microphoneDescription": "录制您的声音用于转录",
       "grant": "授权",
       "accessibilityTitle": "辅助功能",
       "accessibilityDescription": "在系统设置中开启此权限",
       "testAndGrant": "测试并授权",
       "requiredForApp": "OpenWhispr 运行所必需的权限",
       "microphoneRequired": "需要麦克风访问权限",
-      "openSystemSettings": "打开系统设置"
+      "openSystemSettings": "打开系统设置",
+      "screenRecordingTitle": "系统音频",
+      "screenRecordingDescription": "录制通话和会议中其他参与者的音频。我们绝不会录制您的屏幕。",
+      "optional": "可选"
     },
     "transcription": {
       "title": "转录设置",
@@ -1228,7 +1231,7 @@
       "accessibilityDescription": "转录后自动粘贴需要此权限",
       "accessibilityTitle": "辅助功能",
       "description": "测试和管理 OpenWhispr 正常运行所需的系统权限",
-      "microphoneDescription": "语音录制和听写需要此权限",
+      "microphoneDescription": "录制您的声音用于听写和转录",
       "microphoneTitle": "麦克风",
       "resetAccessibility": {
         "description": "这将从辅助功能权限中移除 OpenWhispr。你需要在系统设置 > 隐私与安全 > 辅助功能中重新授权。",
@@ -1236,6 +1239,9 @@
         "rowDescription": "重新安装或重新构建应用后，通过在系统设置中移除并重新添加 OpenWhispr 来解决问题",
         "title": "重置辅助功能权限"
       },
+      "optional": "可选",
+      "screenRecordingTitle": "系统音频",
+      "screenRecordingDescription": "录制通话和会议中其他参与者的音频",
       "test": "测试",
       "testAndGrant": "测试并授权",
       "title": "权限",
@@ -1753,7 +1759,10 @@
       "addAnother": "添加其他日历",
       "disconnect": "断开",
       "disconnectConfirm": "断开 {{email}}？",
-      "disconnectDescription": "将不再从此日历记录会议笔记。"
+      "disconnectDescription": "将不再从此日历记录会议笔记。",
+      "screenRecordingRequired": "需要系统音频权限",
+      "screenRecordingDescription": "要转录会议，OpenWhispr 需要系统音频权限来录制其他参与者的音频。我们绝不会录制您的屏幕。您将被引导至系统设置以启用此权限。",
+      "openSettings": "打开系统设置"
     },
     "plan": {
       "title": "您的方案",
@@ -1786,6 +1795,8 @@
     "now": "进行中",
     "join": "加入",
     "untitledEvent": "无标题事件",
+    "screenRecordingRequired": "需要系统音频权限来录制其他参与者的音频。",
+    "openSettings": "打开系统设置",
     "signInRequired": "登录以使用会议录制",
     "signInDescription": "创建账户或登录以录制和转录会议。",
     "connectCalendar": "连接您的日历",

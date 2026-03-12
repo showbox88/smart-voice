@@ -152,14 +152,17 @@
     "permissions": {
       "title": "權限",
       "microphoneTitle": "麥克風",
-      "microphoneDescription": "用於擷取你的語音",
+      "microphoneDescription": "錄製您的聲音用於轉錄",
       "grant": "授權",
       "accessibilityTitle": "輔助使用",
       "accessibilityDescription": "在系統設定中開啟此權限",
       "testAndGrant": "測試並授權",
       "requiredForApp": "OpenWhispr 運作所需",
       "microphoneRequired": "需要麥克風存取權限",
-      "openSystemSettings": "打開系統設定"
+      "openSystemSettings": "打開系統設定",
+      "screenRecordingTitle": "系統音訊",
+      "screenRecordingDescription": "錄製通話和會議中其他參與者的音訊。我們絕不會錄製您的螢幕。",
+      "optional": "可選"
     },
     "transcription": {
       "title": "轉錄設定",
@@ -1228,7 +1231,7 @@
       "accessibilityDescription": "轉錄後自動貼上文字所需的權限",
       "accessibilityTitle": "輔助使用",
       "description": "測試和管理 OpenWhispr 正常運作所需的系統權限",
-      "microphoneDescription": "錄音和語音輸入所需的權限",
+      "microphoneDescription": "錄製您的聲音用於聽寫和轉錄",
       "microphoneTitle": "麥克風",
       "resetAccessibility": {
         "description": "這將從輔助使用權限中移除 OpenWhispr。你需要在「系統設定 > 隱私權與安全性 > 輔助使用」中重新授權。",
@@ -1236,6 +1239,9 @@
         "rowDescription": "重新安裝或重新建置應用程式後，透過在系統設定中移除並重新加入 OpenWhispr 來修復問題",
         "title": "重設輔助使用權限"
       },
+      "optional": "可選",
+      "screenRecordingTitle": "系統音訊",
+      "screenRecordingDescription": "錄製通話和會議中其他參與者的音訊",
       "test": "測試",
       "testAndGrant": "測試並授權",
       "title": "權限",
@@ -1753,7 +1759,10 @@
       "addAnother": "新增其他日曆",
       "disconnect": "中斷連接",
       "disconnectConfirm": "中斷 {{email}} 的連接？",
-      "disconnectDescription": "將不再從此日曆記錄會議筆記。"
+      "disconnectDescription": "將不再從此日曆記錄會議筆記。",
+      "screenRecordingRequired": "需要系統音訊權限",
+      "screenRecordingDescription": "要轉錄會議，OpenWhispr 需要系統音訊權限來錄製其他參與者的音訊。我們絕不會錄製您的螢幕。您將被引導至系統設定以啟用此權限。",
+      "openSettings": "打開系統設定"
     },
     "plan": {
       "title": "您的方案",
@@ -1786,6 +1795,8 @@
     "now": "進行中",
     "join": "加入",
     "untitledEvent": "無標題事件",
+    "screenRecordingRequired": "需要系統音訊權限來錄製其他參與者的音訊。",
+    "openSettings": "打開系統設定",
     "signInRequired": "登入以使用會議錄製",
     "signInDescription": "建立帳戶或登入以錄製和轉錄會議。",
     "connectCalendar": "連接您的日曆",

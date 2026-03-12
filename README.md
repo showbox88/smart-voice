@@ -81,8 +81,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Prerequisites
 
-- **Node.js 18+** and npm (Download from [nodejs.org](https://nodejs.org/))
-- **macOS 10.15+**, **Windows 10+**, or **Linux**
+- **Node.js 22+** and npm (Download from [nodejs.org](https://nodejs.org/))
+- **macOS 12+**, **Windows 10+**, or **Linux**
 - On macOS, Globe key support requires the Xcode Command Line Tools (`xcode-select --install`) so the bundled Swift helper can run
 
 ## Quick Start

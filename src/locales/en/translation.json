@@ -152,7 +152,7 @@
     "permissions": {
       "title": "Permissions",
       "microphoneTitle": "Microphone",
-      "microphoneDescription": "To capture your voice",
+      "microphoneDescription": "Captures your voice for transcription",
       "grant": "Grant",
       "accessibilityTitle": "Accessibility",
       "accessibilityDescription": "Enable in System Settings by toggling it on",
@@ -160,8 +160,8 @@
       "requiredForApp": "Required for OpenWhispr to work",
       "microphoneRequired": "Microphone access required",
       "openSystemSettings": "Open System Settings",
-      "screenRecordingTitle": "Screen Recording",
-      "screenRecordingDescription": "Needed to capture meeting audio. You can enable this later in System Settings.",
+      "screenRecordingTitle": "System Audio",
+      "screenRecordingDescription": "Captures other participants' audio from calls and meetings. We never record your screen.",
       "optional": "Optional"
     },
     "transcription": {
@@ -564,7 +564,7 @@
     "now": "Now",
     "join": "Join",
     "untitledEvent": "Untitled event",
-    "screenRecordingRequired": "Screen Recording permission is needed to capture meeting audio.",
+    "screenRecordingRequired": "System Audio permission is needed to capture other participants' audio.",
     "openSettings": "Open System Settings"
   },
   "cleanupPrompt": "Cleanup",
@@ -1291,7 +1291,7 @@
       "accessibilityDescription": "Required for auto-paste to work after transcription",
       "accessibilityTitle": "Accessibility",
       "description": "Test and manage system permissions required for OpenWhispr to function correctly",
-      "microphoneDescription": "Required for voice recording and dictation",
+      "microphoneDescription": "Captures your voice for dictation and transcription",
       "microphoneTitle": "Microphone",
       "resetAccessibility": {
         "description": "This will remove OpenWhispr from accessibility permissions. You'll need to re-grant access in System Settings > Privacy & Security > Accessibility.",
@@ -1300,8 +1300,8 @@
         "title": "Reset Accessibility Permissions"
       },
       "optional": "Optional",
-      "screenRecordingTitle": "Screen Recording",
-      "screenRecordingDescription": "Required to capture meeting audio from other apps",
+      "screenRecordingTitle": "System Audio",
+      "screenRecordingDescription": "Captures other participants' audio from calls and meetings",
       "test": "Test",
       "testAndGrant": "Test & Grant",
       "title": "Permissions",
@@ -1830,8 +1830,8 @@
       "disconnect": "Disconnect",
       "disconnectConfirm": "Disconnect {{email}}?",
       "disconnectDescription": "Meeting notes will no longer be recorded from this calendar.",
-      "screenRecordingRequired": "Screen Recording Permission Required",
-      "screenRecordingDescription": "To transcribe meetings, OpenWhispr needs the Screen Recording permission to capture audio from other apps. You'll be taken to System Settings to enable it.",
+      "screenRecordingRequired": "System Audio Permission Required",
+      "screenRecordingDescription": "To transcribe meetings, OpenWhispr needs the System Audio permission to capture other participants' audio. We never record your screen. You'll be taken to System Settings to enable it.",
       "openSettings": "Open System Settings"
     },
     "plan": {
@@ -1865,7 +1865,7 @@
     "now": "Now",
     "join": "Join",
     "untitledEvent": "Untitled Event",
-    "screenRecordingRequired": "Screen Recording permission is needed to capture meeting audio.",
+    "screenRecordingRequired": "System Audio permission is needed to capture other participants' audio.",
     "openSettings": "Open System Settings",
     "signInRequired": "Sign in to use meeting recording",
     "signInDescription": "Create an account or sign in to record and transcribe meetings.",
