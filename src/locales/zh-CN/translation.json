@@ -1491,8 +1491,7 @@
       "staleIndicator": "内容在增强后已更改",
       "live": "实时",
       "transcript": "转录",
-      "notes": "笔记",
-      "generateNotes": "生成笔记"
+      "notes": "笔记"
     },
     "upload": {
       "title": "上传音频",
@@ -1569,9 +1568,9 @@
       "selectAction": "选择操作",
       "done": "完成",
       "builtin": {
-        "cleanupNotes": {
-          "name": "整理笔记",
-          "description": "修正语法、结构和格式"
+        "generateNotes": {
+          "name": "生成笔记",
+          "description": "清理、结构化和增强您的笔记"
         }
       },
       "errors": {

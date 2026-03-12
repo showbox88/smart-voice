@@ -1529,8 +1529,7 @@
       "staleIndicator": "Le contenu a changé depuis l'amélioration",
       "live": "En direct",
       "transcript": "Transcription",
-      "notes": "Notes",
-      "generateNotes": "Générer des notes"
+      "notes": "Notes"
     },
     "upload": {
       "title": "Téléverser un fichier audio",
@@ -1623,9 +1622,9 @@
       "runAction": "Exécuter {{name}}",
       "selectAction": "Sélectionner l'action",
       "builtin": {
-        "cleanupNotes": {
-          "name": "Nettoyer les notes",
-          "description": "Corriger la grammaire, la structure et la mise en forme"
+        "generateNotes": {
+          "name": "Générer des notes",
+          "description": "Nettoyer, structurer et améliorer vos notes"
         }
       },
       "errors": {

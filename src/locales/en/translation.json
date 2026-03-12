@@ -1605,8 +1605,7 @@
       "staleIndicator": "Content has changed since enhancement",
       "live": "Live",
       "transcript": "Transcript",
-      "notes": "Notes",
-      "generateNotes": "Generate notes"
+      "notes": "Notes"
     },
     "upload": {
       "title": "Upload Audio",
@@ -1699,9 +1698,9 @@
       "runAction": "Run {{name}}",
       "selectAction": "Select action",
       "builtin": {
-        "cleanupNotes": {
-          "name": "Clean Up Notes",
-          "description": "Fix grammar, structure, and formatting"
+        "generateNotes": {
+          "name": "Generate Notes",
+          "description": "Clean up, structure, and enhance your notes"
         }
       },
       "errors": {

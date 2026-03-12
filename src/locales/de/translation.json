@@ -1491,8 +1491,7 @@
       "staleIndicator": "Der Inhalt hat sich seit der Verbesserung geändert",
       "live": "Live",
       "transcript": "Transkript",
-      "notes": "Notizen",
-      "generateNotes": "Notizen generieren"
+      "notes": "Notizen"
     },
     "upload": {
       "title": "Audio hochladen",
@@ -1569,9 +1568,9 @@
       "selectAction": "Aktion auswählen",
       "done": "Fertig",
       "builtin": {
-        "cleanupNotes": {
-          "name": "Notizen bereinigen",
-          "description": "Grammatik, Struktur und Formatierung verbessern"
+        "generateNotes": {
+          "name": "Notizen generieren",
+          "description": "Notizen bereinigen, strukturieren und verbessern"
         }
       },
       "errors": {

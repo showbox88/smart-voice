@@ -66,7 +66,6 @@ interface NoteEditorProps {
   isMeetingRecording?: boolean;
   meetingTranscript?: string;
   onStopMeetingRecording?: () => void;
-  onGenerateNotes?: () => void;
   liveTranscript?: string;
 }
 
@@ -163,7 +162,6 @@ export default function NoteEditor({
   isMeetingRecording,
   meetingTranscript,
   onStopMeetingRecording,
-  onGenerateNotes,
   liveTranscript,
 }: NoteEditorProps) {
   const { t } = useTranslation();
@@ -648,30 +646,6 @@ export default function NoteEditor({
 
   const noteDate = formatNoteDate(note.created_at);
 
-  const generateNotesButton = onGenerateNotes ? (
-    <button
-      onClick={onGenerateNotes}
-      disabled={actionProcessingState === "processing"}
-      className={cn(
-        "flex items-center gap-2 h-11 px-5 rounded-xl",
-        "bg-accent/8 dark:bg-accent/12",
-        "backdrop-blur-xl",
-        "border border-accent/15 dark:border-accent/20",
-        "shadow-sm hover:shadow-md",
-        "text-accent/70 hover:text-accent",
-        "transition-[background-color,color,transform] duration-200",
-        "hover:bg-accent/12 dark:hover:bg-accent/18",
-        "active:scale-[0.98]",
-        "disabled:opacity-40 disabled:pointer-events-none"
-      )}
-    >
-      <Sparkles size={14} />
-      <span className="text-xs font-semibold tracking-tight">
-        {t("notes.editor.generateNotes")}
-      </span>
-    </button>
-  ) : null;
-
   return (
     <div className="flex flex-col h-full min-h-0">
       <div className="px-5 pt-4 pb-0">
@@ -836,13 +810,7 @@ export default function NoteEditor({
           isProcessing={isProcessing}
           onStart={handleStartRecording}
           onStop={isMeetingRecording ? onStopMeetingRecording! : onStopRecording}
-          actionPicker={
-            isMeetingRecording
-              ? undefined
-              : hasMeetingTranscript && !enhancement
-                ? generateNotesButton
-                : actionPicker
-          }
+          actionPicker={isMeetingRecording ? undefined : actionPicker}
         />
       </div>
     </div>

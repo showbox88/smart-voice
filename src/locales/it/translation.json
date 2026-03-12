@@ -1491,8 +1491,7 @@
       "staleIndicator": "Il contenuto è cambiato dall'ultimo miglioramento",
       "live": "Dal vivo",
       "transcript": "Trascrizione",
-      "notes": "Note",
-      "generateNotes": "Genera note"
+      "notes": "Note"
     },
     "upload": {
       "title": "Carica audio",
@@ -1569,9 +1568,9 @@
       "selectAction": "Seleziona azione",
       "done": "Fatto",
       "builtin": {
-        "cleanupNotes": {
-          "name": "Pulisci note",
-          "description": "Correggere grammatica, struttura e formattazione"
+        "generateNotes": {
+          "name": "Genera note",
+          "description": "Pulire, strutturare e migliorare le note"
         }
       },
       "errors": {

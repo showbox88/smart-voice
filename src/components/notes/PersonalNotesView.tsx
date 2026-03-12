@@ -17,7 +17,6 @@ import ActionManagerDialog from "./ActionManagerDialog";
 import AddNotesToFolderDialog from "./AddNotesToFolderDialog";
 import { useNoteRecording } from "../../hooks/useNoteRecording";
 import { useActionProcessing } from "../../hooks/useActionProcessing";
-import type { ActionItem } from "../../types/electron";
 import { useSettingsStore, selectIsCloudReasoningMode } from "../../stores/settingsStore";
 import { useFolderManagement } from "../../hooks/useFolderManagement";
 import { useNoteDragAndDrop } from "../../hooks/useNoteDragAndDrop";
@@ -366,41 +365,6 @@ export default function PersonalNotesView({
   useEffect(() => {
     return () => cancelAction();
   }, [activeNoteId, cancelAction]);
-
-  const handleGenerateNotes = useCallback(() => {
-    const transcript = meetingTranscript || activeNote?.transcript;
-    if (!transcript) return;
-
-    const combinedContent = [
-      localContentRef.current.trim() ? `## My Notes\n${localContentRef.current}` : "",
-      `## Meeting Transcript\n${transcript}`,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-
-    const generateAction = {
-      id: -1,
-      name: "Generate notes",
-      description: "",
-      prompt:
-        "You are given a meeting transcript and optionally the user's own notes taken during the meeting. " +
-        "Combine them into clean, well-structured meeting notes in markdown. " +
-        "Include: key discussion points, decisions made, action items, and any follow-ups. " +
-        "Preserve the user's notes where relevant and enrich them with context from the transcript. " +
-        "Do not include filler, small talk, or redundant information.",
-      icon: "sparkles",
-      is_builtin: 0,
-      sort_order: 0,
-      translation_key: null,
-      created_at: "",
-      updated_at: "",
-    } satisfies ActionItem;
-
-    runAction(generateAction, combinedContent, {
-      isCloudMode,
-      modelId: effectiveModelId,
-    });
-  }, [meetingTranscript, activeNote?.transcript, runAction, isCloudMode, effectiveModelId]);
 
   const isEnhancementStale = useMemo(() => {
     if (!activeNote?.enhanced_content || !activeNote?.enhanced_at_content_hash) return false;
@@ -788,7 +752,6 @@ export default function PersonalNotesView({
               isMeetingRecording={isMeetingRecording}
               meetingTranscript={meetingTranscript}
               onStopMeetingRecording={stopMeetingTranscription}
-              onGenerateNotes={handleGenerateNotes}
               liveTranscript={liveTranscript}
               actionProcessingState={actionProcessingState}
               actionName={actionName}

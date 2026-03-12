@@ -1491,8 +1491,7 @@
       "staleIndicator": "O conteúdo mudou desde o aprimoramento",
       "live": "Ao vivo",
       "transcript": "Transcrição",
-      "notes": "Notas",
-      "generateNotes": "Gerar notas"
+      "notes": "Notas"
     },
     "upload": {
       "title": "Enviar áudio",
@@ -1569,9 +1568,9 @@
       "selectAction": "Selecionar ação",
       "done": "Concluído",
       "builtin": {
-        "cleanupNotes": {
-          "name": "Limpar notas",
-          "description": "Corrigir gramática, estrutura e formatação"
+        "generateNotes": {
+          "name": "Gerar notas",
+          "description": "Limpar, estruturar e aprimorar suas notas"
         }
       },
       "errors": {
