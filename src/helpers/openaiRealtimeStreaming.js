@@ -149,9 +149,9 @@ class OpenAIRealtimeStreaming {
                   },
                   turn_detection: {
                     type: "server_vad",
-                    threshold: 0.5,
+                    threshold: 0.3,
                     silence_duration_ms: 800,
-                    prefix_padding_ms: 300,
+                    prefix_padding_ms: 500,
                   },
                 },
               })

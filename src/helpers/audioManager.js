@@ -233,11 +233,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const { preferBuiltInMic: preferBuiltIn, selectedMicDeviceId: selectedDeviceId } =
       getSettings();
 
-    // Disable browser audio processing — dictation doesn't need it and it adds ~48ms latency
+    // AGC enabled to boost quiet/soft speech — essential for low-volume voice recognition.
+    // Echo cancellation and noise suppression stay off to avoid latency and speech distortion.
     const noProcessing = {
       echoCancellation: false,
       noiseSuppression: false,
-      autoGainControl: false,
+      autoGainControl: true,
     };
 
     if (preferBuiltIn) {
