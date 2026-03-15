@@ -34,11 +34,12 @@ class EnvironmentManager {
   }
 
   loadEnvironmentVariables() {
-    // Loaded in priority order - dotenv won't override, so first file wins per variable.
+    // App config (.env in userData) takes precedence over system env vars,
+    // so keys saved by the user in Settings always win.
     const userDataEnv = path.join(app.getPath("userData"), ".env");
     try {
       if (fs.existsSync(userDataEnv)) {
-        require("dotenv").config({ path: userDataEnv });
+        require("dotenv").config({ path: userDataEnv, override: true });
       }
     } catch {}
 
