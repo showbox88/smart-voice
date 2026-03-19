@@ -1371,6 +1371,11 @@ class ReasoningService extends BaseReasoningService {
       executeToolCall?: (name: string, args: string) => Promise<string>;
     }
   ): AsyncGenerator<AgentStreamChunk, void, unknown> {
+    const cookieHeader = await window.electronAPI?.getSessionCookies?.();
+    if (!cookieHeader) {
+      throw new Error("No session cookies available");
+    }
+
     const maxSteps = config.tools?.length ? ReasoningService.MAX_TOOL_STEPS : 1;
     let currentMessages = [...messages];
 
@@ -1380,8 +1385,10 @@ class ReasoningService extends BaseReasoningService {
 
       const response = await fetch(`${OPENWHISPR_API_URL}/api/agent/stream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: cookieHeader,
+        },
         signal: controller.signal,
         body: JSON.stringify({
           messages: currentMessages,

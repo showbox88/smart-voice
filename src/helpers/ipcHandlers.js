@@ -2146,6 +2146,10 @@ class IPCHandlers {
       return getSessionCookiesFromWindow(win);
     };
 
+    ipcMain.handle("get-session-cookies", async (event) => {
+      return getSessionCookies(event);
+    });
+
     ipcMain.handle("cloud-transcribe", async (event, audioBuffer, opts = {}) => {
       try {
         const apiUrl = getApiUrl();

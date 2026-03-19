@@ -1071,6 +1071,9 @@ declare global {
       onAgentStopRecording?: (callback: () => void) => () => void;
       onAgentToggleRecording?: (callback: () => void) => () => void;
 
+      // Auth cookies for direct renderer-to-API fetch
+      getSessionCookies?: () => Promise<string>;
+
       // Agent cloud tools
       agentWebSearch?: (
         query: string,
