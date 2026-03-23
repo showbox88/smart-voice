@@ -28,6 +28,7 @@ class ReasoningService extends BaseReasoningService {
   private static readonly OPENAI_ENDPOINT_PREF_STORAGE_KEY = "openAiEndpointPreference";
   private static readonly MAX_TOOL_STEPS = 20;
   private cacheCleanupStop: (() => void) | undefined;
+  private streamAbortController: AbortController | null = null;
 
   constructor() {
     super();
@@ -731,48 +732,57 @@ class ReasoningService extends BaseReasoningService {
     agentName: string | null = null,
     config: ReasoningConfig = {}
   ): Promise<string> {
+    if (this.isProcessing) {
+      throw new Error("Already processing a request");
+    }
+
     logger.logReasoning("ANTHROPIC_START", {
       model,
       agentName,
       environment: typeof window !== "undefined" ? "browser" : "node",
     });
 
-    if (typeof window !== "undefined" && window.electronAPI) {
-      const startTime = Date.now();
+    this.isProcessing = true;
+    try {
+      if (typeof window !== "undefined" && window.electronAPI) {
+        const startTime = Date.now();
 
-      logger.logReasoning("ANTHROPIC_IPC_CALL", {
-        model,
-        textLength: text.length,
-      });
-
-      const systemPrompt = config.systemPrompt || this.getSystemPrompt(agentName, text);
-      const result = await window.electronAPI.processAnthropicReasoning(text, model, agentName, {
-        ...config,
-        systemPrompt,
-      });
-
-      const processingTime = Date.now() - startTime;
-
-      if (result.success) {
-        logger.logReasoning("ANTHROPIC_SUCCESS", {
+        logger.logReasoning("ANTHROPIC_IPC_CALL", {
           model,
-          processingTimeMs: processingTime,
-          resultLength: result.text.length,
+          textLength: text.length,
         });
-        return result.text;
+
+        const systemPrompt = config.systemPrompt || this.getSystemPrompt(agentName, text);
+        const result = await window.electronAPI.processAnthropicReasoning(text, model, agentName, {
+          ...config,
+          systemPrompt,
+        });
+
+        const processingTime = Date.now() - startTime;
+
+        if (result.success) {
+          logger.logReasoning("ANTHROPIC_SUCCESS", {
+            model,
+            processingTimeMs: processingTime,
+            resultLength: result.text.length,
+          });
+          return result.text;
+        } else {
+          logger.logReasoning("ANTHROPIC_ERROR", {
+            model,
+            processingTimeMs: processingTime,
+            error: result.error,
+          });
+          throw new Error(result.error);
+        }
       } else {
-        logger.logReasoning("ANTHROPIC_ERROR", {
-          model,
-          processingTimeMs: processingTime,
-          error: result.error,
+        logger.logReasoning("ANTHROPIC_UNAVAILABLE", {
+          reason: "Not in Electron environment",
         });
-        throw new Error(result.error);
+        throw new Error("Anthropic reasoning is not available in this environment");
       }
-    } else {
-      logger.logReasoning("ANTHROPIC_UNAVAILABLE", {
-        reason: "Not in Electron environment",
-      });
-      throw new Error("Anthropic reasoning is not available in this environment");
+    } finally {
+      this.isProcessing = false;
     }
   }
 
@@ -782,48 +792,57 @@ class ReasoningService extends BaseReasoningService {
     agentName: string | null = null,
     config: ReasoningConfig = {}
   ): Promise<string> {
+    if (this.isProcessing) {
+      throw new Error("Already processing a request");
+    }
+
     logger.logReasoning("LOCAL_START", {
       model,
       agentName,
       environment: typeof window !== "undefined" ? "browser" : "node",
     });
 
-    if (typeof window !== "undefined" && window.electronAPI) {
-      const startTime = Date.now();
+    this.isProcessing = true;
+    try {
+      if (typeof window !== "undefined" && window.electronAPI) {
+        const startTime = Date.now();
 
-      logger.logReasoning("LOCAL_IPC_CALL", {
-        model,
-        textLength: text.length,
-      });
-
-      const systemPrompt = config.systemPrompt || this.getSystemPrompt(agentName, text);
-      const result = await window.electronAPI.processLocalReasoning(text, model, agentName, {
-        ...config,
-        systemPrompt,
-      });
-
-      const processingTime = Date.now() - startTime;
-
-      if (result.success) {
-        logger.logReasoning("LOCAL_SUCCESS", {
+        logger.logReasoning("LOCAL_IPC_CALL", {
           model,
-          processingTimeMs: processingTime,
-          resultLength: result.text.length,
+          textLength: text.length,
         });
-        return result.text;
+
+        const systemPrompt = config.systemPrompt || this.getSystemPrompt(agentName, text);
+        const result = await window.electronAPI.processLocalReasoning(text, model, agentName, {
+          ...config,
+          systemPrompt,
+        });
+
+        const processingTime = Date.now() - startTime;
+
+        if (result.success) {
+          logger.logReasoning("LOCAL_SUCCESS", {
+            model,
+            processingTimeMs: processingTime,
+            resultLength: result.text.length,
+          });
+          return result.text;
+        } else {
+          logger.logReasoning("LOCAL_ERROR", {
+            model,
+            processingTimeMs: processingTime,
+            error: result.error,
+          });
+          throw new Error(result.error);
+        }
       } else {
-        logger.logReasoning("LOCAL_ERROR", {
-          model,
-          processingTimeMs: processingTime,
-          error: result.error,
+        logger.logReasoning("LOCAL_UNAVAILABLE", {
+          reason: "Not in Electron environment",
         });
-        throw new Error(result.error);
+        throw new Error("Local reasoning is not available in this environment");
       }
-    } else {
-      logger.logReasoning("LOCAL_UNAVAILABLE", {
-        reason: "Not in Electron environment",
-      });
-      throw new Error("Local reasoning is not available in this environment");
+    } finally {
+      this.isProcessing = false;
     }
   }
 
@@ -1192,11 +1211,25 @@ class ReasoningService extends BaseReasoningService {
       headers["Authorization"] = `Bearer ${apiKey}`;
     }
 
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(requestBody),
-    });
+    this.streamAbortController = new AbortController();
+    const controller = this.streamAbortController;
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    let response: Response;
+    try {
+      response = await fetch(endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if ((error as Error).name === "AbortError") {
+        throw new Error("Streaming request timed out");
+      }
+      throw error;
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -1276,6 +1309,8 @@ class ReasoningService extends BaseReasoningService {
         }
       }
     } finally {
+      clearTimeout(timeoutId);
+      this.streamAbortController = null;
       reader.releaseLock();
     }
   }
@@ -1361,7 +1396,8 @@ class ReasoningService extends BaseReasoningService {
   }
 
   cancelActiveStream(): void {
-    // No-op — event-based stream cleanup is handled by listener removal
+    this.streamAbortController?.abort();
+    this.streamAbortController = null;
   }
 
   private streamFromIPC(

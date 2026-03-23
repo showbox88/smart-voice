@@ -934,15 +934,15 @@
           "period": "永久",
           "features": [
             "## OpenWhispr Cloud",
-            "2,000 words/week transcription",
-            "5 hours of meeting recordings/month",
-            "## Always free",
-            "Unlimited local AI models",
-            "Unlimited cloud transcription with your own API keys",
-            "100+ languages supported",
-            "Custom dictionary",
-            "Zero data retention",
-            "Community support"
+            "週2,000ワードの文字起こし",
+            "月5時間の会議録音",
+            "## 永久無料",
+            "無制限のローカルAIモデル",
+            "独自のAPIキーで無制限のクラウド文字起こし",
+            "100以上の言語に対応",
+            "カスタム辞書",
+            "データ保持なし",
+            "コミュニティサポート"
           ]
         },
         "pro": {
@@ -954,10 +954,10 @@
           "annualEquivalent": "$6.67",
           "includesPrefix": "Free の全機能 +",
           "features": [
-            "Unlimited cloud transcription",
-            "20 hours of meeting recordings/month",
-            "Mobile app (iOS Coming Soon)",
-            "Email support"
+            "無制限のクラウド文字起こし",
+            "月20時間の会議録音",
+            "モバイルアプリ（iOS 近日公開）",
+            "メールサポート"
           ],
           "cta": "始める",
           "switchToAnnual": "年払いに切り替え"
@@ -972,10 +972,10 @@
           "includesPrefix": "Pro の全機能 +",
           "badge": "一番人気",
           "features": [
-            "Unlimited meeting recordings",
-            "Agent mode",
-            "Chat over your data (Coming Soon)",
-            "Priority support"
+            "無制限の会議録音",
+            "エージェントモード",
+            "データとチャット（近日公開）",
+            "優先サポート"
           ],
           "cta": "始める",
           "switchToAnnual": "年払いに切り替え"
@@ -983,16 +983,16 @@
         "enterprise": {
           "name": "Enterprise",
           "price": "カスタム",
-          "subtitle": "For advanced security & support",
+          "subtitle": "高度なセキュリティとサポート向け",
           "includesPrefix": "Business の全機能 +",
           "features": [
-            "Managed API credits",
-            "Cloud sync across devices",
-            "Team features & admin",
-            "SSO & compliance",
-            "Dedicated support"
+            "管理されたAPIクレジット",
+            "デバイス間のクラウド同期",
+            "チーム機能と管理",
+            "SSO とコンプライアンス",
+            "専任サポート"
           ],
-          "cta": "Contact Sales"
+          "cta": "営業に問い合わせる"
         },
         "currentPlan": "現在のプラン",
         "upgrade": "アップグレード",
@@ -1880,7 +1880,9 @@
       "calendarEvents": "{{count}}件の予定が見つかりました",
       "calendarEvents_plural": "{{count}}件の予定が見つかりました",
       "noResults": "結果が見つかりません",
-      "error": "ツールエラー"
+      "error": "ツールエラー",
+      "unknownTool": "不明なツール: {{name}}",
+      "invalidArgs": "{{name}} のツール引数が無効です"
     }
   },
   "integrations": {

@@ -954,15 +954,15 @@
           "period": "永久",
           "features": [
             "## OpenWhispr Cloud",
-            "2,000 words/week transcription",
-            "5 hours of meeting recordings/month",
-            "## Always free",
-            "Unlimited local AI models",
-            "Unlimited cloud transcription with your own API keys",
-            "100+ languages supported",
-            "Custom dictionary",
-            "Zero data retention",
-            "Community support"
+            "每周 2,000 字转录",
+            "每月 5 小时会议录制",
+            "## 永久免费",
+            "无限本地 AI 模型",
+            "使用自己的 API 密钥无限云端转录",
+            "支持 100+ 种语言",
+            "自定义词典",
+            "零数据留存",
+            "社区支持"
           ]
         },
         "pro": {
@@ -974,10 +974,10 @@
           "annualEquivalent": "$6.67",
           "includesPrefix": "所有 Free 功能 +",
           "features": [
-            "Unlimited cloud transcription",
-            "20 hours of meeting recordings/month",
-            "Mobile app (iOS Coming Soon)",
-            "Email support"
+            "无限云端转录",
+            "每月 20 小时会议录制",
+            "移动应用（iOS 即将推出）",
+            "邮件支持"
           ],
           "cta": "开始使用",
           "switchToAnnual": "切换为年付"
@@ -991,28 +991,23 @@
           "annualEquivalent": "$16.67",
           "includesPrefix": "所有 Pro 功能 +",
           "badge": "最受欢迎",
-          "features": [
-            "Unlimited meeting recordings",
-            "Agent mode",
-            "Chat over your data (Coming Soon)",
-            "Priority support"
-          ],
+          "features": ["无限会议录制", "代理模式", "与您的数据对话（即将推出）", "优先支持"],
           "cta": "开始使用",
           "switchToAnnual": "切换为年付"
         },
         "enterprise": {
           "name": "Enterprise",
           "price": "自定义",
-          "subtitle": "For advanced security & support",
+          "subtitle": "提供高级安全保障与支持",
           "includesPrefix": "所有 Business 功能 +",
           "features": [
-            "Managed API credits",
-            "Cloud sync across devices",
-            "Team features & admin",
-            "SSO & compliance",
-            "Dedicated support"
+            "托管 API 额度",
+            "跨设备云端同步",
+            "团队功能与管理",
+            "SSO 与合规",
+            "专属支持"
           ],
-          "cta": "Contact Sales"
+          "cta": "联系销售"
         },
         "currentPlan": "当前套餐",
         "upgrade": "升级",
@@ -1880,7 +1875,9 @@
       "calendarEvents": "找到 {{count}} 个日程",
       "calendarEvents_plural": "找到 {{count}} 个日程",
       "noResults": "未找到结果",
-      "error": "工具错误"
+      "error": "工具错误",
+      "unknownTool": "未知工具：{{name}}",
+      "invalidArgs": "{{name}} 的工具参数无效"
     }
   },
   "integrations": {

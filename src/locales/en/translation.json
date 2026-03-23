@@ -1928,7 +1928,9 @@
       "calendarEvents": "Found {{count}} event",
       "calendarEvents_plural": "Found {{count}} events",
       "noResults": "No results found",
-      "error": "Tool error"
+      "error": "Tool error",
+      "unknownTool": "Unknown tool: {{name}}",
+      "invalidArgs": "Invalid tool arguments for {{name}}"
     }
   },
   "integrations": {

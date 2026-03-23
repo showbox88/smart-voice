@@ -82,7 +82,9 @@ export default function AgentOverlay() {
 
       // Create conversation on first message
       if (!conversationIdRef.current) {
-        const conv = await window.electronAPI?.createAgentConversation?.("New conversation");
+        const conv = await window.electronAPI?.createAgentConversation?.(
+          t("agentMode.titleBar.newChat")
+        );
         conversationIdRef.current = conv?.id ?? null;
       }
 
@@ -143,8 +145,19 @@ export default function AgentOverlay() {
             ? async (name: string, argsJson: string) => {
                 const tool = registry.get(name);
                 if (!tool)
-                  return { data: `Unknown tool: ${name}`, displayText: `Unknown tool: ${name}` };
-                const args = JSON.parse(argsJson);
+                  return {
+                    data: `Unknown tool: ${name}`,
+                    displayText: t("agentMode.tools.unknownTool", { name }),
+                  };
+                let args: Record<string, unknown>;
+                try {
+                  args = JSON.parse(argsJson);
+                } catch {
+                  return {
+                    data: `Invalid tool arguments for ${name}`,
+                    displayText: t("agentMode.tools.invalidArgs", { name }),
+                  };
+                }
                 const result = await tool.execute(args);
                 const data = result.success
                   ? typeof result.data === "string"
@@ -256,7 +269,11 @@ export default function AgentOverlay() {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, content: `Error: ${(error as Error).message}`, isStreaming: false }
+              ? {
+                  ...m,
+                  content: `${t("agentMode.chat.errorPrefix")}: ${(error as Error).message}`,
+                  isStreaming: false,
+                }
               : m
           )
         );
@@ -284,7 +301,7 @@ export default function AgentOverlay() {
       },
       onError: (error: { message?: string }) => {
         const msg = error?.message || (typeof error === "string" ? error : "Transcription failed");
-        addSystemMessage(`Error: ${msg}`);
+        addSystemMessage(`${t("agentMode.chat.errorPrefix")}: ${msg}`);
         setAgentState("idle");
       },
       onTranscriptionComplete: (result: { text: string }) => {
