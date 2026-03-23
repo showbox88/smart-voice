@@ -1030,7 +1030,7 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
       title: t("settingsPage.permissions.resetAccessibility.title"),
       description: message,
       onConfirm: () => {
-        permissionsHook.openAccessibilitySettings();
+        permissionsHook.requestAccessibilityPermission();
       },
     });
   };
@@ -3324,8 +3324,7 @@ EOF`,
                   description={t("settingsPage.permissions.microphoneDescription")}
                   granted={permissionsHook.micPermissionGranted}
                   onRequest={permissionsHook.requestMicPermission}
-                  buttonText={t("settingsPage.permissions.test")}
-                  onOpenSettings={permissionsHook.openMicPrivacySettings}
+                  buttonText={t("settingsPage.permissions.grantAccess")}
                 />
 
                 {platform === "darwin" && (
@@ -3335,9 +3334,8 @@ EOF`,
                       title={t("settingsPage.permissions.accessibilityTitle")}
                       description={t("settingsPage.permissions.accessibilityDescription")}
                       granted={permissionsHook.accessibilityPermissionGranted}
-                      onRequest={permissionsHook.testAccessibilityPermission}
-                      buttonText={t("settingsPage.permissions.testAndGrant")}
-                      onOpenSettings={permissionsHook.openAccessibilitySettings}
+                      onRequest={permissionsHook.requestAccessibilityPermission}
+                      buttonText={t("settingsPage.permissions.grantAccess")}
                     />
                     {systemAudio.mode === "native" && (
                       <PermissionCard
@@ -3346,8 +3344,7 @@ EOF`,
                         description={t("settingsPage.permissions.systemAudioDescription")}
                         granted={systemAudio.granted}
                         onRequest={systemAudio.request}
-                        buttonText={t("settingsPage.permissions.test")}
-                        onOpenSettings={systemAudio.openSettings}
+                        buttonText={t("settingsPage.permissions.grantAccess")}
                         badge={t("settingsPage.permissions.optional")}
                       />
                     )}

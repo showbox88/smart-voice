@@ -2066,12 +2066,14 @@ class IPCHandlers {
         return { granted: true, status: "granted", mode: "unsupported" };
       }
 
-      if (this.audioTapManager?.isSupported()) {
-        const status = systemPreferences.getMediaAccessStatus("screen");
-        return { granted: status === "granted", status, mode: "native" };
+      if (!this.audioTapManager?.isSupported()) {
+        return { granted: false, status: "unsupported", mode: "unsupported" };
       }
 
-      return { granted: false, status: "unsupported", mode: "unsupported" };
+      const screenStatus = systemPreferences.getMediaAccessStatus("screen");
+      const tapStatus = this.audioTapManager.getPermissionStatus();
+      const granted = screenStatus === "granted" || tapStatus === "granted";
+      return { granted, status: granted ? "granted" : screenStatus, mode: "native" };
     });
 
     ipcMain.handle("request-system-audio-access", async () => {
@@ -2083,16 +2085,24 @@ class IPCHandlers {
         return { granted: false, status: "unsupported", mode: "unsupported" };
       }
 
-      const status = systemPreferences.getMediaAccessStatus("screen");
-      if (status === "granted") {
+      const screenStatus = systemPreferences.getMediaAccessStatus("screen");
+      if (screenStatus === "granted") {
         return { granted: true, status: "granted", mode: "native" };
       }
 
-      // Permission not yet granted — open System Settings so the user can toggle it manually.
-      // Unlike microphone, macOS does not show a system prompt for screen/audio recording;
-      // the user must enable it in System Settings.
+      // Probe the binary — AudioHardwareCreateProcessTap triggers the native consent dialog
+      try {
+        const result = await this.audioTapManager.requestAccess();
+        if (result.granted) {
+          return { granted: true, status: "granted", mode: "native" };
+        }
+      } catch {
+        // Falls through to opening System Settings
+      }
+
+      // Fallback for older macOS or if the native prompt was denied
       await openSystemSettings("systemAudio");
-      return { granted: false, status, mode: "native" };
+      return { granted: false, status: screenStatus, mode: "native" };
     });
 
     // Auth: clear all session cookies for sign-out.

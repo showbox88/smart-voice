@@ -15,11 +15,10 @@ export interface UsePermissionsReturn {
   accessibilityTroubleshooting: boolean;
 
   requestMicPermission: () => Promise<void>;
-  testAccessibilityPermission: () => Promise<void>;
+  requestAccessibilityPermission: () => Promise<void>;
   checkPasteToolsAvailability: () => Promise<PasteToolsResult | null>;
   openMicPrivacySettings: () => Promise<void>;
   openSoundInputSettings: () => Promise<void>;
-  openAccessibilitySettings: () => Promise<void>;
   setMicPermissionGranted: (granted: boolean) => void;
   setAccessibilityPermissionGranted: (granted: boolean) => void;
 }
@@ -128,7 +127,6 @@ export const usePermissions = (
   const [isCheckingPasteTools, setIsCheckingPasteTools] = useState(false);
   const [accessibilityTroubleshooting, setAccessibilityTroubleshooting] = useState(false);
   const accessibilityPollCount = useRef(0);
-  const hasPromptedAccessibility = useRef(false);
 
   const openSystemSettings = useCallback(
     async (
@@ -170,19 +168,6 @@ export const usePermissions = (
     () => openSystemSettings("sound", window.electronAPI?.openSoundInputSettings),
     [openSystemSettings]
   );
-
-  const openAccessibilitySettings = useCallback(async () => {
-    // On first click, trigger the macOS system prompt to create a TCC entry
-    if (!hasPromptedAccessibility.current) {
-      hasPromptedAccessibility.current = true;
-      try {
-        await window.electronAPI?.promptAccessibilityPermission?.();
-      } catch {
-        // Ignore — falls through to opening System Settings
-      }
-    }
-    await openSystemSettings("accessibility", window.electronAPI?.openAccessibilitySettings);
-  }, [openSystemSettings]);
 
   const requestMicPermission = useCallback(async () => {
     if (!navigator?.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
@@ -254,6 +239,46 @@ export const usePermissions = (
     }
   }, [setAccessibilityPermissionGranted]);
 
+  const requestAccessibilityPermission = useCallback(async () => {
+    const platform = getPlatform();
+
+    if (platform === "darwin") {
+      // Check if already granted
+      const alreadyGranted = await window.electronAPI?.checkAccessibilityPermission?.(true);
+      if (alreadyGranted) {
+        setAccessibilityPermissionGranted(true);
+        return;
+      }
+
+      // Trigger the macOS TCC prompt (creates entry in System Settings)
+      try {
+        const granted = await window.electronAPI?.promptAccessibilityPermission?.();
+        if (granted) {
+          setAccessibilityPermissionGranted(true);
+          return;
+        }
+      } catch {
+        // Falls through to opening System Settings
+      }
+
+      // Open System Settings for manual toggle
+      await openSystemSettings("accessibility", window.electronAPI?.openAccessibilitySettings);
+      return;
+    }
+
+    // On Windows, PowerShell SendKeys is always available
+    if (platform === "win32") {
+      setAccessibilityPermissionGranted(true);
+      return;
+    }
+
+    // On Linux, auto-paste is optional — grant regardless of paste tool availability
+    if (platform === "linux") {
+      await checkPasteToolsAvailability();
+      setAccessibilityPermissionGranted(true);
+    }
+  }, [openSystemSettings, checkPasteToolsAvailability, setAccessibilityPermissionGranted]);
+
   // Check paste tools on mount
   useEffect(() => {
     checkPasteToolsAvailability();
@@ -305,97 +330,6 @@ export const usePermissions = (
     return () => clearInterval(interval);
   }, [accessibilityPermissionGranted, setAccessibilityPermissionGranted]);
 
-  const testAccessibilityPermission = useCallback(async () => {
-    const platform = getPlatform();
-
-    // On macOS, actually test the accessibility permission
-    if (platform === "darwin") {
-      try {
-        await window.electronAPI.pasteText(t("hooks.permissions.accessibilityTestText"));
-        setAccessibilityPermissionGranted(true);
-      } catch (err) {
-        logger.error("Accessibility permission test failed:", err);
-        if (showAlertDialog) {
-          showAlertDialog({
-            title: t("hooks.permissions.titles.accessibilityNeeded"),
-            description: t("hooks.permissions.descriptions.accessibilityNeeded"),
-          });
-        } else {
-          alert(t("hooks.permissions.alerts.accessibilityNeeded"));
-        }
-      }
-      return;
-    }
-
-    // On Windows, PowerShell SendKeys is always available
-    if (platform === "win32") {
-      setAccessibilityPermissionGranted(true);
-      if (showAlertDialog) {
-        showAlertDialog({
-          title: t("hooks.permissions.titles.readyToGo"),
-          description: t("hooks.permissions.descriptions.windowsReady"),
-        });
-      }
-      return;
-    }
-
-    // On Linux, check if paste tools are available
-    if (platform === "linux") {
-      const result = await checkPasteToolsAvailability();
-
-      if (result?.available) {
-        setAccessibilityPermissionGranted(true);
-        if (showAlertDialog) {
-          const method = result.method || t("hooks.permissions.labels.defaultPasteTool");
-          const methodLabel =
-            result.isWayland && method === "xdotool"
-              ? t("hooks.permissions.labels.xdotoolXwayland")
-              : method;
-          showAlertDialog({
-            title: t("hooks.permissions.titles.readyToGo"),
-            description: t("hooks.permissions.descriptions.linuxReadyWithMethod", {
-              method: methodLabel,
-            }),
-          });
-        }
-      } else {
-        // Don't block, but inform the user
-        const isWayland = result?.isWayland;
-        const xwaylandAvailable = result?.xwaylandAvailable;
-        const recommendedTool = result?.recommendedInstall;
-        const installCmd =
-          recommendedTool === "wtype"
-            ? "sudo dnf install wtype  # Fedora\nsudo apt install wtype  # Debian/Ubuntu"
-            : "sudo apt install xdotool  # Debian/Ubuntu/Mint\nsudo dnf install xdotool  # Fedora";
-
-        if (showAlertDialog) {
-          if (isWayland && !xwaylandAvailable && !recommendedTool) {
-            showAlertDialog({
-              title: t("hooks.permissions.titles.waylandClipboardMode"),
-              description: t("hooks.permissions.descriptions.waylandClipboardMode"),
-            });
-          } else {
-            const waylandNote = isWayland
-              ? recommendedTool === "wtype"
-                ? t("hooks.permissions.notes.waylandWtype")
-                : t("hooks.permissions.notes.waylandXwaylandOnly")
-              : "";
-            showAlertDialog({
-              title: t("hooks.permissions.titles.optionalPasteTool"),
-              description: t("hooks.permissions.descriptions.optionalPasteTool", {
-                tool: recommendedTool || t("hooks.permissions.labels.defaultPasteTool"),
-                installCmd,
-                waylandNote,
-              }),
-            });
-          }
-        }
-        // Still allow proceeding - this is optional
-        setAccessibilityPermissionGranted(true);
-      }
-    }
-  }, [showAlertDialog, checkPasteToolsAvailability, setAccessibilityPermissionGranted, t]);
-
   return {
     micPermissionGranted,
     accessibilityPermissionGranted,
@@ -404,11 +338,10 @@ export const usePermissions = (
     isCheckingPasteTools,
     accessibilityTroubleshooting,
     requestMicPermission,
-    testAccessibilityPermission,
+    requestAccessibilityPermission,
     checkPasteToolsAvailability,
     openMicPrivacySettings,
     openSoundInputSettings,
-    openAccessibilitySettings,
     setMicPermissionGranted,
     setAccessibilityPermissionGranted,
   };

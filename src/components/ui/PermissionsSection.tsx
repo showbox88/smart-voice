@@ -11,7 +11,6 @@ interface PermissionsSectionProps {
     granted: boolean;
     mode: "native" | "unsupported";
     request: () => Promise<boolean>;
-    openSettings: () => Promise<void>;
   };
 }
 
@@ -29,7 +28,7 @@ export default function PermissionsSection({ permissions, systemAudio }: Permiss
           description={t("onboarding.permissions.microphoneDescription")}
           granted={permissions.micPermissionGranted}
           onRequest={permissions.requestMicPermission}
-          buttonText={t("onboarding.permissions.grant")}
+          buttonText={t("onboarding.permissions.grantAccess")}
         />
 
         {isMacOS && (
@@ -39,10 +38,8 @@ export default function PermissionsSection({ permissions, systemAudio }: Permiss
               title={t("onboarding.permissions.accessibilityTitle")}
               description={t("onboarding.permissions.accessibilityDescription")}
               granted={permissions.accessibilityPermissionGranted}
-              onRequest={permissions.testAccessibilityPermission}
-              buttonText={t("onboarding.permissions.testAndGrant")}
-              onOpenSettings={permissions.openAccessibilitySettings}
-              openSettingsText={t("onboarding.permissions.openSystemSettings")}
+              onRequest={permissions.requestAccessibilityPermission}
+              buttonText={t("onboarding.permissions.grantAccess")}
               badge={t("onboarding.permissions.recommended")}
               hint={
                 permissions.accessibilityTroubleshooting
@@ -57,8 +54,7 @@ export default function PermissionsSection({ permissions, systemAudio }: Permiss
                 description={t("onboarding.permissions.systemAudioDescription")}
                 granted={systemAudio.granted}
                 onRequest={systemAudio.request}
-                buttonText={t("onboarding.permissions.grant")}
-                onOpenSettings={systemAudio.openSettings}
+                buttonText={t("onboarding.permissions.grantAccess")}
                 badge={t("onboarding.permissions.optional")}
               />
             )}
