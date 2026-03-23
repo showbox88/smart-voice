@@ -12,6 +12,7 @@ interface PermissionCardProps {
   onOpenSettings?: () => void;
   badge?: string;
   openSettingsText?: string;
+  hint?: string;
 }
 
 export default function PermissionCard({
@@ -24,6 +25,7 @@ export default function PermissionCard({
   onOpenSettings,
   badge,
   openSettingsText,
+  hint,
 }: PermissionCardProps) {
   return (
     <div
@@ -93,6 +95,11 @@ export default function PermissionCard({
           </div>
         )}
       </div>
+
+      {/* Troubleshooting hint */}
+      {hint && !granted && (
+        <p className="text-[11px] text-warning/80 leading-snug mt-2 pl-11">{hint}</p>
+      )}
     </div>
   );
 }

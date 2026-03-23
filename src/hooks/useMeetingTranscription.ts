@@ -4,10 +4,20 @@ import { isBuiltInMicrophone } from "../utils/audioDeviceUtils";
 import { getSystemAudioStream } from "../utils/systemAudio";
 import logger from "../utils/logger";
 
+export interface TranscriptSegment {
+  id: string;
+  text: string;
+  source: "mic" | "system";
+  timestamp?: number;
+}
+
 interface UseMeetingTranscriptionReturn {
   isRecording: boolean;
   transcript: string;
   partialTranscript: string;
+  segments: TranscriptSegment[];
+  micPartial: string;
+  systemPartial: string;
   error: string | null;
   prepareTranscription: () => Promise<void>;
   startTranscription: () => Promise<void>;
@@ -83,7 +93,7 @@ const getMeetingMicConstraints = async (): Promise<MediaStreamConstraints> => {
   const micProcessing = {
     echoCancellation: false,
     noiseSuppression: false,
-    autoGainControl: true,
+    autoGainControl: false,
   };
 
   if (preferBuiltInMic) {
@@ -172,6 +182,20 @@ const createAudioPipeline = async ({
   return { source, processor };
 };
 
+/**
+ * Detach an AudioContext from hardware output to avoid Bluetooth routing issues.
+ * When BT headphones become the default output, the AudioContext can stall due to
+ * HFP sample-rate mismatches. Using a "none" sink keeps processing running without
+ * coupling to any physical device.
+ */
+const detachFromOutputDevice = async (ctx: AudioContext) => {
+  if ("setSinkId" in ctx) {
+    try {
+      await (ctx as any).setSinkId({ type: "none" });
+    } catch {}
+  }
+};
+
 const flushAndDisconnectProcessor = async (processor: AudioWorkletNode | null) => {
   if (!processor) return;
 
@@ -186,12 +210,15 @@ const flushAndDisconnectProcessor = async (processor: AudioWorkletNode | null) =
   processor.disconnect();
 };
 
-// getSystemAudioStream imported from ../utils/systemAudio
+let segmentCounter = 0;
 
 export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [partialTranscript, setPartialTranscript] = useState("");
+  const [segments, setSegments] = useState<TranscriptSegment[]>([]);
+  const [micPartial, setMicPartial] = useState("");
+  const [systemPartial, setSystemPartial] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -207,59 +234,40 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
   const isPreparedRef = useRef(false);
   const preparePromiseRef = useRef<Promise<void> | null>(null);
   const ipcCleanupsRef = useRef<Array<() => void>>([]);
+  const pendingCleanupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cleanup = useCallback(async () => {
-    if (processorRef.current) {
-      await flushAndDisconnectProcessor(processorRef.current);
-      processorRef.current = null;
-    }
+    const processors = [processorRef, micProcessorRef];
+    const sources = [sourceRef, micSourceRef];
+    const streams = [streamRef, micStreamRef];
+    const contexts = [audioContextRef, micContextRef];
 
-    if (sourceRef.current) {
-      sourceRef.current.disconnect();
-      sourceRef.current = null;
+    for (const ref of processors) {
+      await flushAndDisconnectProcessor(ref.current);
+      ref.current = null;
     }
-
-    if (micProcessorRef.current) {
-      await flushAndDisconnectProcessor(micProcessorRef.current);
-      micProcessorRef.current = null;
+    for (const ref of sources) {
+      ref.current?.disconnect();
+      ref.current = null;
     }
-
-    if (micSourceRef.current) {
-      micSourceRef.current.disconnect();
-      micSourceRef.current = null;
-    }
-
-    if (streamRef.current) {
+    for (const ref of streams) {
       try {
-        streamRef.current.getTracks().forEach((t) => t.stop());
+        ref.current?.getTracks().forEach((t) => t.stop());
       } catch {}
-      streamRef.current = null;
+      ref.current = null;
     }
-
-    if (micStreamRef.current) {
+    for (const ref of contexts) {
       try {
-        micStreamRef.current.getTracks().forEach((t) => t.stop());
+        await ref.current?.close();
       } catch {}
-      micStreamRef.current = null;
-    }
-
-    if (audioContextRef.current) {
-      try {
-        await audioContextRef.current.close();
-      } catch {}
-      audioContextRef.current = null;
-    }
-
-    if (micContextRef.current) {
-      try {
-        await micContextRef.current.close();
-      } catch {}
-      micContextRef.current = null;
+      ref.current = null;
     }
 
     ipcCleanupsRef.current.forEach((fn) => fn());
     ipcCleanupsRef.current = [];
     isPreparedRef.current = false;
+    isRecordingRef.current = false;
+    isStartingRef.current = false;
   }, []);
 
   const stopTranscription = useCallback(async () => {
@@ -295,7 +303,7 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
     if (isPreparedRef.current || isRecordingRef.current || isStartingRef.current) return;
     if (preparePromiseRef.current) return; // already preparing
 
-    logger.info("Meeting transcription preparing (pre-warming WebSocket)...", {}, "meeting");
+    logger.info("Meeting transcription preparing (pre-warming WebSockets)...", {}, "meeting");
 
     const promise = (async () => {
       try {
@@ -335,6 +343,9 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
     logger.info("Meeting transcription starting...", {}, "meeting");
     setTranscript("");
     setPartialTranscript("");
+    setSegments([]);
+    setMicPartial("");
+    setSystemPartial("");
     setError(null);
 
     // Set recording state immediately for instant UI feedback
@@ -401,16 +412,52 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
       }
       streamRef.current = stream;
 
-      const partialCleanup = window.electronAPI?.onMeetingTranscriptionPartial?.((text) => {
-        setPartialTranscript(text);
-      });
-      if (partialCleanup) ipcCleanupsRef.current.push(partialCleanup);
+      const partialSetters = { mic: setMicPartial, system: setSystemPartial };
 
-      const finalCleanup = window.electronAPI?.onMeetingTranscriptionFinal?.((text) => {
-        setTranscript(text);
-        setPartialTranscript("");
-      });
-      if (finalCleanup) ipcCleanupsRef.current.push(finalCleanup);
+      const segmentCleanup = window.electronAPI?.onMeetingTranscriptionSegment?.(
+        (data: {
+          text: string;
+          source: "mic" | "system";
+          type: "partial" | "final";
+          timestamp?: number;
+        }) => {
+          logger.debug(
+            "Meeting segment received in renderer",
+            {
+              source: data.source,
+              type: data.type,
+              text: data.text?.slice(0, 80),
+            },
+            "meeting"
+          );
+          const setPartialForSource = partialSetters[data.source];
+
+          if (data.type === "partial") {
+            setPartialForSource(data.text);
+            setPartialTranscript(data.text);
+          } else {
+            const seg: TranscriptSegment = {
+              id: `seg-${++segmentCounter}`,
+              text: data.text,
+              source: data.source,
+              timestamp: data.timestamp,
+            };
+            setSegments((prev) => {
+              // Insert in chronological order — scan from the end since most
+              // segments arrive in order and this is O(1) in the common case.
+              const ts = seg.timestamp ?? Infinity;
+              let i = prev.length;
+              while (i > 0 && (prev[i - 1].timestamp ?? 0) > ts) i--;
+              if (i === prev.length) return [...prev, seg];
+              return [...prev.slice(0, i), seg, ...prev.slice(i)];
+            });
+            setPartialForSource("");
+            setTranscript((prev) => (prev ? prev + " " + data.text : data.text));
+            setPartialTranscript("");
+          }
+        }
+      );
+      if (segmentCleanup) ipcCleanupsRef.current.push(segmentCleanup);
 
       const errorCleanup = window.electronAPI?.onMeetingTranscriptionError?.((err) => {
         setError(err);
@@ -418,11 +465,25 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
       });
       if (errorCleanup) ipcCleanupsRef.current.push(errorCleanup);
 
-      const pendingAudioChunks: ArrayBuffer[] = [];
+      const pendingSystemChunks: ArrayBuffer[] = [];
+      const pendingMicChunks: ArrayBuffer[] = [];
       let socketReady = false;
 
-      const audioContext = new AudioContext({ sampleRate: 24000 });
+      // Use the loopback stream's native sample rate for the system AudioContext.
+      // System audio loopback produces silence when forced through a 24kHz
+      // AudioContext — the resampling path differs from getUserMedia and doesn't
+      // work correctly for loopback sources.
+      const loopbackRate = stream.getAudioTracks()[0]?.getSettings()?.sampleRate || 48000;
+      const systemNeedsResample = loopbackRate !== 24000;
+      const audioContext = new AudioContext({ sampleRate: loopbackRate });
+      await detachFromOutputDevice(audioContext);
       audioContextRef.current = audioContext;
+
+      logger.debug(
+        "System audio context created",
+        { loopbackRate, needsResample: systemNeedsResample },
+        "meeting"
+      );
 
       const systemPipelinePromise = createAudioPipeline({
         stream,
@@ -430,20 +491,25 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
         label: "Meeting system",
         onChunk: (chunk) => {
           if (!isRecordingRef.current) return;
-          const samples = new Int16Array(chunk);
-          let hasSignal = false;
-          for (let i = 0; i < samples.length; i++) {
-            if (samples[i] !== 0) {
-              hasSignal = true;
-              break;
+          let samples = new Int16Array(chunk);
+
+          // Downsample to 24kHz for the OpenAI Realtime API
+          if (systemNeedsResample) {
+            const ratio = loopbackRate / 24000;
+            const outLen = Math.floor(samples.length / ratio);
+            const out = new Int16Array(outLen);
+            for (let i = 0; i < outLen; i++) {
+              out[i] = samples[Math.round(i * ratio)];
             }
+            samples = out;
           }
-          if (!hasSignal) return;
+
+          const buf = samples.buffer;
           if (socketReady) {
-            window.electronAPI?.meetingTranscriptionSend?.(chunk);
+            window.electronAPI?.meetingTranscriptionSend?.(buf, "system");
             return;
           }
-          pendingAudioChunks.push(chunk.slice(0));
+          pendingSystemChunks.push(buf.slice(0) as ArrayBuffer);
         },
       });
 
@@ -451,6 +517,7 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
       if (micResult) {
         micStreamRef.current = micResult;
         const micContext = new AudioContext({ sampleRate: 24000 });
+        await detachFromOutputDevice(micContext);
         micContextRef.current = micContext;
 
         micPipelinePromise = createAudioPipeline({
@@ -460,10 +527,10 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
           onChunk: (chunk) => {
             if (!isRecordingRef.current) return;
             if (socketReady) {
-              window.electronAPI?.meetingTranscriptionSend?.(chunk);
+              window.electronAPI?.meetingTranscriptionSend?.(chunk, "mic");
               return;
             }
-            pendingAudioChunks.push(chunk.slice(0));
+            pendingMicChunks.push(chunk.slice(0));
           },
         }).then(({ source, processor }) => {
           micSourceRef.current = source;
@@ -505,15 +572,18 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
       isStartingRef.current = false;
       socketReady = true;
 
-      for (const chunk of pendingAudioChunks) {
-        window.electronAPI?.meetingTranscriptionSend?.(chunk);
+      for (const chunk of pendingSystemChunks) {
+        window.electronAPI?.meetingTranscriptionSend?.(chunk, "system");
+      }
+      for (const chunk of pendingMicChunks) {
+        window.electronAPI?.meetingTranscriptionSend?.(chunk, "mic");
       }
 
       const totalMs = performance.now() - startTime;
       logger.info(
         "Meeting transcription started successfully",
         {
-          bufferedChunks: pendingAudioChunks.length,
+          bufferedChunks: pendingSystemChunks.length + pendingMicChunks.length,
           streamsMs: Math.round(streamsMs),
           totalMs: Math.round(totalMs),
           wasPrepared: isPreparedRef.current,
@@ -538,11 +608,20 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
   }, []);
 
   useEffect(() => {
+    // Cancel any pending cleanup from a previous StrictMode unmount — the component remounted,
+    // so the in-flight startTranscription from the prior mount should keep running.
+    if (pendingCleanupRef.current) {
+      clearTimeout(pendingCleanupRef.current);
+      pendingCleanupRef.current = null;
+    }
+
     return () => {
-      // Don't reset isRecordingRef here — StrictMode double-mount would abort in-flight setup
-      if (isRecordingRef.current) {
+      // Defer cleanup to next tick so StrictMode remount can cancel it.
+      // On real unmount, the timeout fires and tears everything down.
+      pendingCleanupRef.current = setTimeout(() => {
+        pendingCleanupRef.current = null;
         void cleanup();
-      }
+      }, 0);
     };
   }, [cleanup]);
 
@@ -550,6 +629,9 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
     isRecording,
     transcript,
     partialTranscript,
+    segments,
+    micPartial,
+    systemPartial,
     error,
     prepareTranscription,
     startTranscription,

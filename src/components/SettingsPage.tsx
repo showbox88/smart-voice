@@ -51,7 +51,7 @@ import { useDialogs } from "../hooks/useDialogs";
 import { useAgentName } from "../utils/agentName";
 import { useWhisper } from "../hooks/useWhisper";
 import { usePermissions } from "../hooks/usePermissions";
-import { useScreenRecordingPermission } from "../hooks/useScreenRecordingPermission";
+import { useSystemAudioPermission } from "../hooks/useSystemAudioPermission";
 import { useClipboard } from "../hooks/useClipboard";
 import { useUpdater } from "../hooks/useUpdater";
 
@@ -59,7 +59,7 @@ import PromptStudio from "./ui/PromptStudio";
 import ReasoningModelSelector from "./ReasoningModelSelector";
 import { HotkeyInput } from "./ui/HotkeyInput";
 import { useHotkeyRegistration } from "../hooks/useHotkeyRegistration";
-import { getValidationMessage } from "../utils/hotkeyValidator";
+import { getValidationMessage, normalizeHotkey } from "../utils/hotkeyValidator";
 import { getPlatform, getCachedPlatform } from "../utils/platform";
 import { getDefaultHotkey, formatHotkeyLabel } from "../utils/hotkeys";
 import { ActivationModeSelector } from "./ui/ActivationModeSelector";
@@ -711,10 +711,13 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
     setTelemetryEnabled,
     audioRetentionDays,
     setAudioRetentionDays,
+    dataRetentionEnabled,
+    setDataRetentionEnabled,
     customDictionary,
     setCustomDictionary,
   } = useSettings();
 
+  const agentKey = useSettingsStore((s) => s.agentKey);
   const meetingAudioDetection = useSettingsStore((s) => s.meetingAudioDetection);
   const setMeetingAudioDetection = useSettingsStore((s) => s.setMeetingAudioDetection);
 
@@ -749,7 +752,7 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
 
   const whisperHook = useWhisper();
   const permissionsHook = usePermissions(showAlertDialog);
-  const screenRecording = useScreenRecordingPermission();
+  const systemAudio = useSystemAudioPermission();
   useClipboard(showAlertDialog);
   const { agentName, setAgentName } = useAgentName();
   const [agentNameInput, setAgentNameInput] = useState(agentName);
@@ -881,9 +884,40 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
       registerFn: meetingRegisterFn,
     });
 
-  const validateHotkeyForInput = useCallback(
-    (hotkey: string) => getValidationMessage(hotkey, getPlatform()),
-    []
+  const validateDictationHotkey = useCallback(
+    (hotkey: string) => {
+      const formatError = getValidationMessage(hotkey, getPlatform());
+      if (formatError) return formatError;
+      const platform = getPlatform();
+      const normalized = normalizeHotkey(hotkey, platform);
+      if (meetingKey && normalizeHotkey(meetingKey, platform) === normalized) {
+        return t("hotkey.errors.slotConflict", {
+          slot: t("settingsPage.general.meetingHotkey.title"),
+        });
+      }
+      if (agentKey && normalizeHotkey(agentKey, platform) === normalized) {
+        return t("hotkey.errors.slotConflict", { slot: t("agentMode.settings.hotkey") });
+      }
+      return null;
+    },
+    [meetingKey, agentKey, t]
+  );
+
+  const validateMeetingHotkey = useCallback(
+    (hotkey: string) => {
+      const formatError = getValidationMessage(hotkey, getPlatform());
+      if (formatError) return formatError;
+      const platform = getPlatform();
+      const normalized = normalizeHotkey(hotkey, platform);
+      if (dictationKey && normalizeHotkey(dictationKey, platform) === normalized) {
+        return t("hotkey.errors.slotConflict", { slot: t("settingsPage.general.hotkey.title") });
+      }
+      if (agentKey && normalizeHotkey(agentKey, platform) === normalized) {
+        return t("hotkey.errors.slotConflict", { slot: t("agentMode.settings.hotkey") });
+      }
+      return null;
+    },
+    [dictationKey, agentKey, t]
   );
 
   const [isUsingNativeShortcut, setIsUsingNativeShortcut] = useState(false);
@@ -2741,7 +2775,7 @@ EOF`,
                       await registerHotkey(newHotkey);
                     }}
                     disabled={isHotkeyRegistering}
-                    validate={validateHotkeyForInput}
+                    validate={validateDictationHotkey}
                   />
                   {dictationKey && dictationKey !== getDefaultHotkey() && (
                     <button
@@ -2781,7 +2815,7 @@ EOF`,
                       await registerMeetingHotkey(newHotkey);
                     }}
                     disabled={isMeetingHotkeyRegistering}
-                    validate={validateHotkeyForInput}
+                    validate={validateMeetingHotkey}
                   />
                   {meetingKey && (
                     <button
@@ -3247,6 +3281,20 @@ EOF`,
               </SettingsPanel>
             </div>
 
+            {/* Data Retention */}
+            <div className="border-t border-border/40 pt-6">
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.privacy.dataRetention")}
+                    description={t("settingsPage.privacy.dataRetentionDescription")}
+                  >
+                    <Toggle checked={dataRetentionEnabled} onChange={setDataRetentionEnabled} />
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+
             {/* Permissions */}
             <div className="border-t border-border/40 pt-6">
               <SectionHeader
@@ -3278,12 +3326,12 @@ EOF`,
                     />
                     <PermissionCard
                       icon={Monitor}
-                      title={t("settingsPage.permissions.screenRecordingTitle")}
-                      description={t("settingsPage.permissions.screenRecordingDescription")}
-                      granted={screenRecording.granted}
-                      onRequest={screenRecording.request}
+                      title={t("settingsPage.permissions.systemAudioTitle")}
+                      description={t("settingsPage.permissions.systemAudioDescription")}
+                      granted={systemAudio.granted}
+                      onRequest={systemAudio.request}
                       buttonText={t("settingsPage.permissions.test")}
-                      onOpenSettings={screenRecording.openSettings}
+                      onOpenSettings={systemAudio.openSettings}
                       badge={t("settingsPage.permissions.optional")}
                     />
                   </>
@@ -3382,7 +3430,15 @@ EOF`,
                     <Button
                       onClick={async () => {
                         try {
-                          await checkForUpdates();
+                          const result = await checkForUpdates();
+                          if (result && !result.updateAvailable) {
+                            toast({
+                              title: t("settingsPage.general.updates.dialogs.noUpdates.title"),
+                              description: t(
+                                "settingsPage.general.updates.dialogs.noUpdates.description"
+                              ),
+                            });
+                          }
                         } catch {}
                       }}
                       disabled={checkingForUpdates || updateStatus.isDevelopment}

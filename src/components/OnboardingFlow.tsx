@@ -8,25 +8,21 @@ import {
   ChevronLeft,
   Check,
   Settings,
-  Mic,
   Shield,
   Command,
   UserCircle,
-  Monitor,
 } from "lucide-react";
 import TitleBar from "./TitleBar";
 import WindowControls from "./WindowControls";
-import PermissionCard from "./ui/PermissionCard";
+import PermissionsSection from "./ui/PermissionsSection";
 import SupportDropdown from "./ui/SupportDropdown";
-import MicPermissionWarning from "./ui/MicPermissionWarning";
-import PasteToolsInfo from "./ui/PasteToolsInfo";
 import StepProgress from "./ui/StepProgress";
 import { AlertDialog, ConfirmDialog } from "./ui/dialog";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useDialogs } from "../hooks/useDialogs";
 import { usePermissions } from "../hooks/usePermissions";
 import { useClipboard } from "../hooks/useClipboard";
-import { useScreenRecordingPermission } from "../hooks/useScreenRecordingPermission";
+import { useSystemAudioPermission } from "../hooks/useSystemAudioPermission";
 import { useSettings } from "../hooks/useSettings";
 import LanguageSelector from "./ui/LanguageSelector";
 import AuthenticationStep from "./AuthenticationStep";
@@ -41,6 +37,7 @@ import { getPlatform } from "../utils/platform";
 import logger from "../utils/logger";
 import { ActivationModeSelector } from "./ui/ActivationModeSelector";
 import TranscriptionModelPicker from "./TranscriptionModelPicker";
+import { areRequiredPermissionsMet } from "../utils/permissions";
 
 interface OnboardingFlowProps {
   onComplete: () => void;
@@ -126,7 +123,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const permissionsHook = usePermissions(showAlertDialog);
   useClipboard(showAlertDialog); // Initialize clipboard hook for permission checks
 
-  const screenRecording = useScreenRecordingPermission();
+  const systemAudio = useSystemAudioPermission();
 
   // For signed-in users, merge setup and permissions into one step
   const steps =
@@ -391,61 +388,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 <h3 className="text-sm font-medium text-foreground">
                   {t("onboarding.permissions.title")}
                 </h3>
-                <div className="space-y-1.5">
-                  <PermissionCard
-                    icon={Mic}
-                    title={t("onboarding.permissions.microphoneTitle")}
-                    description={t("onboarding.permissions.microphoneDescription")}
-                    granted={permissionsHook.micPermissionGranted}
-                    onRequest={permissionsHook.requestMicPermission}
-                    buttonText={t("onboarding.permissions.grant")}
-                  />
-
-                  {isMacOS && (
-                    <>
-                      <PermissionCard
-                        icon={Shield}
-                        title={t("onboarding.permissions.accessibilityTitle")}
-                        description={t("onboarding.permissions.accessibilityDescription")}
-                        granted={permissionsHook.accessibilityPermissionGranted}
-                        onRequest={permissionsHook.testAccessibilityPermission}
-                        buttonText={t("onboarding.permissions.testAndGrant")}
-                        onOpenSettings={permissionsHook.openAccessibilitySettings}
-                        openSettingsText={t("onboarding.permissions.openSystemSettings")}
-                      />
-                      <PermissionCard
-                        icon={Monitor}
-                        title={t("onboarding.permissions.screenRecordingTitle")}
-                        description={t("onboarding.permissions.screenRecordingDescription")}
-                        granted={screenRecording.granted}
-                        onRequest={screenRecording.request}
-                        buttonText={t("onboarding.permissions.grant")}
-                        onOpenSettings={screenRecording.openSettings}
-                        badge={t("onboarding.permissions.optional")}
-                      />
-                    </>
-                  )}
-                </div>
-
-                {/* Error state - only show when there's actually an issue */}
-                {!permissionsHook.micPermissionGranted && permissionsHook.micPermissionError && (
-                  <MicPermissionWarning
-                    error={permissionsHook.micPermissionError}
-                    onOpenSoundSettings={permissionsHook.openSoundInputSettings}
-                    onOpenPrivacySettings={permissionsHook.openMicPrivacySettings}
-                  />
-                )}
-
-                {/* Linux paste tools - only when needed */}
-                {platform === "linux" &&
-                  permissionsHook.pasteToolsInfo &&
-                  !permissionsHook.pasteToolsInfo.available && (
-                    <PasteToolsInfo
-                      pasteToolsInfo={permissionsHook.pasteToolsInfo}
-                      isChecking={permissionsHook.isCheckingPasteTools}
-                      onCheck={permissionsHook.checkPasteToolsAvailability}
-                    />
-                  )}
+                <PermissionsSection permissions={permissionsHook} systemAudio={systemAudio} />
               </div>
             </div>
           );
@@ -551,62 +494,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               </p>
             </div>
 
-            {/* Permission cards - tight stack */}
-            <div className="space-y-1.5">
-              <PermissionCard
-                icon={Mic}
-                title={t("onboarding.permissions.microphoneTitle")}
-                description={t("onboarding.permissions.microphoneDescription")}
-                granted={permissionsHook.micPermissionGranted}
-                onRequest={permissionsHook.requestMicPermission}
-                buttonText={t("onboarding.permissions.grant")}
-              />
-
-              {isMacOS && (
-                <>
-                  <PermissionCard
-                    icon={Shield}
-                    title={t("onboarding.permissions.accessibilityTitle")}
-                    description={t("onboarding.permissions.accessibilityDescription")}
-                    granted={permissionsHook.accessibilityPermissionGranted}
-                    onRequest={permissionsHook.testAccessibilityPermission}
-                    buttonText={t("onboarding.permissions.testAndGrant")}
-                    onOpenSettings={permissionsHook.openAccessibilitySettings}
-                    openSettingsText={t("onboarding.permissions.openSystemSettings")}
-                  />
-                  <PermissionCard
-                    icon={Monitor}
-                    title={t("onboarding.permissions.screenRecordingTitle")}
-                    description={t("onboarding.permissions.screenRecordingDescription")}
-                    granted={screenRecording.granted}
-                    onRequest={screenRecording.request}
-                    buttonText={t("onboarding.permissions.grant")}
-                    onOpenSettings={screenRecording.openSettings}
-                    badge={t("onboarding.permissions.optional")}
-                  />
-                </>
-              )}
-            </div>
-
-            {/* Error state - only show when there's actually an issue */}
-            {!permissionsHook.micPermissionGranted && permissionsHook.micPermissionError && (
-              <MicPermissionWarning
-                error={permissionsHook.micPermissionError}
-                onOpenSoundSettings={permissionsHook.openSoundInputSettings}
-                onOpenPrivacySettings={permissionsHook.openMicPrivacySettings}
-              />
-            )}
-
-            {/* Linux paste tools - only when needed */}
-            {platform === "linux" &&
-              permissionsHook.pasteToolsInfo &&
-              !permissionsHook.pasteToolsInfo.available && (
-                <PasteToolsInfo
-                  pasteToolsInfo={permissionsHook.pasteToolsInfo}
-                  isChecking={permissionsHook.isCheckingPasteTools}
-                  onCheck={permissionsHook.checkPasteToolsAvailability}
-                />
-              )}
+            <PermissionsSection permissions={permissionsHook} systemAudio={systemAudio} />
           </div>
         );
 
@@ -701,15 +589,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       case 1:
         // For signed-in users: Setup step includes permissions
         if (isSignedIn && !skipAuth) {
-          // Check permissions
-          if (!permissionsHook.micPermissionGranted) {
-            return false;
-          }
-          const currentPlatform = permissionsHook.pasteToolsInfo?.platform;
-          if (currentPlatform === "darwin") {
-            return permissionsHook.accessibilityPermissionGranted;
-          }
-          return true;
+          return areRequiredPermissionsMet(
+            permissionsHook.micPermissionGranted,
+            permissionsHook.accessibilityPermissionGranted,
+            permissionsHook.pasteToolsInfo?.platform
+          );
         }
 
         // For non-signed-in users: Setup - check if configuration is complete
@@ -738,14 +622,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         }
 
         // For non-signed-in users, this is permissions step
-        if (!permissionsHook.micPermissionGranted) {
-          return false;
-        }
-        const currentPlatform = permissionsHook.pasteToolsInfo?.platform;
-        if (currentPlatform === "darwin") {
-          return permissionsHook.accessibilityPermissionGranted;
-        }
-        return true;
+        return areRequiredPermissionsMet(
+          permissionsHook.micPermissionGranted,
+          permissionsHook.accessibilityPermissionGranted,
+          permissionsHook.pasteToolsInfo?.platform
+        );
       }
       case 3:
         return hotkey.trim() !== ""; // Activation step for non-signed-in users

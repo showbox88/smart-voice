@@ -76,14 +76,27 @@ if (process.platform === "win32") {
 }
 
 // Enable native Wayland support: Ozone platform for native rendering.
-// GlobalShortcutsPortal is intentionally omitted — GNOME uses its own
-// D-Bus shortcut manager, and on KDE the portal causes unwanted permission
-// dialogs while XWayland globalShortcut works fine without it.
+// KDE is forced to XWayland because globalShortcut doesn't work on native
+// Wayland without the GlobalShortcuts portal, and the portal causes unwanted
+// permission dialogs with broken hotkey registration.
+// GNOME and Hyprland use their own D-Bus shortcut managers so they're fine.
 if (process.platform === "linux" && process.env.XDG_SESSION_TYPE === "wayland") {
-  app.commandLine.appendSwitch("ozone-platform-hint", "auto");
+  const desktop = (process.env.XDG_CURRENT_DESKTOP || "").toLowerCase();
+  if (desktop.includes("kde")) {
+    app.commandLine.appendSwitch("ozone-platform-hint", "x11");
+  } else {
+    app.commandLine.appendSwitch("ozone-platform-hint", "auto");
+  }
+  app.commandLine.appendSwitch("enable-features", "UseOzonePlatform,WaylandWindowDecorations");
+}
+
+// Enable system audio loopback capture on macOS via CoreAudio Taps (Electron 39+).
+// Without these flags, getDisplayMedia({ audio: "loopback" }) returns a live audio track
+// that produces only silence (all-zero samples).
+if (process.platform === "darwin") {
   app.commandLine.appendSwitch(
     "enable-features",
-    "UseOzonePlatform,WaylandWindowDecorations"
+    "MacLoopbackAudioForScreenShare,MacSckSystemAudioLoopbackOverride,MacCatapSystemAudioLoopbackCapture"
   );
 }
 
@@ -279,6 +292,7 @@ function initializeCoreManagers() {
   );
   windowManager.meetingDetectionEngine = meetingDetectionEngine;
   updateManager = new UpdateManager();
+  updateManager.setWindowManager(windowManager);
   windowsKeyManager = new WindowsKeyManager();
   textEditMonitor = new TextEditMonitor();
   windowManager.textEditMonitor = textEditMonitor;
@@ -532,9 +546,7 @@ async function startApp() {
         names: sources.map((s) => s.name),
       });
       if (!sources.length) {
-        debugLogger.error(
-          "No screen sources available — Screen Recording permission may be denied"
-        );
+        debugLogger.error("No screen sources available — System Audio permission may be denied");
         callback({});
         return;
       }
@@ -601,18 +613,11 @@ async function startApp() {
 
   const savedAgentKey = environmentManager.getAgentKey?.() || "";
   if (savedAgentKey) {
-    hotkeyManager.registerSlot("agent", savedAgentKey, agentHotkeyCallback);
-  }
-
-  ipcMain.on("agent-hotkey-changed", (_event, hotkey) => {
-    if (hotkey) {
-      hotkeyManager.registerSlot("agent", hotkey, agentHotkeyCallback);
-      environmentManager.saveAgentKey(hotkey);
-    } else {
-      hotkeyManager.unregisterSlot("agent");
-      environmentManager.saveAgentKey("");
+    const result = await hotkeyManager.registerSlot("agent", savedAgentKey, agentHotkeyCallback);
+    if (!result.success) {
+      debugLogger.warn("Failed to restore agent hotkey", { hotkey: savedAgentKey }, "hotkey");
     }
-  });
+  }
 
   // Set up meeting mode hotkey
   const meetingHotkeyCallback = () => {
@@ -623,13 +628,21 @@ async function startApp() {
 
   const savedMeetingKey = environmentManager.getMeetingKey?.() || "";
   if (savedMeetingKey) {
-    const result = hotkeyManager.registerSlot("meeting", savedMeetingKey, meetingHotkeyCallback);
-    debugLogger.info("Meeting hotkey startup registration", { savedMeetingKey, ...result }, "meeting");
+    const result = await hotkeyManager.registerSlot(
+      "meeting",
+      savedMeetingKey,
+      meetingHotkeyCallback
+    );
+    debugLogger.info(
+      "Meeting hotkey startup registration",
+      { savedMeetingKey, ...result },
+      "meeting"
+    );
   }
 
-  ipcMain.handle("register-meeting-hotkey", (_event, hotkey) => {
+  ipcMain.handle("register-meeting-hotkey", async (_event, hotkey) => {
     if (hotkey) {
-      const result = hotkeyManager.registerSlot("meeting", hotkey, meetingHotkeyCallback);
+      const result = await hotkeyManager.registerSlot("meeting", hotkey, meetingHotkeyCallback);
       if (result.success) {
         environmentManager.saveMeetingKey(hotkey);
         return { success: true };

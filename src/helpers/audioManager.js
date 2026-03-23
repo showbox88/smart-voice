@@ -225,20 +225,29 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     if (REALTIME_MODELS.has(cloudTranscriptionModel)) {
       return STREAMING_PROVIDERS["openai-realtime"];
     }
-    const providerName = this.sttConfig?.streamingProvider || "deepgram";
-    return STREAMING_PROVIDERS[providerName] || STREAMING_PROVIDERS.deepgram;
+    const defaultProvider = this.context === "notes" ? "deepgram" : "openai-realtime";
+    const providerName = this.sttConfig?.streamingProvider || defaultProvider;
+    return STREAMING_PROVIDERS[providerName] || STREAMING_PROVIDERS[defaultProvider];
+  }
+
+  getStreamingProviderName() {
+    const defaultProvider = this.context === "notes" ? "deepgram" : "openai-realtime";
+    return this.sttConfig?.streamingProvider || defaultProvider;
   }
 
   async getAudioConstraints() {
     const { preferBuiltInMic: preferBuiltIn, selectedMicDeviceId: selectedDeviceId } =
       getSettings();
 
-    // AGC enabled to boost quiet/soft speech — essential for low-volume voice recognition.
-    // Echo cancellation and noise suppression stay off to avoid latency and speech distortion.
+    // All browser audio processing disabled to avoid OS-level side-effects.
+    // AGC off: Chromium's AGC on Windows mutates the system mic volume via WASAPI (#476).
+    // Echo cancellation and noise suppression off to avoid latency and speech distortion.
+    // Stereo recording required — mono WebM breaks silence detection on Linux/PipeWire (#472).
     const noProcessing = {
       echoCancellation: false,
       noiseSuppression: false,
-      autoGainControl: true,
+      autoGainControl: false,
+      channelCount: 2,
     };
 
     if (preferBuiltIn) {
@@ -1926,6 +1935,13 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   }
 
   async saveTranscription(text, rawText = null) {
+    if (!getSettings().dataRetentionEnabled) {
+      logger.debug("Skipping transcription save — data retention disabled", {}, "audio");
+      this.lastAudioBlob = null;
+      this.lastAudioMetadata = null;
+      return true;
+    }
+
     try {
       const result = await window.electronAPI.saveTranscription(text, rawText);
 
@@ -1953,6 +1969,13 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   }
 
   async saveFailedTranscription(errorMessage, metadata = {}) {
+    if (!getSettings().dataRetentionEnabled) {
+      logger.debug("Skipping failed transcription save — data retention disabled", {}, "audio");
+      this.lastAudioBlob = null;
+      this.lastAudioMetadata = null;
+      return;
+    }
+
     try {
       const result = await window.electronAPI.saveTranscription("", null, {
         status: "failed",
@@ -2005,6 +2028,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   shouldUseStreaming(isSignedInOverride) {
     const s = getSettings();
     if (s.useLocalWhisper) return false;
+
+    // For dictation/agent: respect sttConfig mode from the API — this allows
+    // batch mode even for realtime-capable models (e.g. gpt-4o-mini-transcribe).
+    if (this.context !== "notes" && this.sttConfig?.dictation?.mode === "batch") {
+      return false;
+    }
 
     if (REALTIME_MODELS.has(s.cloudTranscriptionModel)) {
       if (s.cloudTranscriptionMode === "byok") return !!s.openaiApiKey;
@@ -2498,7 +2527,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
               customPrompt: this.getCustomPrompt(),
               language: stSettings.preferredLanguage || "auto",
               locale: stSettings.uiLanguage || "en",
-              sttProvider: this.sttConfig?.streamingProvider || "deepgram",
+              sttProvider: this.getStreamingProviderName(),
               sttModel: streamingSttModel,
               sttProcessingMs: streamingSttProcessingMs,
               sttWordCount: streamingSttWordCount,
@@ -2585,14 +2614,14 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         durationMs: durationSeconds
           ? Math.round(durationSeconds * 1000)
           : Math.round(tBeforePaste - t0),
-        provider: `${this.sttConfig?.streamingProvider || "deepgram"}-streaming`,
+        provider: `${this.getStreamingProviderName()}-streaming`,
         model: streamingSttModel || null,
       };
       this.onTranscriptionComplete?.({
         success: true,
         text: finalText,
         rawText: finalText,
-        source: `${this.sttConfig?.streamingProvider || "deepgram"}-streaming`,
+        source: `${this.getStreamingProviderName()}-streaming`,
       });
 
       if (!usedBatchFallback) {
@@ -2604,7 +2633,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
                 durationSeconds ?? 0,
                 {
                   sendLogs: !usedCloudReasoning,
-                  sttProvider: this.sttConfig?.streamingProvider || "deepgram",
+                  sttProvider: this.getStreamingProviderName(),
                   sttModel: streamingSttModel,
                   sttProcessingMs: streamingSttProcessingMs,
                   sttLanguage: streamingSttLanguage,

@@ -10,16 +10,20 @@ import { ToastProvider } from "./components/ui/Toast.tsx";
 import { SettingsProvider } from "./hooks/useSettings";
 import { useTheme } from "./hooks/useTheme";
 import { useAuth } from "./hooks/useAuth";
+import { areRequiredPermissionsMet } from "./utils/permissions";
 import i18n from "./i18n";
 import "./index.css";
 
 const controlPanelImport = () => import("./components/ControlPanel.tsx");
 const onboardingFlowImport = () => import("./components/OnboardingFlow.tsx");
 const agentOverlayImport = () => import("./components/AgentOverlay.tsx");
+const permissionsGateImport = () => import("./components/PermissionsGate.tsx");
 const ControlPanel = React.lazy(controlPanelImport);
 const OnboardingFlow = React.lazy(onboardingFlowImport);
 const AgentOverlay = React.lazy(agentOverlayImport);
+const PermissionsGate = React.lazy(permissionsGateImport);
 import MeetingNotificationOverlay from "./components/MeetingNotificationOverlay.tsx";
+import UpdateNotificationOverlay from "./components/UpdateNotificationOverlay.tsx";
 
 let root = null;
 
@@ -273,20 +277,25 @@ if (!isOAuthBrowserRedirect()) {
 
 function AppRouter() {
   useTheme();
-  const isMeetingNotification = window.location.search.includes("meeting-notification=true");
+  const params = window.location.search;
 
-  if (isMeetingNotification) {
+  if (params.includes("meeting-notification=true")) {
     return <MeetingNotificationOverlay />;
+  }
+
+  if (params.includes("update-notification=true")) {
+    return <UpdateNotificationOverlay />;
   }
 
   return <MainApp />;
 }
 
 function MainApp() {
-  const { isSignedIn, isLoaded: authLoaded } = useAuth();
+  const { isSignedIn, isGracePeriodOnly, isLoaded: authLoaded } = useAuth();
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [needsReauth, setNeedsReauth] = useState(false);
+  const [needsPermissions, setNeedsPermissions] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const isAgentPanel = window.location.search.includes("agent=true");
@@ -301,6 +310,7 @@ function MainApp() {
       agentOverlayImport().catch(() => {});
     } else if (isControlPanel) {
       controlPanelImport().catch(() => {});
+      permissionsGateImport().catch(() => {});
       if (!localStorage.getItem("onboardingCompleted")) {
         onboardingFlowImport().catch(() => {});
       }
@@ -315,8 +325,11 @@ function MainApp() {
       localStorage.getItem("authenticationSkipped") === "true" ||
       localStorage.getItem("skipAuth") === "true";
 
-    // Valid session proves prior onboarding — restore flag if localStorage was wiped
-    const isReturningUser = !onboardingCompleted && isSignedIn;
+    // Actual session (not OAuth grace period) proves prior onboarding — restore flag if localStorage was wiped.
+    // Guard with onboardingInProgress so first-time users mid-onboarding don't get auto-completed.
+    const onboardingInProgress = localStorage.getItem("onboardingCurrentStep") !== null;
+    const isReturningUser =
+      !onboardingCompleted && isSignedIn && !isGracePeriodOnly && !onboardingInProgress;
     if (isReturningUser) {
       localStorage.setItem("onboardingCompleted", "true");
     }
@@ -328,12 +341,14 @@ function MainApp() {
         setShowOnboarding(true);
       } else if (!isSignedIn && !authSkipped) {
         setNeedsReauth(true);
-      }
-
-      // Returning users who skipped onboarding may lack accessibility permissions.
-      // Trigger an immediate check so the main process sends accessibility-missing.
-      if (isReturningUser) {
-        window.electronAPI?.checkAccessibilityTrusted?.();
+      } else {
+        // Check permissions from localStorage — PermissionsGate does the real async checks
+        const platform = window.electronAPI?.getPlatform?.() ?? "darwin";
+        const micOk = localStorage.getItem("micPermissionGranted") === "true";
+        const accessibilityOk = localStorage.getItem("accessibilityPermissionGranted") === "true";
+        if (!areRequiredPermissionsMet(micOk, accessibilityOk, platform)) {
+          setNeedsPermissions(true);
+        }
       }
     }
 
@@ -346,11 +361,16 @@ function MainApp() {
     }
 
     setIsLoading(false);
-  }, [isControlPanel, isDictationPanel, isSignedIn, authLoaded]);
+  }, [isControlPanel, isDictationPanel, isSignedIn, isGracePeriodOnly, authLoaded]);
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
+    setNeedsPermissions(false); // onboarding already handled permissions
     localStorage.setItem("onboardingCompleted", "true");
+  };
+
+  const handlePermissionsComplete = () => {
+    setNeedsPermissions(false);
   };
 
   if (isAgentPanel) {
@@ -409,6 +429,15 @@ function MainApp() {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // Returning user missing permissions (new machine, re-auth, etc.)
+  if (isControlPanel && needsPermissions) {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <PermissionsGate onComplete={handlePermissionsComplete} />
+      </Suspense>
     );
   }
 

@@ -447,6 +447,7 @@ declare global {
 
       // Clipboard operations
       checkAccessibilityPermission: (silent?: boolean) => Promise<boolean>;
+      promptAccessibilityPermission: () => Promise<boolean>;
       readClipboard: () => Promise<string>;
       writeClipboard: (text: string) => Promise<{ success: boolean }>;
       checkPasteTools: () => Promise<PasteToolsResult>;
@@ -731,11 +732,11 @@ declare global {
 
       // System settings helpers
       requestMicrophoneAccess?: () => Promise<{ granted: boolean }>;
-      checkScreenRecordingAccess?: () => Promise<{ granted: boolean }>;
+      checkSystemAudioAccess?: () => Promise<{ granted: boolean }>;
       openMicrophoneSettings?: () => Promise<{ success: boolean; error?: string }>;
       openSoundInputSettings?: () => Promise<{ success: boolean; error?: string }>;
       openAccessibilitySettings?: () => Promise<{ success: boolean; error?: string }>;
-      openScreenRecordingSettings?: () => Promise<{ success: boolean; error?: string }>;
+      openSystemAudioSettings?: () => Promise<{ success: boolean; error?: string }>;
       toggleMediaPlayback?: () => Promise<boolean>;
       pauseMediaPlayback?: () => Promise<boolean>;
       resumeMediaPlayback?: () => Promise<boolean>;
@@ -969,7 +970,7 @@ declare global {
       }>;
 
       // Agent Mode
-      notifyAgentHotkeyChanged?: (hotkey: string) => void;
+      updateAgentHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
       getAgentKey?: () => Promise<string>;
       saveAgentKey?: (key: string) => Promise<void>;
       createAgentConversation?: (title: string) => Promise<{
@@ -1146,7 +1147,7 @@ declare global {
         error?: string;
       }>;
 
-      // Meeting transcription (streaming)
+      // Meeting transcription (streaming, dual-channel)
       meetingTranscriptionPrepare?: (options: {
         provider?: string;
         model?: string;
@@ -1157,14 +1158,19 @@ declare global {
         model?: string;
         language?: string;
       }) => Promise<{ success: boolean; error?: string }>;
-      meetingTranscriptionSend?: (buffer: ArrayBuffer) => void;
+      meetingTranscriptionSend?: (buffer: ArrayBuffer, source: "mic" | "system") => void;
       meetingTranscriptionStop?: () => Promise<{
         success: boolean;
         transcript?: string;
         error?: string;
       }>;
-      onMeetingTranscriptionPartial?: (callback: (text: string) => void) => () => void;
-      onMeetingTranscriptionFinal?: (callback: (text: string) => void) => () => void;
+      onMeetingTranscriptionSegment?: (
+        callback: (data: {
+          text: string;
+          source: "mic" | "system";
+          type: "partial" | "final";
+        }) => void
+      ) => () => void;
       onMeetingTranscriptionError?: (callback: (error: string) => void) => () => void;
 
       // Dictation realtime streaming

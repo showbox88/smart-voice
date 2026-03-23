@@ -170,6 +170,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Clipboard functions
   checkAccessibilityPermission: (silent) =>
     ipcRenderer.invoke("check-accessibility-permission", silent),
+  promptAccessibilityPermission: () =>
+    ipcRenderer.invoke("prompt-accessibility-permission"),
   readClipboard: () => ipcRenderer.invoke("read-clipboard"),
   writeClipboard: (text) => ipcRenderer.invoke("write-clipboard", text),
   checkPasteTools: () => ipcRenderer.invoke("check-paste-tools"),
@@ -360,11 +362,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // System settings helpers for microphone/audio permissions
   requestMicrophoneAccess: () => ipcRenderer.invoke("request-microphone-access"),
-  checkScreenRecordingAccess: () => ipcRenderer.invoke("check-screen-recording-access"),
+  checkSystemAudioAccess: () => ipcRenderer.invoke("check-system-audio-access"),
   openMicrophoneSettings: () => ipcRenderer.invoke("open-microphone-settings"),
   openSoundInputSettings: () => ipcRenderer.invoke("open-sound-input-settings"),
   openAccessibilitySettings: () => ipcRenderer.invoke("open-accessibility-settings"),
-  openScreenRecordingSettings: () => ipcRenderer.invoke("open-screen-recording-settings"),
+  openSystemAudioSettings: () => ipcRenderer.invoke("open-system-audio-settings"),
   toggleMediaPlayback: () => ipcRenderer.invoke("toggle-media-playback"),
   pauseMediaPlayback: () => ipcRenderer.invoke("pause-media-playback"),
   resumeMediaPlayback: () => ipcRenderer.invoke("resume-media-playback"),
@@ -451,19 +453,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   meetingTranscribeChain: (blobUrl, opts) =>
     ipcRenderer.invoke("meeting-transcribe-chain", blobUrl, opts),
 
-  // Meeting transcription (streaming)
+  // Meeting transcription (streaming, dual-channel)
   meetingTranscriptionPrepare: (options) =>
     ipcRenderer.invoke("meeting-transcription-prepare", options),
   meetingTranscriptionStart: (options) =>
     ipcRenderer.invoke("meeting-transcription-start", options),
-  meetingTranscriptionSend: (buffer) => ipcRenderer.send("meeting-transcription-send", buffer),
+  meetingTranscriptionSend: (buffer, source) =>
+    ipcRenderer.send("meeting-transcription-send", buffer, source),
   meetingTranscriptionStop: () => ipcRenderer.invoke("meeting-transcription-stop"),
-  onMeetingTranscriptionPartial: registerListener(
-    "meeting-transcription-partial",
-    (callback) => (_event, data) => callback(data)
-  ),
-  onMeetingTranscriptionFinal: registerListener(
-    "meeting-transcription-final",
+  onMeetingTranscriptionSegment: registerListener(
+    "meeting-transcription-segment",
     (callback) => (_event, data) => callback(data)
   ),
   onMeetingTranscriptionError: registerListener(
@@ -560,7 +559,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   setAutoStartEnabled: (enabled) => ipcRenderer.invoke("set-auto-start-enabled", enabled),
 
   // Agent mode
-  notifyAgentHotkeyChanged: (hotkey) => ipcRenderer.send("agent-hotkey-changed", hotkey),
+  updateAgentHotkey: (hotkey) => ipcRenderer.invoke("update-agent-hotkey", hotkey),
   getAgentKey: () => ipcRenderer.invoke("get-agent-key"),
   saveAgentKey: (key) => ipcRenderer.invoke("save-agent-key", key),
   onAgentStartRecording: registerListener("agent-start-recording", (callback) => () => callback()),
@@ -665,4 +664,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     "navigate-to-note",
     (callback) => (_event, data) => callback(data)
   ),
+
+  onUpdateNotificationData: registerListener(
+    "update-notification-data",
+    (callback) => (_event, data) => callback(data)
+  ),
+  getUpdateNotificationData: () => ipcRenderer.invoke("get-update-notification-data"),
+  updateNotificationReady: () => ipcRenderer.invoke("update-notification-ready"),
+  updateNotificationRespond: (action) => ipcRenderer.invoke("update-notification-respond", action),
 });

@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.6] - 2026-03-19
+
+### Added
+
+- **TipTap Rich Text Editor**: Migrated notes editor from plain Markdown to TipTap with Obsidian-style live preview — hides Markdown syntax except on the cursor line, with rich text rendering for enhanced and transcript views
+- **Dual-Channel Meeting Transcription**: Separate mic and system audio channels with chat bubble UI for speaker-differentiated meeting transcripts
+- **Meeting Segment Timestamps**: Persist segment timestamps in saved meeting transcripts with chronological ordering
+- **Meeting-Specific AI Prompts**: Meeting notes generation now uses speaker-aware prompts for better context in generated summaries
+
+### Changed
+
+- **Unified Notes Recording**: All notes now use dual-stream transcription with simplified recording UX — always saves to transcript
+- **Notes Tab Rename**: Renamed "Raw" tab to "Notes" and default to it during meetings
+- **Shared Note Title Generation**: Extracted `generateNoteTitle` utility for consistent auto-titling across meeting and regular notes
+
+### Fixed
+
+- **Gemini Agent Streaming**: Route Gemini agent streaming to the correct API endpoint
+- **Windows Mic Volume Mutation**: Disable browser AGC to prevent Windows mic volume being permanently altered (#476)
+- **Linux Mono Transcription**: Request stereo recording to prevent mono transcription failure on Linux
+- **Meeting Bluetooth Audio**: Detach meeting AudioContexts from output device for Bluetooth compatibility; fix system audio loopback silence
+- **Meeting Detection Suppression**: Suppress meeting detection notifications when meeting mode is already active
+- **Windows Paste Modifier Keys**: Release held modifier keys before `SendInput` paste on Windows
+- **Meeting Session Reset**: Reset meeting audio send counts between sessions
+- **Meeting Hotkey Behavior**: Meeting hotkey always opens a new meeting regardless of current view
+- **STT Config Auth Timing**: Retry STT config fetch before recording when auth isn't ready on mount
+- **Hotkey Restore on Failure**: Restore previous hotkey on registration failure
+- **KDE Wayland Hotkeys**: Force XWayland on KDE Wayland to fix hotkey registration
+- **Streaming Dictation Commands**: Use TipTap editor commands for streaming dictation input
+- **Google OAuth Onboarding**: Fix Google OAuth users skipping onboarding flow
+- **Realtime Dictation Default**: Default streaming provider to openai-realtime for dictation; respect sttConfig dictation mode for realtime models
+
+### Security
+
+- **undici CVE-2026-1526**: Bump undici to 6.24.1 to fix request smuggling vulnerability
+
+## [1.6.5] - 2026-03-17
+
+### Added
+
+- **Data Retention Toggle**: New privacy setting to control whether transcription text is retained in history (Privacy & Data settings)
+
+### Fixed
+
+- **Meeting Detection Reset**: Fix meeting detection not properly resetting after a meeting ends
+
 ## [1.6.4] - 2026-03-15
 
 ### Added

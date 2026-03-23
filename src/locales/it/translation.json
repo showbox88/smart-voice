@@ -162,9 +162,11 @@
       "requiredForApp": "Necessario per usare OpenWhispr",
       "microphoneRequired": "Accesso al microfono richiesto",
       "openSystemSettings": "Apri Impostazioni di Sistema",
-      "screenRecordingTitle": "Audio di Sistema",
-      "screenRecordingDescription": "Cattura l'audio degli altri partecipanti durante chiamate e riunioni. Non registriamo mai il tuo schermo.",
-      "optional": "Facoltativo"
+      "systemAudioTitle": "Audio di Sistema",
+      "systemAudioDescription": "Cattura l'audio degli altri partecipanti durante chiamate e riunioni. Non registriamo mai il tuo schermo.",
+      "optional": "Facoltativo",
+      "recommended": "Consigliato",
+      "accessibilityTroubleshooting": "Non rilevato? Rimuovi OpenWhispr da Accessibilità nelle Impostazioni di Sistema, aggiungilo di nuovo e attivalo. Puoi saltare questo passaggio — il testo verrà solo copiato negli appunti invece di essere incollato automaticamente."
     },
     "transcription": {
       "title": "Configurazione trascrizione",
@@ -227,6 +229,7 @@
       "couldNotDeleteDescription": "Questa trascrizione potrebbe essere già stata rimossa.",
       "couldNotDeleteDescriptionGeneric": "Qualcosa è andato storto. Riprova.",
       "empty": "Nessuna trascrizione",
+      "dataRetentionDisabled": "La conservazione dei dati è disattivata. Trascrizioni e audio non vengono salvati nella cronologia.",
       "press": "Premi",
       "toStart": "per iniziare",
       "dateGroups": {
@@ -1306,8 +1309,8 @@
         "title": "Reimposta permessi di accessibilità"
       },
       "optional": "Facoltativo",
-      "screenRecordingTitle": "Audio di Sistema",
-      "screenRecordingDescription": "Cattura l'audio degli altri partecipanti durante chiamate e riunioni",
+      "systemAudioTitle": "Audio di Sistema",
+      "systemAudioDescription": "Cattura l'audio degli altri partecipanti durante chiamate e riunioni",
       "test": "Test",
       "testAndGrant": "Testa e concedi",
       "title": "Permessi",
@@ -1322,7 +1325,9 @@
       "description": "Controlla quali dati escono dal tuo dispositivo. Tutto è disattivato per impostazione predefinita.",
       "title": "Privacy",
       "usageAnalytics": "Analisi dell'utilizzo",
-      "usageAnalyticsDescription": "Aiutaci a migliorare OpenWhispr condividendo metriche di prestazione anonime. Non inviamo mai il contenuto delle trascrizioni, solo dati su tempi ed errori."
+      "usageAnalyticsDescription": "Aiutaci a migliorare OpenWhispr condividendo metriche di prestazione anonime. Non inviamo mai il contenuto delle trascrizioni, solo dati su tempi ed errori.",
+      "dataRetention": "Conservazione dei dati",
+      "dataRetentionDescription": "Salva trascrizioni e audio localmente nella cronologia. Se disattivato, le trascrizioni vengono incollate ma non salvate."
     },
     "prompts": {
       "description": "Visualizza, personalizza e testa il prompt di sistema unificato che gestisce la correzione del testo e il rilevamento delle istruzioni",
@@ -1407,11 +1412,13 @@
         "qwen_qwen2_5_7b_instruct_q5_k_m": "Modello grande, ragionamento di alta qualità (Q5_K_M)",
         "mistral_mistral_7b_instruct_v0_3_q4_k_m": "Modello instruction veloce ed efficiente",
         "mistral_mistral_7b_instruct_v0_3_q5_k_m": "Modello instruction di qualità superiore",
+        "mistral_nemo_12b_instruct_q4_k_m": "Modello 12B di Mistral, buone prestazioni multilingue",
         "llama_llama_3_2_1b_instruct_q4_k_m": "Modello minuscolo per dispositivi edge",
         "llama_llama_3_2_3b_instruct_q4_k_m": "Modello multilingue piccolo ma capace",
         "llama_llama_3_1_8b_instruct_q4_k_m": "Modello potente con ottime prestazioni",
         "openai_oss_gpt_oss_20b_mxfp4": "Modello open-weight di OpenAI per hardware consumer",
         "gemma_gemma_3_4b_it_q4_k_m": "Modello open-weight di Google, ottimo equilibrio tra velocità e qualità",
+        "gemma_gemma_3_12b_it_q4_k_m": "Modello di fascia media di Google, ragionamento solido",
         "gemma_gemma_3_1b_it_q4_k_m": "Modello Google ultraveloce, ideale per la pulizia di brevi dettature"
       }
     }
@@ -1524,7 +1531,8 @@
       "staleIndicator": "Il contenuto è cambiato dall'ultimo miglioramento",
       "live": "Dal vivo",
       "transcript": "Trascrizione",
-      "notes": "Note"
+      "notes": "Note",
+      "conversationWillAppear": "La conversazione apparirà qui..."
     },
     "upload": {
       "title": "Carica audio",
@@ -1850,8 +1858,8 @@
       "disconnect": "Disconnetti",
       "disconnectConfirm": "Disconnettere {{email}}?",
       "disconnectDescription": "Le note delle riunioni non saranno più registrate da questo calendario.",
-      "screenRecordingRequired": "Autorizzazione Audio di Sistema richiesta",
-      "screenRecordingDescription": "Per trascrivere le riunioni, OpenWhispr necessita dell'autorizzazione Audio di Sistema per catturare l'audio degli altri partecipanti. Non registriamo mai il tuo schermo. Verrai reindirizzato alle Impostazioni di Sistema per attivarla.",
+      "systemAudioRequired": "Autorizzazione Audio di Sistema richiesta",
+      "systemAudioDescription": "Per trascrivere le riunioni, OpenWhispr necessita dell'autorizzazione Audio di Sistema per catturare l'audio degli altri partecipanti. Non registriamo mai il tuo schermo. Verrai reindirizzato alle Impostazioni di Sistema per attivarla.",
       "openSettings": "Apri Impostazioni di Sistema"
     },
     "plan": {
@@ -1916,7 +1924,7 @@
     "now": "In corso",
     "join": "Partecipa",
     "untitledEvent": "Evento senza titolo",
-    "screenRecordingRequired": "L'autorizzazione Audio di Sistema è necessaria per catturare l'audio degli altri partecipanti.",
+    "systemAudioRequired": "L'autorizzazione Audio di Sistema è necessaria per catturare l'audio degli altri partecipanti.",
     "openSettings": "Apri Impostazioni di Sistema",
     "signInRequired": "Accedi per utilizzare la registrazione delle riunioni",
     "signInDescription": "Crea un account o accedi per registrare e trascrivere le riunioni.",
@@ -1965,5 +1973,15 @@
       "open": "Apri",
       "dismiss": "Chiudi"
     }
+  },
+  "updateNotification": {
+    "title": "Aggiornamento OpenWhispr disponibile",
+    "body": "La versione {{version}} è pronta per il download",
+    "cta": "Aggiorna ora"
+  },
+  "permissionsGate": {
+    "title": "Autorizzazioni necessarie",
+    "description": "OpenWhispr ha bisogno di alcune autorizzazioni per funzionare su questo computer.",
+    "continue": "Continua"
   }
 }

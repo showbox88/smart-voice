@@ -23,6 +23,8 @@ class WindowManager {
     this.agentWindow = null;
     this.notificationWindow = null;
     this._notificationTimeout = null;
+    this.updateNotificationWindow = null;
+    this._updateNotificationDismissed = false;
     this.tray = null;
     this.hotkeyManager = new HotkeyManager();
     this.dragManager = new DragManager();
@@ -1050,6 +1052,79 @@ class WindowManager {
       this.notificationWindow.close();
     }
     this.notificationWindow = null;
+  }
+
+  async showUpdateNotification(info) {
+    if (this._updateNotificationDismissed) return;
+    if (this.updateNotificationWindow && !this.updateNotificationWindow.isDestroyed()) {
+      this.updateNotificationWindow.close();
+      this.updateNotificationWindow = null;
+    }
+
+    const display = screen.getPrimaryDisplay();
+    const position = WindowPositionUtil.getNotificationPosition(display);
+
+    this.updateNotificationWindow = new BrowserWindow({
+      ...NOTIFICATION_WINDOW_CONFIG,
+      ...position,
+    });
+
+    WindowPositionUtil.setupAlwaysOnTop(this.updateNotificationWindow);
+
+    if (process.env.NODE_ENV === "development") {
+      await DevServerManager.waitForDevServer();
+      await this.updateNotificationWindow.loadURL(
+        `${DevServerManager.DEV_SERVER_URL}?update-notification=true`
+      );
+    } else {
+      const fileInfo = DevServerManager.getAppFilePath(false);
+      await this.updateNotificationWindow.loadFile(fileInfo.path, {
+        query: { ...fileInfo.query, "update-notification": "true" },
+      });
+    }
+
+    this._pendingUpdateNotificationData = {
+      version: info?.version,
+      releaseDate: info?.releaseDate,
+    };
+
+    this._updateNotificationReadyFallback = setTimeout(() => {
+      this._updateNotificationReadyFallback = null;
+      if (this.updateNotificationWindow && !this.updateNotificationWindow.isDestroyed()) {
+        this.updateNotificationWindow.webContents.send(
+          "update-notification-data",
+          this._pendingUpdateNotificationData
+        );
+        this.updateNotificationWindow.showInactive();
+      }
+    }, 3000);
+
+    this.updateNotificationWindow.on("closed", () => {
+      this.updateNotificationWindow = null;
+    });
+  }
+
+  showUpdateNotificationWindow() {
+    if (this._updateNotificationReadyFallback) {
+      clearTimeout(this._updateNotificationReadyFallback);
+      this._updateNotificationReadyFallback = null;
+    }
+    if (this.updateNotificationWindow && !this.updateNotificationWindow.isDestroyed()) {
+      this.updateNotificationWindow.showInactive();
+    }
+  }
+
+  dismissUpdateNotification() {
+    this._pendingUpdateNotificationData = null;
+    this._updateNotificationDismissed = true;
+    if (this._updateNotificationReadyFallback) {
+      clearTimeout(this._updateNotificationReadyFallback);
+      this._updateNotificationReadyFallback = null;
+    }
+    if (this.updateNotificationWindow && !this.updateNotificationWindow.isDestroyed()) {
+      this.updateNotificationWindow.close();
+    }
+    this.updateNotificationWindow = null;
   }
 
   sendToControlPanel(channel, data) {

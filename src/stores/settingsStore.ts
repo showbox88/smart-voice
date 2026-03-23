@@ -64,6 +64,7 @@ const BOOLEAN_SETTINGS = new Set([
   "isSignedIn",
   "agentEnabled",
   "keepTranscriptionInClipboard",
+  "dataRetentionEnabled",
 ]);
 
 const ARRAY_SETTINGS = new Set(["customDictionary", "gcalAccounts"]);
@@ -145,6 +146,7 @@ export interface SettingsState
   setCloudBackupEnabled: (value: boolean) => void;
   setTelemetryEnabled: (value: boolean) => void;
   setAudioRetentionDays: (days: number) => void;
+  setDataRetentionEnabled: (value: boolean) => void;
   setAudioCuesEnabled: (value: boolean) => void;
   setPauseMediaOnDictation: (value: boolean) => void;
   setFloatingIconAutoHide: (enabled: boolean) => void;
@@ -279,6 +281,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     const parsed = parseInt(stored, 10);
     return isNaN(parsed) ? 30 : parsed;
   })(),
+  dataRetentionEnabled: readBoolean("dataRetentionEnabled", true),
   audioCuesEnabled: readBoolean("audioCuesEnabled", true),
   pauseMediaOnDictation: readBoolean("pauseMediaOnDictation", false),
   floatingIconAutoHide: readBoolean("floatingIconAutoHide", false),
@@ -304,7 +307,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     if (v === "bottom-right" || v === "center" || v === "bottom-left") return v;
     return "bottom-right" as const;
   })(),
-  keepTranscriptionInClipboard: readBoolean("keepTranscriptionInClipboard", true),
+  keepTranscriptionInClipboard: readBoolean("keepTranscriptionInClipboard", false),
   isSignedIn: readBoolean("isSignedIn", false),
 
   agentModel: readString("agentModel", "openai/gpt-oss-120b"),
@@ -444,6 +447,17 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     if (isBrowser) localStorage.setItem("audioRetentionDays", String(days));
     set({ audioRetentionDays: days });
   },
+  setDataRetentionEnabled: (value: boolean) => {
+    if (isBrowser) localStorage.setItem("dataRetentionEnabled", String(value));
+    set({ dataRetentionEnabled: value });
+    logger.info(
+      value
+        ? "Data retention enabled — transcriptions and audio will be saved"
+        : "Data retention disabled — transcriptions and audio will not be saved",
+      {},
+      "settings"
+    );
+  },
   setAudioCuesEnabled: createBooleanSetter("audioCuesEnabled"),
   setPauseMediaOnDictation: createBooleanSetter("pauseMediaOnDictation"),
 
@@ -494,12 +508,44 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setAgentModel: createStringSetter("agentModel"),
   setAgentProvider: createStringSetter("agentProvider"),
   setAgentKey: (key: string) => {
-    if (isBrowser) localStorage.setItem("agentKey", key);
-    useSettingsStore.setState({ agentKey: key });
-    if (isBrowser) {
-      window.electronAPI?.notifyAgentHotkeyChanged?.(key);
-      window.electronAPI?.saveAgentKey?.(key);
+    if (!isBrowser) {
+      useSettingsStore.setState({ agentKey: key });
+      return;
     }
+
+    const updateAgentHotkey = window.electronAPI?.updateAgentHotkey;
+    if (!updateAgentHotkey) {
+      localStorage.setItem("agentKey", key);
+      useSettingsStore.setState({ agentKey: key });
+      window.electronAPI?.saveAgentKey?.(key);
+      return;
+    }
+
+    const previousKey = get().agentKey;
+
+    void updateAgentHotkey(key)
+      .then((result) => {
+        if (!result?.success) {
+          localStorage.setItem("agentKey", previousKey);
+          useSettingsStore.setState({ agentKey: previousKey });
+          logger.warn(
+            "Failed to update agent hotkey",
+            { hotkey: key, message: result?.message },
+            "settings"
+          );
+          return;
+        }
+
+        localStorage.setItem("agentKey", key);
+        useSettingsStore.setState({ agentKey: key });
+      })
+      .catch((error) => {
+        logger.warn(
+          "Failed to update agent hotkey",
+          { hotkey: key, error: error instanceof Error ? error.message : String(error) },
+          "settings"
+        );
+      });
   },
   setAgentSystemPrompt: createStringSetter("agentSystemPrompt"),
   setAgentEnabled: createBooleanSetter("agentEnabled"),

@@ -162,9 +162,11 @@
       "requiredForApp": "OpenWhispr 运行所必需的权限",
       "microphoneRequired": "需要麦克风访问权限",
       "openSystemSettings": "打开系统设置",
-      "screenRecordingTitle": "系统音频",
-      "screenRecordingDescription": "录制通话和会议中其他参与者的音频。我们绝不会录制您的屏幕。",
-      "optional": "可选"
+      "systemAudioTitle": "系统音频",
+      "systemAudioDescription": "录制通话和会议中其他参与者的音频。我们绝不会录制您的屏幕。",
+      "optional": "可选",
+      "recommended": "推荐",
+      "accessibilityTroubleshooting": "未检测到？请在系统设置的辅助功能中移除 OpenWhispr，然后重新添加并开启。您可以跳过此步继续 — 文本将复制到剪贴板而非自动粘贴。"
     },
     "transcription": {
       "title": "转录设置",
@@ -227,6 +229,7 @@
       "couldNotDeleteDescription": "此转录记录可能已被删除。",
       "couldNotDeleteDescriptionGeneric": "出了点问题，请重试。",
       "empty": "暂无转录记录",
+      "dataRetentionDisabled": "数据保留已关闭。转录和音频不会保存到历史记录。",
       "press": "按下",
       "toStart": "开始",
       "dateGroups": {
@@ -1306,8 +1309,8 @@
         "title": "重置辅助功能权限"
       },
       "optional": "可选",
-      "screenRecordingTitle": "系统音频",
-      "screenRecordingDescription": "录制通话和会议中其他参与者的音频",
+      "systemAudioTitle": "系统音频",
+      "systemAudioDescription": "录制通话和会议中其他参与者的音频",
       "test": "测试",
       "testAndGrant": "测试并授权",
       "title": "权限",
@@ -1322,7 +1325,9 @@
       "description": "控制哪些数据会离开你的设备。默认全部关闭。",
       "title": "隐私",
       "usageAnalytics": "使用分析",
-      "usageAnalyticsDescription": "通过分享匿名性能数据帮助我们改进 OpenWhispr。我们绝不发送转录内容——仅发送计时和错误数据。"
+      "usageAnalyticsDescription": "通过分享匿名性能数据帮助我们改进 OpenWhispr。我们绝不发送转录内容——仅发送计时和错误数据。",
+      "dataRetention": "数据保留",
+      "dataRetentionDescription": "将转录和音频本地保存到历史记录中。禁用后，转录内容会被粘贴但不会被保存。"
     },
     "prompts": {
       "description": "查看、自定义和测试用于文本整理和指令识别的统一系统提示词",
@@ -1407,11 +1412,13 @@
         "qwen_qwen2_5_7b_instruct_q5_k_m": "大型模型，高质量推理（Q5_K_M）",
         "mistral_mistral_7b_instruct_v0_3_q4_k_m": "快速高效的指令模型",
         "mistral_mistral_7b_instruct_v0_3_q5_k_m": "更高质量的指令模型",
+        "mistral_nemo_12b_instruct_q4_k_m": "Mistral 12B 模型，强大的多语言性能",
         "llama_llama_3_2_1b_instruct_q4_k_m": "超小模型，适用于边缘设备",
         "llama_llama_3_2_3b_instruct_q4_k_m": "小而强的多语言模型",
         "llama_llama_3_1_8b_instruct_q4_k_m": "强大模型，性能出色",
         "openai_oss_gpt_oss_20b_mxfp4": "OpenAI 开源模型，适用于消费级硬件",
         "gemma_gemma_3_4b_it_q4_k_m": "谷歌开放权重模型，速度与质量的绝佳平衡",
+        "gemma_gemma_3_12b_it_q4_k_m": "Google 中型模型，强推理能力",
         "gemma_gemma_3_1b_it_q4_k_m": "超快谷歌模型，最适合短听写清理"
       }
     }
@@ -1524,7 +1531,8 @@
       "staleIndicator": "内容在增强后已更改",
       "live": "实时",
       "transcript": "转录",
-      "notes": "笔记"
+      "notes": "笔记",
+      "conversationWillAppear": "对话将显示在这里..."
     },
     "upload": {
       "title": "上传音频",
@@ -1850,8 +1858,8 @@
       "disconnect": "断开",
       "disconnectConfirm": "断开 {{email}}？",
       "disconnectDescription": "将不再从此日历记录会议笔记。",
-      "screenRecordingRequired": "需要系统音频权限",
-      "screenRecordingDescription": "要转录会议，OpenWhispr 需要系统音频权限来录制其他参与者的音频。我们绝不会录制您的屏幕。您将被引导至系统设置以启用此权限。",
+      "systemAudioRequired": "需要系统音频权限",
+      "systemAudioDescription": "要转录会议，OpenWhispr 需要系统音频权限来录制其他参与者的音频。我们绝不会录制您的屏幕。您将被引导至系统设置以启用此权限。",
       "openSettings": "打开系统设置"
     },
     "plan": {
@@ -1916,7 +1924,7 @@
     "now": "进行中",
     "join": "加入",
     "untitledEvent": "无标题事件",
-    "screenRecordingRequired": "需要系统音频权限来录制其他参与者的音频。",
+    "systemAudioRequired": "需要系统音频权限来录制其他参与者的音频。",
     "openSettings": "打开系统设置",
     "signInRequired": "登录以使用会议录制",
     "signInDescription": "创建账户或登录以录制和转录会议。",
@@ -1965,5 +1973,15 @@
       "open": "打开",
       "dismiss": "关闭"
     }
+  },
+  "updateNotification": {
+    "title": "OpenWhispr 有可用更新",
+    "body": "版本 {{version}} 已可下载",
+    "cta": "立即更新"
+  },
+  "permissionsGate": {
+    "title": "需要权限",
+    "description": "OpenWhispr 需要一些权限才能在此电脑上正常运行。",
+    "continue": "继续"
   }
 }

@@ -26,6 +26,7 @@ class OpenAIRealtimeStreaming {
     this.model = "gpt-4o-mini-transcribe";
     this.coldStartBuffer = [];
     this.coldStartBufferSize = 0;
+    this.speechStartedAt = null;
   }
 
   getFullTranscript() {
@@ -49,6 +50,7 @@ class OpenAIRealtimeStreaming {
     this.audioBytesSent = 0;
     this.coldStartBuffer = [];
     this.coldStartBufferSize = 0;
+    this.speechStartedAt = null;
 
     const url = "wss://api.openai.com/v1/realtime?intent=transcription";
     debugLogger.debug("OpenAI Realtime connecting", { model: this.model });
@@ -188,7 +190,9 @@ class OpenAIRealtimeStreaming {
           }
           this.currentPartial = "";
           const fullText = this.getFullTranscript();
-          this.onFinalTranscript?.(fullText);
+          const speechTimestamp = this.speechStartedAt || Date.now();
+          this.speechStartedAt = null;
+          this.onFinalTranscript?.(fullText, speechTimestamp);
           debugLogger.debug("OpenAI Realtime turn completed", {
             turnText: transcript.slice(0, 100),
             totalLength: fullText.length,
@@ -198,6 +202,8 @@ class OpenAIRealtimeStreaming {
         }
 
         case "input_audio_buffer.speech_started":
+          this.speechStartedAt = Date.now();
+          break;
         case "input_audio_buffer.speech_stopped":
         case "input_audio_buffer.committed":
           break;
