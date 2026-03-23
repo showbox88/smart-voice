@@ -794,6 +794,9 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
     hasUdevRule: boolean;
     hasGroup: boolean;
     allGood: boolean;
+    isKde?: boolean;
+    hasXclip?: boolean;
+    hasXsel?: boolean;
   } | null>(null);
   const [ydotoolGuideKey, setYdotoolGuideKey] = useState<string | null>(null);
 
@@ -2604,6 +2607,28 @@ EOF`,
                       ],
                     },
                   ];
+
+                  if (ydotoolStatus.isKde) {
+                    checks.push({
+                      key: "hasXclip",
+                      label: "xclip",
+                      ok: ydotoolStatus.hasXclip || ydotoolStatus.hasXsel || false,
+                      desc: t("settingsPage.general.waylandPaste.xclipDesc", {
+                        defaultValue: "Clipboard tool for KDE Wayland paste (xclip or xsel)",
+                      }),
+                      guide: [
+                        {
+                          title: t("settingsPage.general.waylandPaste.guide.xclip.step1Title", {
+                            defaultValue: "Install xclip",
+                          }),
+                          cmds: [
+                            { cmd: "sudo dnf install xclip  # Fedora" },
+                            { cmd: "sudo apt install xclip  # Debian/Ubuntu" },
+                          ],
+                        },
+                      ],
+                    });
+                  }
 
                   const allOk = checks.every((c) => c.ok);
                   const activeGuide = checks.find((c) => c.key === ydotoolGuideKey);

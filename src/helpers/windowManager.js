@@ -495,6 +495,10 @@ class WindowManager {
     return this.hotkeyManager.isUsingHyprland();
   }
 
+  isUsingKDEHotkeys() {
+    return this.hotkeyManager.isUsingKDE();
+  }
+
   isUsingNativeShortcutHotkeys() {
     return this.hotkeyManager.isUsingNativeShortcut();
   }

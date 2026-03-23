@@ -76,10 +76,9 @@ if (process.platform === "win32") {
 }
 
 // Enable native Wayland support: Ozone platform for native rendering.
-// KDE is forced to XWayland because globalShortcut doesn't work on native
-// Wayland without the GlobalShortcuts portal, and the portal causes unwanted
-// permission dialogs with broken hotkey registration.
-// GNOME and Hyprland use their own D-Bus shortcut managers so they're fine.
+// KDE uses XWayland for reliable clipboard access (Wayland restricts clipboard
+// to focused windows), with KGlobalAccel D-Bus for global shortcuts.
+// GNOME and Hyprland run native Wayland with their own D-Bus shortcut managers.
 if (process.platform === "linux" && process.env.XDG_SESSION_TYPE === "wayland") {
   const desktop = (process.env.XDG_CURRENT_DESKTOP || "").toLowerCase();
   if (desktop.includes("kde")) {

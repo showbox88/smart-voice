@@ -2,6 +2,7 @@ const { globalShortcut } = require("electron");
 const debugLogger = require("./debugLogger");
 const GnomeShortcutManager = require("./gnomeShortcut");
 const HyprlandShortcutManager = require("./hyprlandShortcut");
+const KDEShortcutManager = require("./kdeShortcut");
 const { i18nMain } = require("./i18nMain");
 
 // Delay to ensure localStorage is accessible after window load
@@ -68,6 +69,8 @@ class HotkeyManager {
     this.useGnome = false;
     this.hyprlandManager = null;
     this.useHyprland = false;
+    this.kdeManager = null;
+    this.useKDE = false;
   }
 
   // Backward-compatible property accessors
@@ -185,6 +188,35 @@ class HotkeyManager {
       return { success: true, hotkey };
     }
 
+    // On KDE Wayland, route all slots through KGlobalAccel D-Bus
+    if (this.useKDE && this.kdeManager) {
+      if (slotName === "agent") {
+        this.kdeManager.setAgentCallback(callback);
+      }
+
+      const success = await this.kdeManager.registerKeybinding(hotkey, slotName, callback);
+      if (!success) {
+        debugLogger.log(
+          `[HotkeyManager] KDE keybinding registration failed for slot "${slotName}" ("${hotkey}")`
+        );
+        return {
+          success: false,
+          error: `Failed to register KDE hotkey "${hotkey}" for ${slotName}`,
+        };
+      }
+
+      const slot = this.slots.get(slotName) || { hotkey: null, callback: null, accelerator: null };
+      slot.hotkey = hotkey;
+      slot.callback = callback;
+      slot.accelerator = null;
+      this.slots.set(slotName, slot);
+
+      debugLogger.log(
+        `[HotkeyManager] KDE slot "${slotName}" set to "${hotkey}"`
+      );
+      return { success: true, hotkey };
+    }
+
     const result = this.setupShortcuts(hotkey, callback, slotName);
     if (result.success) {
       const slot = this.slots.get(slotName) || {};
@@ -197,6 +229,19 @@ class HotkeyManager {
   unregisterSlot(slotName) {
     const slot = this.slots.get(slotName);
     if (!slot || !slot.hotkey) return;
+
+    // On KDE Wayland, all slots are managed via KGlobalAccel
+    if (this.useKDE && this.kdeManager) {
+      this.kdeManager.unregisterKeybinding(slotName).catch((err) => {
+        debugLogger.warn(
+          `[HotkeyManager] Error unregistering KDE keybinding for slot "${slotName}":`,
+          err.message
+        );
+      });
+      slot.hotkey = null;
+      slot.accelerator = null;
+      return;
+    }
 
     // On GNOME Wayland, non-dictation slots are managed via gsettings, not globalShortcut
     if (this.useGnome && this.gnomeManager && slotName !== "dictation") {
@@ -437,6 +482,29 @@ class HotkeyManager {
     return false;
   }
 
+  async initializeKDEShortcuts(callback) {
+    if (process.platform !== "linux" || !KDEShortcutManager.isWayland() || !KDEShortcutManager.isKDE()) {
+      return false;
+    }
+
+    try {
+      this.kdeManager = new KDEShortcutManager();
+      const ok = await this.kdeManager.init();
+      if (ok) {
+        this.useKDE = true;
+        this.hotkeyCallback = callback;
+        debugLogger.log("[HotkeyManager] KDE Wayland shortcuts initialized via KGlobalAccel D-Bus");
+        return true;
+      }
+    } catch (err) {
+      debugLogger.log("[HotkeyManager] KDE shortcut init failed:", err.message);
+      this.kdeManager = null;
+      this.useKDE = false;
+    }
+
+    return false;
+  }
+
   async initializeHyprlandShortcuts(callback) {
     const isLinux = process.platform === "linux";
     const isWayland = HyprlandShortcutManager.isWayland();
@@ -525,7 +593,49 @@ class HotkeyManager {
         return;
       }
 
-      // Try Hyprland native shortcuts if GNOME path was not applicable
+      // Try KDE native shortcuts via KGlobalAccel
+      const kdeOk = await this.initializeKDEShortcuts(callback);
+
+      if (kdeOk) {
+        const registerKDEHotkey = async () => {
+          try {
+            const savedHotkey = await mainWindow.webContents.executeJavaScript(`
+              localStorage.getItem("dictationKey") || ""
+            `);
+            const hotkey = savedHotkey && savedHotkey.trim() !== "" ? savedHotkey : "Control+Super";
+            const success = await this.kdeManager.registerKeybinding(hotkey, "dictation", callback);
+            if (success) {
+              this.currentHotkey = hotkey;
+              debugLogger.log(
+                `[HotkeyManager] KDE hotkey "${hotkey}" registered successfully`
+              );
+            } else {
+              debugLogger.log(
+                "[HotkeyManager] KDE keybinding failed, falling back to globalShortcut"
+              );
+              this.kdeManager.close();
+              this.kdeManager = null;
+              this.useKDE = false;
+              this.loadSavedHotkeyOrDefault(mainWindow, callback);
+            }
+          } catch (err) {
+            debugLogger.log(
+              "[HotkeyManager] KDE keybinding failed, falling back to globalShortcut:",
+              err.message
+            );
+            this.kdeManager?.close();
+            this.kdeManager = null;
+            this.useKDE = false;
+            this.loadSavedHotkeyOrDefault(mainWindow, callback);
+          }
+        };
+
+        setTimeout(registerKDEHotkey, HOTKEY_REGISTRATION_DELAY_MS);
+        this.isInitialized = true;
+        return;
+      }
+
+      // Try Hyprland native shortcuts if GNOME/KDE paths were not applicable
       const hyprlandOk = await this.initializeHyprlandShortcuts(callback);
 
       if (hyprlandOk) {
@@ -796,6 +906,20 @@ class HotkeyManager {
       this.gnomeManager = null;
       this.useGnome = false;
     }
+    if (this.kdeManager) {
+      const kdeSlots = [...this.kdeManager.registeredSlots];
+      for (const slotName of kdeSlots) {
+        this.kdeManager.unregisterKeybinding(slotName).catch((err) => {
+          debugLogger.warn(
+            `[HotkeyManager] Error unregistering KDE keybinding for slot "${slotName}":`,
+            err.message
+          );
+        });
+      }
+      this.kdeManager.close();
+      this.kdeManager = null;
+      this.useKDE = false;
+    }
     if (this.hyprlandManager) {
       this.hyprlandManager.unregisterKeybinding().catch((err) => {
         debugLogger.warn("[HotkeyManager] Error unregistering Hyprland keybinding:", err.message);
@@ -822,8 +946,12 @@ class HotkeyManager {
     return this.useHyprland;
   }
 
+  isUsingKDE() {
+    return this.useKDE;
+  }
+
   isUsingNativeShortcut() {
-    return this.useGnome || this.useHyprland;
+    return this.useGnome || this.useHyprland || this.useKDE;
   }
 
   isHotkeyRegistered(hotkey) {

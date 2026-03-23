@@ -1384,6 +1384,7 @@ class IPCHandlers {
       return {
         isUsingGnome: this.windowManager.isUsingGnomeHotkeys(),
         isUsingHyprland: this.windowManager.isUsingHyprlandHotkeys(),
+        isUsingKDE: this.windowManager.isUsingKDEHotkeys(),
         isUsingNativeShortcut: this.windowManager.isUsingNativeShortcutHotkeys(),
       };
     });
@@ -3354,7 +3355,16 @@ class IPCHandlers {
 
     ipcMain.handle("get-ydotool-status", () => {
       const { getYdotoolStatus } = require("./ensureYdotool");
-      return getYdotoolStatus();
+      const { execFileSync } = require("child_process");
+      const status = getYdotoolStatus();
+      const isKde = (process.env.XDG_CURRENT_DESKTOP || "").toLowerCase().includes("kde");
+      let hasXclip = false;
+      let hasXsel = false;
+      if (isKde) {
+        try { execFileSync("which", ["xclip"], { timeout: 1000 }); hasXclip = true; } catch {}
+        try { execFileSync("which", ["xsel"], { timeout: 1000 }); hasXsel = true; } catch {}
+      }
+      return { ...status, isKde, hasXclip, hasXsel };
     });
 
     ipcMain.handle("get-debug-state", async () => {
