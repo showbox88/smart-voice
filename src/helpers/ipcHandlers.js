@@ -2090,7 +2090,7 @@ class IPCHandlers {
         return { granted: true, status: "granted", mode: "native" };
       }
 
-      // Probe the binary — triggers ScreenCaptureKit's native consent dialog on macOS 15+
+      // Probe the binary — AudioHardwareCreateProcessTap triggers the native consent dialog
       try {
         const result = await this.audioTapManager.requestAccess();
         if (result.granted) {

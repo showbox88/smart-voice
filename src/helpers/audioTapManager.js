@@ -11,7 +11,7 @@ const ARCH_CPU_TYPE = {
 const DEFAULT_SAMPLE_RATE = 24000;
 const DEFAULT_CHUNK_MS = 100;
 const START_TIMEOUT_MS = 3000;
-const REQUEST_TIMEOUT_MS = 15000;
+const REQUEST_TIMEOUT_MS = 60000;
 const STOP_TIMEOUT_MS = 5000;
 
 function compareVersions(left, right) {
