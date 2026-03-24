@@ -1,15 +1,13 @@
 import { useState, useRef, useCallback } from "react";
-import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../lib/utils";
 
 interface ChatHeaderProps {
   title: string;
   onTitleChange: (title: string) => void;
-  onNewChat: () => void;
 }
 
-export default function ChatHeader({ title, onTitleChange, onNewChat }: ChatHeaderProps) {
+export default function ChatHeader({ title, onTitleChange }: ChatHeaderProps) {
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(title);
@@ -54,8 +52,8 @@ export default function ChatHeader({ title, onTitleChange, onNewChat }: ChatHead
             onBlur={commitEdit}
             onKeyDown={handleKeyDown}
             className={cn(
-              "w-full bg-transparent text-xs font-medium text-foreground",
-              "outline-none border-none appearance-none",
+              "input-inline w-full text-xs font-medium text-foreground",
+              "outline-none appearance-none",
               "rounded-sm focus-visible:ring-1 focus-visible:ring-primary/30 px-1 -mx-1"
             )}
           />
@@ -69,18 +67,6 @@ export default function ChatHeader({ title, onTitleChange, onNewChat }: ChatHead
           </p>
         )}
       </div>
-      <button
-        onClick={onNewChat}
-        className={cn(
-          "p-1 rounded-sm shrink-0 ml-2",
-          "text-muted-foreground/60 hover:text-foreground hover:bg-foreground/8",
-          "transition-colors duration-150",
-          "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring/30"
-        )}
-        aria-label={t("chat.newChat")}
-      >
-        <Plus size={14} />
-      </button>
     </div>
   );
 }

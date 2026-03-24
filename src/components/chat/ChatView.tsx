@@ -159,7 +159,6 @@ export default function ChatView() {
               <ChatHeader
                 title={activeTitle}
                 onTitleChange={handleTitleChange}
-                onNewChat={handleNewChat}
               />
               <ChatMessages messages={persistence.messages} />
               <ChatInput
