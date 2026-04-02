@@ -18,6 +18,7 @@ import {
   updateTranscription as updateInStore,
   clearTranscriptions as clearStore,
 } from "../stores/transcriptionStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import ControlPanelSidebar, { type ControlPanelView } from "./ControlPanelSidebar";
 import WindowControls from "./WindowControls";
 
@@ -368,7 +369,17 @@ export default function ControlPanel() {
   const retryTranscription = useCallback(
     async (id: number) => {
       try {
-        const result = await window.electronAPI.retryTranscription(id);
+        const s = useSettingsStore.getState();
+        const result = await window.electronAPI.retryTranscription(id, {
+          useLocalWhisper: s.useLocalWhisper,
+          localTranscriptionProvider: s.localTranscriptionProvider,
+          cloudTranscriptionMode: s.cloudTranscriptionMode,
+          cloudTranscriptionProvider: s.cloudTranscriptionProvider,
+          cloudTranscriptionModel: s.cloudTranscriptionModel,
+          cloudTranscriptionBaseUrl: s.cloudTranscriptionBaseUrl,
+          parakeetModel: s.parakeetModel,
+          whisperModel: s.whisperModel,
+        });
         if (result.success && result.transcription) {
           const rawText = result.transcription.text;
           let finalTranscription = result.transcription;

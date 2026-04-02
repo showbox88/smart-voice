@@ -321,7 +321,17 @@ declare global {
       getAudioStorageUsage: () => Promise<{ fileCount: number; totalBytes: number }>;
       deleteAllAudio: () => Promise<{ deleted: number }>;
       retryTranscription: (
-        id: number
+        id: number,
+        settings?: {
+          useLocalWhisper: boolean;
+          localTranscriptionProvider: string;
+          cloudTranscriptionMode: string;
+          cloudTranscriptionProvider: string;
+          cloudTranscriptionModel: string;
+          cloudTranscriptionBaseUrl?: string;
+          parakeetModel: string;
+          whisperModel: string;
+        }
       ) => Promise<{ success: boolean; transcription?: TranscriptionItem; error?: string }>;
       updateTranscriptionText: (
         id: number,

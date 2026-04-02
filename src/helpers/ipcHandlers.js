@@ -136,6 +136,22 @@ class IPCHandlers {
     }
   }
 
+  _resolveByokModel(provider, configuredModel) {
+    const trimmed = (configuredModel || "").trim();
+    if (provider === "custom") return trimmed || "whisper-1";
+    if (trimmed) {
+      const isGroq = trimmed.startsWith("whisper-large-v3");
+      const isOpenAI = trimmed.startsWith("gpt-4o") || trimmed === "whisper-1";
+      const isMistral = trimmed.startsWith("voxtral-");
+      if (provider === "groq" && isGroq) return trimmed;
+      if (provider === "openai" && isOpenAI) return trimmed;
+      if (provider === "mistral" && isMistral) return trimmed;
+    }
+    if (provider === "groq") return "whisper-large-v3-turbo";
+    if (provider === "mistral") return "voxtral-mini-latest";
+    return "gpt-4o-mini-transcribe";
+  }
+
   _cleanupTextEditMonitor() {
     if (this._autoLearnDebounceTimer) {
       clearTimeout(this._autoLearnDebounceTimer);
@@ -2317,20 +2333,23 @@ class IPCHandlers {
       }
     });
 
-    ipcMain.handle("retry-transcription", async (event, id) => {
+    ipcMain.handle("retry-transcription", async (event, id, settings) => {
       const buffer = this.audioStorageManager.getAudioBuffer(id);
       if (!buffer) return { success: false, error: "Audio file not found" };
       try {
         let result;
-        // Try local engines first
-        if (this.parakeetManager?.serverManager?.isAvailable?.()) {
-          result = await this.parakeetManager.transcribeLocalParakeet(buffer, {});
-        } else if (this.whisperManager?.serverManager?.isAvailable?.()) {
-          result = await this.whisperManager.transcribeLocalWhisper(buffer, {});
-        }
 
-        // Fall back to cloud transcription
-        if (!result?.text) {
+        if (settings?.useLocalWhisper) {
+          if (settings.localTranscriptionProvider === "nvidia") {
+            const model =
+              settings.parakeetModel || process.env.PARAKEET_MODEL || "parakeet-tdt-0.6b-v3";
+            result = await this.parakeetManager.transcribeLocalParakeet(buffer, { model });
+          } else if (this.whisperManager?.serverManager?.isAvailable?.()) {
+            result = await this.whisperManager.transcribeLocalWhisper(buffer, {
+              model: settings.whisperModel,
+            });
+          }
+        } else if (settings?.cloudTranscriptionMode === "openwhispr") {
           const win = BrowserWindow.fromWebContents(event.sender);
           if (win) {
             const cookieHeader = await getSessionCookiesFromWindow(win);
@@ -2352,6 +2371,52 @@ class IPCHandlers {
               }
             }
           }
+        } else {
+          const provider = settings?.cloudTranscriptionProvider || "openai";
+          const model = this._resolveByokModel(provider, settings?.cloudTranscriptionModel);
+
+          let apiKey, endpoint;
+          if (provider === "groq") {
+            apiKey = this.environmentManager.getGroqKey();
+            endpoint = "https://api.groq.com/openai/v1/audio/transcriptions";
+          } else if (provider === "mistral") {
+            apiKey = this.environmentManager.getMistralKey();
+            endpoint = MISTRAL_TRANSCRIPTION_URL;
+          } else if (provider === "custom") {
+            apiKey = this.environmentManager.getCustomTranscriptionKey();
+            const base = (settings?.cloudTranscriptionBaseUrl || "").trim();
+            endpoint = base
+              ? /\/audio\/(transcriptions|translations)$/i.test(base)
+                ? base
+                : `${base}/audio/transcriptions`
+              : "https://api.openai.com/v1/audio/transcriptions";
+          } else {
+            apiKey = this.environmentManager.getOpenAIKey();
+            endpoint = "https://api.openai.com/v1/audio/transcriptions";
+          }
+          if (!apiKey && provider !== "custom") {
+            throw new Error(`${provider} API key not configured`);
+          }
+
+          const formData = new FormData();
+          formData.append("file", new Blob([buffer], { type: "audio/webm" }), "audio.webm");
+          formData.append("model", model);
+          const headers = {};
+          if (provider === "mistral") {
+            headers["x-api-key"] = apiKey;
+          } else if (apiKey) {
+            headers.Authorization = `Bearer ${apiKey}`;
+          }
+
+          const response = await fetch(endpoint, { method: "POST", headers, body: formData });
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`${provider} API Error: ${response.status} ${errorText}`);
+          }
+          const data = await response.json();
+          if (data?.text) {
+            result = { text: data.text, source: provider, model };
+          }
         }
 
         if (!result?.text) {
@@ -2360,13 +2425,13 @@ class IPCHandlers {
 
         this.databaseManager.updateTranscriptionText(id, result.text, result.text);
         this.databaseManager.updateTranscriptionStatus(id, "completed");
-        const provider = result.source || "local";
-        const model = result.model || null;
+        const providerName = result.source || "local";
+        const modelName = result.model || null;
         this.databaseManager.updateTranscriptionAudio(id, {
           hasAudio: 1,
           audioDurationMs: null,
-          provider,
-          model,
+          provider: providerName,
+          model: modelName,
         });
         const updated = this.databaseManager.getTranscriptionById(id);
         if (updated) {
