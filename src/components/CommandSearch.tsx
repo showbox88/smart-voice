@@ -18,7 +18,7 @@ export interface CommandSearchProps {
   onOpenChange: (open: boolean) => void;
   mode?: "all" | "conversations";
   transcriptions?: TranscriptionItem[];
-  onNoteSelect?: (noteId: number) => void;
+  onNoteSelect?: (noteId: number, folderId: number | null) => void;
   onTranscriptSelect?: (transcriptId: number) => void;
   onConversationSelect?: (conversationId: number) => void;
 }
@@ -217,7 +217,7 @@ export default function CommandSearch({
 
   const selectItem = useCallback(
     (item: FlatItem) => {
-      if (item.kind === "note") onNoteSelect?.(item.note.id);
+      if (item.kind === "note") onNoteSelect?.(item.note.id, item.note.folder_id ?? null);
       else if (item.kind === "transcript") onTranscriptSelect?.(item.transcript.id);
       else if (item.kind === "conversation") onConversationSelect?.(item.conversation.id);
       onOpenChange(false);

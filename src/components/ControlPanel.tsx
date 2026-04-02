@@ -570,7 +570,8 @@ export default function ControlPanel() {
             open={showSearch}
             onOpenChange={setShowSearch}
             transcriptions={history}
-            onNoteSelect={(id) => {
+            onNoteSelect={(id, folderId) => {
+              if (folderId) setActiveFolderId(folderId);
               setActiveNoteId(id);
               setActiveView("personal-notes");
             }}

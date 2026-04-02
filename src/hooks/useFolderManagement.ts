@@ -118,7 +118,6 @@ export function useFolderManagement(): UseFolderManagementReturn {
     if (!activeFolderId || isLoading) return;
     if (prevFolderIdRef.current === activeFolderId) return;
     prevFolderIdRef.current = activeFolderId;
-    setActiveNoteId(null);
     const loadForFolder = async () => {
       try {
         const notes = await initializeNotes(null, 50, activeFolderId);
