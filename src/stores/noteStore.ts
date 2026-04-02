@@ -18,6 +18,7 @@ const useNoteStore = create<NoteState>()(() => ({
 let hasBoundIpcListeners = false;
 const DEFAULT_LIMIT = 50;
 let currentLimit = DEFAULT_LIMIT;
+let loadGeneration = 0;
 
 function ensureIpcListeners() {
   if (hasBoundIpcListeners || typeof window === "undefined") {
@@ -69,9 +70,11 @@ export async function initializeNotes(
   limit = DEFAULT_LIMIT,
   folderId?: number | null
 ): Promise<NoteItem[]> {
+  const gen = ++loadGeneration;
   currentLimit = limit;
   ensureIpcListeners();
   const items = (await window.electronAPI?.getNotes(noteType, limit, folderId)) ?? [];
+  if (gen !== loadGeneration) return items;
   useNoteStore.setState({ notes: items });
   return items;
 }

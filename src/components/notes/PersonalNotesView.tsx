@@ -170,41 +170,43 @@ export default function PersonalNotesView({
   }, [stopTranscription]);
 
   useEffect(() => {
-    if (activeNote && activeNote.id !== activeNoteRef.current) {
-      // Flush any pending save for the previous note before switching
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = null;
-        if (activeNoteRef.current) {
-          window.electronAPI.updateNote(activeNoteRef.current, {
-            title: localTitleRef.current,
-            content: localContentRef.current,
-          });
+    const syncNote = async () => {
+      if (activeNote && activeNote.id !== activeNoteRef.current) {
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
+          if (activeNoteRef.current) {
+            await window.electronAPI.updateNote(activeNoteRef.current, {
+              title: localTitleRef.current,
+              content: localContentRef.current,
+            });
+          }
         }
+        if (enhancedSaveTimeoutRef.current) {
+          clearTimeout(enhancedSaveTimeoutRef.current);
+          enhancedSaveTimeoutRef.current = null;
+        }
+        activeNoteRef.current = activeNote.id;
+        setLocalTitle(activeNote.title);
+        setLocalContent(activeNote.content);
+        setLocalEnhancedContent(activeNote.enhanced_content ?? null);
       }
-      if (enhancedSaveTimeoutRef.current) {
-        clearTimeout(enhancedSaveTimeoutRef.current);
-        enhancedSaveTimeoutRef.current = null;
+      if (!activeNote) {
+        if (saveTimeoutRef.current) {
+          clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
+        }
+        if (enhancedSaveTimeoutRef.current) {
+          clearTimeout(enhancedSaveTimeoutRef.current);
+          enhancedSaveTimeoutRef.current = null;
+        }
+        activeNoteRef.current = null;
+        setLocalTitle("");
+        setLocalContent("");
+        setLocalEnhancedContent(null);
       }
-      activeNoteRef.current = activeNote.id;
-      setLocalTitle(activeNote.title);
-      setLocalContent(activeNote.content);
-      setLocalEnhancedContent(activeNote.enhanced_content ?? null);
-    }
-    if (!activeNote) {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = null;
-      }
-      if (enhancedSaveTimeoutRef.current) {
-        clearTimeout(enhancedSaveTimeoutRef.current);
-        enhancedSaveTimeoutRef.current = null;
-      }
-      activeNoteRef.current = null;
-      setLocalTitle("");
-      setLocalContent("");
-      setLocalEnhancedContent(null);
-    }
+    };
+    syncNote();
   }, [activeNote]);
 
   const debouncedSave = useCallback((noteId: number, title: string, content: string) => {
@@ -483,8 +485,13 @@ export default function PersonalNotesView({
     prevTranscribingRef.current = isTranscribing;
   }, [isTranscribing, realtimeTranscript, realtimeSegments]);
 
+  const isLocalSynced = activeNoteRef.current === activeNote?.id;
   const editorNote = activeNote
-    ? { ...activeNote, title: localTitle, content: localContent }
+    ? {
+        ...activeNote,
+        title: isLocalSynced ? localTitle : activeNote.title,
+        content: isLocalSynced ? localContent : activeNote.content,
+      }
     : null;
 
   if (!isOnboardingComplete) {

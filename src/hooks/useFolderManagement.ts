@@ -116,14 +116,23 @@ export function useFolderManagement(): UseFolderManagementReturn {
   // Re-initialize notes when active folder changes
   useEffect(() => {
     if (!activeFolderId || isLoading) return;
-    // Skip if folder hasn't changed (e.g., initial load completing)
     if (prevFolderIdRef.current === activeFolderId) return;
     prevFolderIdRef.current = activeFolderId;
+    setActiveNoteId(null);
     const loadForFolder = async () => {
-      const notes = await initializeNotes(null, 50, activeFolderId);
-      const presetNoteId = getActiveNoteIdValue();
-      if (!presetNoteId || !notes.some((n) => n.id === presetNoteId)) {
-        setActiveNoteId(notes.length > 0 ? notes[0].id : null);
+      try {
+        const notes = await initializeNotes(null, 50, activeFolderId);
+        if (getActiveFolderIdValue() !== activeFolderId) return;
+        const presetNoteId = getActiveNoteIdValue();
+        if (!presetNoteId || !notes.some((n) => n.id === presetNoteId)) {
+          setActiveNoteId(notes.length > 0 ? notes[0].id : null);
+        }
+      } catch (err) {
+        logger.warn(
+          "Failed to load notes for folder",
+          { folderId: activeFolderId, error: (err as Error).message },
+          "notes"
+        );
       }
     };
     loadForFolder();
@@ -192,11 +201,11 @@ export function useFolderManagement(): UseFolderManagementReturn {
     async (folderId: number) => {
       const result = await window.electronAPI.deleteFolder(folderId);
       if (result.success) {
-        const personalFolder = findDefaultFolder(folders);
-        if (activeFolderId === folderId && personalFolder) {
-          setActiveFolderId(personalFolder.id);
+        const items = await loadFolders();
+        if (getActiveFolderIdValue() === folderId) {
+          const personalFolder = findDefaultFolder(items);
+          if (personalFolder) setActiveFolderId(personalFolder.id);
         }
-        await loadFolders();
       } else if (result.error) {
         toast({
           title: t("notes.folders.couldNotDelete"),
@@ -205,7 +214,7 @@ export function useFolderManagement(): UseFolderManagementReturn {
         });
       }
     },
-    [folders, activeFolderId, loadFolders, toast, t]
+    [loadFolders, toast, t]
   );
 
   return {
