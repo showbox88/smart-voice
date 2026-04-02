@@ -79,26 +79,19 @@ class AudioTapManager {
   }
 
   /**
-   * Probe the native binary to resolve permission status for the session.
-   * Safe to call on startup: only probes when macOS has already asked the
-   * user (screenStatus !== "not-determined"), so no consent dialog appears.
-   * First-time users stay "unknown" until they click "Grant Access".
+   * Probe the native binary once on startup to cache the real TCC status.
+   * The macOS consent dialog only appears on the very first call — after
+   * that, probing is always silent (success or silent failure). Safe to
+   * call on every app launch.
    */
   async resolvePermission() {
     if (!this.isSupported() || this.permissionStatus !== "unknown") {
       return;
     }
-    const { systemPreferences } = require("electron");
-    const screenStatus = systemPreferences.getMediaAccessStatus("screen");
-    if (screenStatus === "not-determined") {
-      // User has never been asked — don't trigger the consent dialog.
-      return;
-    }
-    // User was asked before (granted or denied) — probe is dialog-safe.
     try {
       await this.requestAccess();
     } catch {
-      // requestAccess already caches "denied" on permission_denied errors.
+      // requestAccess caches "denied" on permission_denied errors.
     }
   }
 

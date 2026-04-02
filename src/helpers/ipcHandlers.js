@@ -2375,12 +2375,6 @@ class IPCHandlers {
         return { granted: false, status: "unsupported", mode: "unsupported" };
       }
 
-      // Use cached permission status from the audio tap manager.
-      // We intentionally do NOT probe here — probing spawns the native
-      // binary which triggers the macOS consent dialog.  The status gets
-      // resolved to "granted" or "denied" after the user explicitly
-      // clicks "Grant Access" (request-system-audio-access) or after a
-      // successful recording session.
       const result = this.audioTapManager.checkAccess();
       return { granted: result.granted, status: result.status, mode: "native" };
     });

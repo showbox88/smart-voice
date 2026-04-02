@@ -367,9 +367,7 @@ function initializeDeferredManagers() {
     });
   }
 
-  // Resolve system audio permission status for the session.
-  // If already granted, the probe succeeds instantly (no dialog).
-  // If never asked, status stays "unknown" until the user clicks "Grant Access".
+  // Cache the system audio TCC status for the session via a quick probe.
   if (audioTapManager?.isSupported()) {
     audioTapManager.resolvePermission().catch(() => {});
   }
