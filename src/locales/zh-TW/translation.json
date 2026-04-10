@@ -1090,7 +1090,11 @@
         "openwhispr": "OpenWhispr",
         "providers": "供應商",
         "local": "本機執行",
-        "selfHosted": "自架主機"
+        "selfHosted": "自架主機",
+        "openwhisprDesc": "即開即用，無需設定。",
+        "providersDesc": "使用你自己的 API Key。",
+        "localDesc": "在本機執行，完全私密。",
+        "selfHostedDesc": "自架伺服器，區網或雲端。"
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "即開即用，無需設定。",
@@ -1399,7 +1403,11 @@
         "openwhispr": "OpenWhispr",
         "providers": "供應商",
         "local": "本機執行",
-        "selfHosted": "自架主機"
+        "selfHosted": "自架主機",
+        "openwhisprDesc": "即開即用，無需設定。",
+        "providersDesc": "使用你自己的 API Key。",
+        "localDesc": "在本機執行，完全私密。",
+        "selfHostedDesc": "自架伺服器，區網或雲端。"
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "即開即用，無需設定。",

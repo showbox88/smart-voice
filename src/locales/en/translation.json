@@ -1143,7 +1143,11 @@
         "openwhispr": "OpenWhispr",
         "providers": "Providers",
         "local": "On Device",
-        "selfHosted": "Self-Hosted"
+        "selfHosted": "Self-Hosted",
+        "openwhisprDesc": "Just works. No setup needed.",
+        "providersDesc": "Bring your own API key.",
+        "localDesc": "Runs on your machine. Fully private.",
+        "selfHostedDesc": "Your own server on LAN or cloud."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "Just works. No configuration needed.",
@@ -1452,7 +1456,11 @@
         "openwhispr": "OpenWhispr",
         "providers": "Providers",
         "local": "On Device",
-        "selfHosted": "Self-Hosted"
+        "selfHosted": "Self-Hosted",
+        "openwhisprDesc": "Just works. No setup needed.",
+        "providersDesc": "Bring your own API key.",
+        "localDesc": "Runs on your machine. Fully private.",
+        "selfHostedDesc": "Your own server on LAN or cloud."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "Just works. No configuration needed.",

@@ -1095,7 +1095,11 @@
         "openwhispr": "OpenWhispr",
         "providers": "Провайдеры",
         "local": "На устройстве",
-        "selfHosted": "Свой сервер"
+        "selfHosted": "Свой сервер",
+        "openwhisprDesc": "Работает сразу. Без настройки.",
+        "providersDesc": "Используйте свой API-ключ.",
+        "localDesc": "Работает локально. Полная приватность.",
+        "selfHostedDesc": "Свой сервер в LAN или облаке."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "Просто работает. Настройка не требуется.",
@@ -1404,7 +1408,11 @@
         "openwhispr": "OpenWhispr",
         "providers": "Провайдеры",
         "local": "На устройстве",
-        "selfHosted": "Свой сервер"
+        "selfHosted": "Свой сервер",
+        "openwhisprDesc": "Работает сразу. Без настройки.",
+        "providersDesc": "Используйте свой API-ключ.",
+        "localDesc": "Работает локально. Полная приватность.",
+        "selfHostedDesc": "Свой сервер в LAN или облаке."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "Просто работает. Настройка не требуется.",

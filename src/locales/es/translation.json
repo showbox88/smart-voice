@@ -1095,7 +1095,11 @@
         "openwhispr": "OpenWhispr",
         "providers": "Proveedores",
         "local": "En dispositivo",
-        "selfHosted": "Autoalojado"
+        "selfHosted": "Autoalojado",
+        "openwhisprDesc": "Funciona sin configurar nada.",
+        "providersDesc": "Usa tu propia clave API.",
+        "localDesc": "Se ejecuta en tu equipo. Privado.",
+        "selfHostedDesc": "Tu servidor en LAN o en la nube."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "Funciona de inmediato. Sin configuración necesaria.",
@@ -1404,7 +1408,11 @@
         "openwhispr": "OpenWhispr",
         "providers": "Proveedores",
         "local": "En dispositivo",
-        "selfHosted": "Autoalojado"
+        "selfHosted": "Autoalojado",
+        "openwhisprDesc": "Funciona sin configurar nada.",
+        "providersDesc": "Usa tu propia clave API.",
+        "localDesc": "Se ejecuta en tu equipo. Privado.",
+        "selfHostedDesc": "Tu servidor en LAN o en la nube."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "Funciona de inmediato. Sin configuración necesaria.",

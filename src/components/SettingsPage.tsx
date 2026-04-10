@@ -37,7 +37,6 @@ import MicrophoneSettings from "./ui/MicrophoneSettings";
 import PermissionCard from "./ui/PermissionCard";
 import PasteToolsInfo from "./ui/PasteToolsInfo";
 import TranscriptionModelPicker from "./TranscriptionModelPicker";
-import { ModeSelector } from "./ui/ModeSelector";
 import SelfHostedPanel from "./SelfHostedPanel";
 import {
   ConfirmDialog,
@@ -243,26 +242,35 @@ function TranscriptionSection({
 }: TranscriptionSectionProps) {
   const { t } = useTranslation();
 
-  const transcriptionModes = [
+  const transcriptionModes: {
+    id: InferenceMode;
+    label: string;
+    description: string;
+    icon: React.ReactNode;
+  }[] = [
     {
-      id: "openwhispr" as InferenceMode,
+      id: "openwhispr",
       label: t("settingsPage.transcription.modes.openwhispr"),
-      icon: <Cloud className="w-3.5 h-3.5" />,
+      description: t("settingsPage.transcription.modes.openwhisprDesc"),
+      icon: <Cloud className="w-4 h-4" />,
     },
     {
-      id: "providers" as InferenceMode,
+      id: "providers",
       label: t("settingsPage.transcription.modes.providers"),
-      icon: <Key className="w-3.5 h-3.5" />,
+      description: t("settingsPage.transcription.modes.providersDesc"),
+      icon: <Key className="w-4 h-4" />,
     },
     {
-      id: "local" as InferenceMode,
+      id: "local",
       label: t("settingsPage.transcription.modes.local"),
-      icon: <Cpu className="w-3.5 h-3.5" />,
+      description: t("settingsPage.transcription.modes.localDesc"),
+      icon: <Cpu className="w-4 h-4" />,
     },
     {
-      id: "self-hosted" as InferenceMode,
+      id: "self-hosted",
       label: t("settingsPage.transcription.modes.selfHosted"),
-      icon: <Network className="w-3.5 h-3.5" />,
+      description: t("settingsPage.transcription.modes.selfHostedDesc"),
+      icon: <Network className="w-4 h-4" />,
     },
   ];
 
@@ -342,11 +350,57 @@ function TranscriptionSection({
 
       {isSignedIn ? (
         <>
-          <ModeSelector
-            modes={transcriptionModes}
-            selectedMode={transcriptionMode}
-            onSelect={handleTranscriptionModeSelect}
-          />
+          <SettingsPanel>
+            {transcriptionModes.map((mode) => {
+              const isActive = transcriptionMode === mode.id;
+              return (
+                <SettingsPanelRow key={mode.id}>
+                  <button
+                    onClick={() => handleTranscriptionModeSelect(mode.id)}
+                    className="w-full flex items-center gap-3 text-left cursor-pointer group"
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-colors ${
+                        isActive
+                          ? "bg-primary/10 dark:bg-primary/15"
+                          : "bg-muted/60 dark:bg-surface-raised group-hover:bg-muted dark:group-hover:bg-surface-3"
+                      }`}
+                    >
+                      <div
+                        className={`transition-colors ${isActive ? "text-primary" : "text-muted-foreground"}`}
+                      >
+                        {mode.icon}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-foreground">{mode.label}</span>
+                        {isActive && (
+                          <span className="text-xs font-medium text-primary bg-primary/10 dark:bg-primary/15 px-1.5 py-px rounded-sm">
+                            {t("common.active")}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground/80 mt-0.5">{mode.description}</p>
+                    </div>
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 shrink-0 transition-colors ${
+                        isActive
+                          ? "border-primary bg-primary"
+                          : "border-border-hover dark:border-border-subtle"
+                      }`}
+                    >
+                      {isActive && (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                </SettingsPanelRow>
+              );
+            })}
+          </SettingsPanel>
 
           {transcriptionMode === "providers" && renderTranscriptionPicker("cloud")}
           {transcriptionMode === "local" && renderTranscriptionPicker("local")}
@@ -444,26 +498,35 @@ function AiModelsSection({
 }: AiModelsSectionProps) {
   const { t } = useTranslation();
 
-  const aiModes = [
+  const aiModes: {
+    id: InferenceMode;
+    label: string;
+    description: string;
+    icon: React.ReactNode;
+  }[] = [
     {
-      id: "openwhispr" as InferenceMode,
+      id: "openwhispr",
       label: t("settingsPage.aiModels.modes.openwhispr"),
-      icon: <Cloud className="w-3.5 h-3.5" />,
+      description: t("settingsPage.aiModels.modes.openwhisprDesc"),
+      icon: <Cloud className="w-4 h-4" />,
     },
     {
-      id: "providers" as InferenceMode,
+      id: "providers",
       label: t("settingsPage.aiModels.modes.providers"),
-      icon: <Key className="w-3.5 h-3.5" />,
+      description: t("settingsPage.aiModels.modes.providersDesc"),
+      icon: <Key className="w-4 h-4" />,
     },
     {
-      id: "local" as InferenceMode,
+      id: "local",
       label: t("settingsPage.aiModels.modes.local"),
-      icon: <Cpu className="w-3.5 h-3.5" />,
+      description: t("settingsPage.aiModels.modes.localDesc"),
+      icon: <Cpu className="w-4 h-4" />,
     },
     {
-      id: "self-hosted" as InferenceMode,
+      id: "self-hosted",
       label: t("settingsPage.aiModels.modes.selfHosted"),
-      icon: <Network className="w-3.5 h-3.5" />,
+      description: t("settingsPage.aiModels.modes.selfHostedDesc"),
+      icon: <Network className="w-4 h-4" />,
     },
   ];
 
@@ -533,11 +596,61 @@ function AiModelsSection({
         <>
           {isSignedIn ? (
             <>
-              <ModeSelector
-                modes={aiModes}
-                selectedMode={reasoningMode}
-                onSelect={handleReasoningModeSelect}
-              />
+              <SettingsPanel>
+                {aiModes.map((mode) => {
+                  const isActive = reasoningMode === mode.id;
+                  return (
+                    <SettingsPanelRow key={mode.id}>
+                      <button
+                        onClick={() => handleReasoningModeSelect(mode.id)}
+                        className="w-full flex items-center gap-3 text-left cursor-pointer group"
+                      >
+                        <div
+                          className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-colors ${
+                            isActive
+                              ? "bg-primary/10 dark:bg-primary/15"
+                              : "bg-muted/60 dark:bg-surface-raised group-hover:bg-muted dark:group-hover:bg-surface-3"
+                          }`}
+                        >
+                          <div
+                            className={`transition-colors ${isActive ? "text-primary" : "text-muted-foreground"}`}
+                          >
+                            {mode.icon}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-foreground">
+                              {mode.label}
+                            </span>
+                            {isActive && (
+                              <span className="text-xs font-medium text-primary bg-primary/10 dark:bg-primary/15 px-1.5 py-px rounded-sm">
+                                {t("common.active")}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground/80 mt-0.5">
+                            {mode.description}
+                          </p>
+                        </div>
+                        <div
+                          className={`w-4 h-4 rounded-full border-2 shrink-0 transition-colors ${
+                            isActive
+                              ? "border-primary bg-primary"
+                              : "border-border-hover dark:border-border-subtle"
+                          }`}
+                        >
+                          {isActive && (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    </SettingsPanelRow>
+                  );
+                })}
+              </SettingsPanel>
 
               {reasoningMode === "providers" && renderReasoningSelector("cloud")}
               {reasoningMode === "local" && renderReasoningSelector("local")}

@@ -1090,7 +1090,11 @@
         "openwhispr": "OpenWhispr",
         "providers": "服务商",
         "local": "本地运行",
-        "selfHosted": "自托管"
+        "selfHosted": "自托管",
+        "openwhisprDesc": "开箱即用，无需设置。",
+        "providersDesc": "使用你自己的 API Key。",
+        "localDesc": "在本机运行，完全私密。",
+        "selfHostedDesc": "自建服务器，局域网或云端。"
       },
       "openwhisprCloud": "OpenWhispr 云端",
       "openwhisprCloudDescription": "开箱即用，无需配置。",
@@ -1399,7 +1403,11 @@
         "openwhispr": "OpenWhispr",
         "providers": "服务商",
         "local": "本地运行",
-        "selfHosted": "自托管"
+        "selfHosted": "自托管",
+        "openwhisprDesc": "开箱即用，无需设置。",
+        "providersDesc": "使用你自己的 API Key。",
+        "localDesc": "在本机运行，完全私密。",
+        "selfHostedDesc": "自建服务器，局域网或云端。"
       },
       "openwhisprCloud": "OpenWhispr 云端",
       "openwhisprCloudDescription": "开箱即用，无需配置。",

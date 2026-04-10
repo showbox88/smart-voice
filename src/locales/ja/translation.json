@@ -1095,7 +1095,11 @@
         "openwhispr": "OpenWhispr",
         "providers": "プロバイダー",
         "local": "デバイス上",
-        "selfHosted": "セルフホスト"
+        "selfHosted": "セルフホスト",
+        "openwhisprDesc": "設定不要ですぐ使える。",
+        "providersDesc": "自分のAPIキーを使用。",
+        "localDesc": "端末上で動作。完全プライベート。",
+        "selfHostedDesc": "LANやクラウドの自前サーバー。"
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "設定不要ですぐに使えます。",
@@ -1404,7 +1408,11 @@
         "openwhispr": "OpenWhispr",
         "providers": "プロバイダー",
         "local": "デバイス上",
-        "selfHosted": "セルフホスト"
+        "selfHosted": "セルフホスト",
+        "openwhisprDesc": "設定不要ですぐ使える。",
+        "providersDesc": "自分のAPIキーを使用。",
+        "localDesc": "端末上で動作。完全プライベート。",
+        "selfHostedDesc": "LANやクラウドの自前サーバー。"
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "設定不要ですぐに使えます。",
