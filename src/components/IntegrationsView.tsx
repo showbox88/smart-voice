@@ -18,6 +18,10 @@ export default function IntegrationsView() {
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const systemAudio = useSystemAudioPermission();
   const hasAccounts = gcalAccounts.length > 0;
+  const needsSystemAudioGrant =
+    !systemAudio.granted &&
+    (systemAudio.mode === "native" ||
+      (systemAudio.mode === "portal" && systemAudio.supportsOnboardingGrant));
 
   const startOAuth = useCallback(async () => {
     setIsConnecting(true);
@@ -36,7 +40,7 @@ export default function IntegrationsView() {
   }, [setGcalAccounts]);
 
   const handleConnect = useCallback(async () => {
-    if (systemAudio.mode === "native" && !systemAudio.granted) {
+    if (needsSystemAudioGrant) {
       const granted = await systemAudio.request();
       if (!granted) {
         setShowPermissionDialog(true);
@@ -44,7 +48,7 @@ export default function IntegrationsView() {
       }
     }
     await startOAuth();
-  }, [systemAudio.mode, systemAudio.granted, systemAudio.request, startOAuth]);
+  }, [needsSystemAudioGrant, startOAuth, systemAudio]);
 
   const handleDisconnect = useCallback(
     async (email: string) => {
@@ -218,8 +222,12 @@ export default function IntegrationsView() {
         onOpenChange={setShowPermissionDialog}
         title={t("integrations.googleCalendar.systemAudioRequired")}
         description={t("integrations.googleCalendar.systemAudioDescription")}
-        confirmText={t("integrations.googleCalendar.openSettings")}
-        onConfirm={systemAudio.openSettings}
+        confirmText={
+          systemAudio.mode === "native"
+            ? t("integrations.googleCalendar.openSettings")
+            : t("onboarding.permissions.grantAccess")
+        }
+        onConfirm={systemAudio.mode === "native" ? systemAudio.openSettings : systemAudio.request}
       />
     </div>
   );

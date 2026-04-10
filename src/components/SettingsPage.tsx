@@ -2777,7 +2777,7 @@ EOF`,
                       desc: t("settingsPage.general.waylandPaste.xclipDesc", {
                         defaultValue: "Clipboard tool for KDE Wayland paste (xclip or xsel)",
                       }),
-                      guide: [
+                      steps: [
                         {
                           title: t("settingsPage.general.waylandPaste.guide.xclip.step1Title", {
                             defaultValue: "Install xclip",
@@ -3498,17 +3498,21 @@ EOF`,
                   buttonText={t("settingsPage.permissions.grantAccess")}
                 />
 
-                {platform === "darwin" && (
+                {(platform === "darwin" ||
+                  (platform === "linux" && systemAudio.supportsOnboardingGrant)) && (
                   <>
-                    <PermissionCard
-                      icon={Shield}
-                      title={t("settingsPage.permissions.accessibilityTitle")}
-                      description={t("settingsPage.permissions.accessibilityDescription")}
-                      granted={permissionsHook.accessibilityPermissionGranted}
-                      onRequest={permissionsHook.requestAccessibilityPermission}
-                      buttonText={t("settingsPage.permissions.grantAccess")}
-                    />
-                    {systemAudio.mode === "native" && (
+                    {platform === "darwin" && (
+                      <PermissionCard
+                        icon={Shield}
+                        title={t("settingsPage.permissions.accessibilityTitle")}
+                        description={t("settingsPage.permissions.accessibilityDescription")}
+                        granted={permissionsHook.accessibilityPermissionGranted}
+                        onRequest={permissionsHook.requestAccessibilityPermission}
+                        buttonText={t("settingsPage.permissions.grantAccess")}
+                      />
+                    )}
+                    {(systemAudio.mode === "native" ||
+                      (systemAudio.mode === "portal" && systemAudio.supportsOnboardingGrant)) && (
                       <PermissionCard
                         icon={Monitor}
                         title={t("settingsPage.permissions.systemAudioTitle")}

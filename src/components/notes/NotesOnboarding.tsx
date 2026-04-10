@@ -54,9 +54,13 @@ export default function NotesOnboarding({ onComplete }: NotesOnboardingProps) {
   const {
     granted: systemAudioGranted,
     mode: systemAudioMode,
+    supportsOnboardingGrant: systemAudioSupportsOnboardingGrant,
     request: requestSystemAudio,
   } = useSystemAudioPermission();
   const [isRequestingSystemAudio, setIsRequestingSystemAudio] = useState(false);
+  const shouldShowSystemAudioPermission =
+    systemAudioMode === "native" ||
+    (systemAudioMode === "portal" && systemAudioSupportsOnboardingGrant);
 
   const handleGrantSystemAudio = useCallback(async () => {
     setIsRequestingSystemAudio(true);
@@ -185,7 +189,7 @@ export default function NotesOnboarding({ onComplete }: NotesOnboardingProps) {
         )}
 
         {/* System Audio Permission */}
-        {systemAudioMode !== "unsupported" && (
+        {shouldShowSystemAudioPermission && (
           <div
             className={cn(
               "rounded-lg border transition-colors duration-200",
@@ -210,10 +214,10 @@ export default function NotesOnboarding({ onComplete }: NotesOnboardingProps) {
                 </div>
               </div>
               {systemAudioGranted ? (
-                <span className="text-xs text-success/60 font-medium shrink-0">
+                <span className="text-xs font-medium text-success/60 shrink-0">
                   {t("notes.onboarding.systemAudio.enabled")}
                 </span>
-              ) : systemAudioMode === "native" ? (
+              ) : (
                 <Button
                   variant="outline"
                   size="sm"
@@ -227,7 +231,7 @@ export default function NotesOnboarding({ onComplete }: NotesOnboardingProps) {
                     t("notes.onboarding.systemAudio.grant")
                   )}
                 </Button>
-              ) : null}
+              )}
             </div>
           </div>
         )}

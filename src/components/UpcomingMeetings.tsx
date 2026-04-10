@@ -41,6 +41,10 @@ export default function UpcomingMeetings({ events, isLoading }: UpcomingMeetings
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const systemAudio = useSystemAudioPermission();
   const isSignedIn = useSettingsStore((s) => s.isSignedIn);
+  const needsSystemAudioGrant =
+    !systemAudio.granted &&
+    (systemAudio.mode === "native" ||
+      (systemAudio.mode === "portal" && systemAudio.supportsOnboardingGrant));
 
   const now = useMemo(() => new Date(), []);
 
@@ -104,7 +108,7 @@ export default function UpcomingMeetings({ events, isLoading }: UpcomingMeetings
       {/* Empty state */}
       {!isLoading && events.length === 0 && (
         <div className="flex flex-col items-center justify-center py-8 px-3">
-          {systemAudio.mode === "native" && !systemAudio.granted ? (
+          {needsSystemAudioGrant ? (
             <>
               <Monitor size={24} className="text-muted-foreground/30 mb-2.5" />
               <p className="text-xs text-muted-foreground/60 text-center mb-3">
@@ -116,7 +120,9 @@ export default function UpcomingMeetings({ events, isLoading }: UpcomingMeetings
                 onClick={() => systemAudio.request()}
                 className="text-xs h-7"
               >
-                {t("upcoming.openSettings")}
+                {systemAudio.mode === "native"
+                  ? t("upcoming.openSettings")
+                  : t("onboarding.permissions.grantAccess")}
               </Button>
             </>
           ) : !isSignedIn ? (

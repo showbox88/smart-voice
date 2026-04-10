@@ -122,10 +122,24 @@ export interface AudioDiagnosticsResult {
   models: string[];
 }
 
+export type SystemAudioMode = "native" | "loopback" | "portal" | "unsupported";
+export type SystemAudioStrategy =
+  | "native"
+  | "loopback"
+  | "browser-portal"
+  | "portal-helper"
+  | "unsupported";
+
 export interface SystemAudioAccessResult {
   granted: boolean;
   status: "granted" | "denied" | "not-determined" | "restricted" | "unknown" | "unsupported";
-  mode: "native" | "loopback" | "unsupported";
+  mode: SystemAudioMode;
+  supportsPersistentGrant?: boolean;
+  supportsOnboardingGrant?: boolean;
+  requiresRuntimeSharePrompt?: boolean;
+  strategy?: SystemAudioStrategy;
+  restoreTokenAvailable?: boolean;
+  portalVersion?: number | null;
   error?: string;
 }
 
@@ -1287,15 +1301,18 @@ declare global {
         provider?: string;
         model?: string;
         language?: string;
+        allowSystemAudio?: boolean;
       }) => Promise<{ success: boolean; alreadyPrepared?: boolean; error?: string }>;
       meetingTranscriptionStart?: (options: {
         provider?: string;
         model?: string;
         language?: string;
+        allowSystemAudio?: boolean;
       }) => Promise<{
         success: boolean;
         error?: string;
-        systemAudioMode?: "native" | "loopback" | "unsupported";
+        systemAudioMode?: SystemAudioMode;
+        systemAudioStrategy?: SystemAudioStrategy;
       }>;
       meetingTranscriptionSend?: (buffer: ArrayBuffer, source: "mic" | "system") => void;
       meetingTranscriptionStop?: () => Promise<{

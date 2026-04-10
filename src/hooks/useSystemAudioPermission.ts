@@ -6,6 +6,12 @@ const DEFAULT_ACCESS: SystemAudioAccessResult = {
   granted: false,
   status: "unsupported",
   mode: "unsupported",
+  supportsPersistentGrant: false,
+  supportsOnboardingGrant: false,
+  requiresRuntimeSharePrompt: false,
+  strategy: "unsupported",
+  restoreTokenAvailable: false,
+  portalVersion: null,
 };
 
 export function useSystemAudioPermission() {
@@ -43,14 +49,20 @@ export function useSystemAudioPermission() {
   }, []);
 
   const request = useCallback(async (): Promise<boolean> => {
-    const currentAccess = access ?? (await window.electronAPI?.checkSystemAudioAccess?.()) ?? DEFAULT_ACCESS;
+    const currentAccess =
+      access ?? (await window.electronAPI?.checkSystemAudioAccess?.()) ?? DEFAULT_ACCESS;
 
     if (currentAccess.mode === "loopback") {
       setAccess(currentAccess);
       return currentAccess.granted;
     }
 
-    if (currentAccess.mode !== "native") {
+    if (currentAccess.mode === "portal") {
+      if (!currentAccess.supportsOnboardingGrant) {
+        setAccess(currentAccess);
+        return currentAccess.granted;
+      }
+    } else if (currentAccess.mode !== "native") {
       setAccess(currentAccess);
       return false;
     }
@@ -71,6 +83,27 @@ export function useSystemAudioPermission() {
   const granted = access?.granted ?? false;
   const status = access?.status ?? "unknown";
   const mode = access?.mode ?? "unsupported";
+  const supportsPersistentGrant = access?.supportsPersistentGrant ?? false;
+  const supportsOnboardingGrant = access?.supportsOnboardingGrant ?? false;
+  const requiresRuntimeSharePrompt = access?.requiresRuntimeSharePrompt ?? false;
+  const strategy = access?.strategy ?? "unsupported";
+  const restoreTokenAvailable = access?.restoreTokenAvailable ?? false;
+  const portalVersion = access?.portalVersion ?? null;
 
-  return { granted, status, mode, isChecking, request, openSettings, check, isMacOS };
+  return {
+    granted,
+    status,
+    mode,
+    supportsPersistentGrant,
+    supportsOnboardingGrant,
+    requiresRuntimeSharePrompt,
+    strategy,
+    restoreTokenAvailable,
+    portalVersion,
+    isChecking,
+    request,
+    openSettings,
+    check,
+    isMacOS,
+  };
 }

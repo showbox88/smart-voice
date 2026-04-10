@@ -170,7 +170,7 @@ export default function PersonalNotesView({
 
   const startRecording = useCallback(async () => {
     isMeetingModeRef.current = false;
-    await startTranscription();
+    await startTranscription({ allowSystemAudio: true });
   }, [startTranscription]);
 
   const stopRecording = useCallback(async () => {
@@ -460,7 +460,7 @@ export default function PersonalNotesView({
     if (!meetingRecordingRequest || activeNoteId !== meetingRecordingRequest.noteId) return;
     meetingNoteIdRef.current = meetingRecordingRequest.noteId;
     isMeetingModeRef.current = true;
-    startTranscription();
+    startTranscription({ allowSystemAudio: false });
     onMeetingRecordingRequestHandled?.();
   }, [meetingRecordingRequest, activeNoteId, startTranscription, onMeetingRecordingRequestHandled]);
 
