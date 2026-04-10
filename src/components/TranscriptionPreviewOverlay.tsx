@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Copy, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -7,6 +7,7 @@ type PreviewPhase = "listening" | "live" | "cleanup" | "final";
 const FINAL_HIDE_DURATION_MS = 4000;
 const COPIED_RESET_MS = 1400;
 const HIDE_ANIMATION_MS = 220;
+const TARGET_WIDTH = 420;
 
 export default function TranscriptionPreviewOverlay() {
   const { t } = useTranslation();
@@ -66,8 +67,6 @@ export default function TranscriptionPreviewOverlay() {
     }
   }, [phase]);
 
-  const targetWidth = 420;
-
   const showFinalResult = useCallback(
     (text: string) => {
       const trimmed = text.trim();
@@ -92,8 +91,8 @@ export default function TranscriptionPreviewOverlay() {
     }
 
     const nextHeight = Math.ceil(shellRef.current.getBoundingClientRect().height) + 16;
-    window.electronAPI.resizeTranscriptionPreviewWindow(targetWidth, nextHeight).catch(() => {});
-  }, [isVisible, targetWidth]);
+    window.electronAPI.resizeTranscriptionPreviewWindow(TARGET_WIDTH, nextHeight).catch(() => {});
+  }, [isVisible]);
 
   useEffect(() => {
     if (!isVisible || !shellRef.current) return;
@@ -247,7 +246,9 @@ export default function TranscriptionPreviewOverlay() {
               ? "border-accent/22 dark:border-accent/25"
               : "border-border/40 dark:border-border-subtle/45",
           "transition-all duration-200 ease-out",
-          isVisible ? "translate-y-0 opacity-100 scale-100" : "translate-y-4 opacity-0 scale-[0.97]",
+          isVisible
+            ? "translate-y-0 opacity-100 scale-100"
+            : "translate-y-4 opacity-0 scale-[0.97]",
         ].join(" ")}
       >
         <div className="flex items-center justify-between">
