@@ -134,8 +134,6 @@ export default function NoteEditor({
     noteTranscript: note.transcript ?? undefined,
   });
   const titleRef = useRef<HTMLDivElement>(null);
-  const prevNoteIdRef = useRef<number>(note.id);
-  const autoShowDoneRef = useRef(false);
 
   const segmentContainerRef = useRef<HTMLDivElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState<React.CSSProperties>({ opacity: 0 });
@@ -164,7 +162,7 @@ export default function NoteEditor({
     } catch {
       return [];
     }
-  }, [note.id, note.participants]);
+  }, [note.participants]);
 
   const updateSegmentIndicator = useCallback(() => {
     const container = segmentContainerRef.current;
@@ -194,46 +192,40 @@ export default function NoteEditor({
     return () => observer.disconnect();
   }, [updateSegmentIndicator]);
 
-  const prevProcessingStateRef = useRef(actionProcessingState);
-  useEffect(() => {
-    if (prevProcessingStateRef.current === "processing" && actionProcessingState === "success") {
+  const [prevProcessingState, setPrevProcessingState] = useState(actionProcessingState);
+  if (actionProcessingState !== prevProcessingState) {
+    if (prevProcessingState === "processing" && actionProcessingState === "success") {
       setViewMode("enhanced");
     }
-    prevProcessingStateRef.current = actionProcessingState;
-  }, [actionProcessingState]);
+    setPrevProcessingState(actionProcessingState);
+  }
 
-  useEffect(() => {
-    if (note.id !== prevNoteIdRef.current) {
-      prevNoteIdRef.current = note.id;
-      autoShowDoneRef.current = false;
-      setChatMode("hidden");
-      if (!isMeetingRecording) {
-        setViewMode("raw");
-      }
-      if (titleRef.current && titleRef.current.textContent !== note.title) {
-        titleRef.current.textContent = note.title || "";
-      }
-      editorRef.current?.commands.focus();
+  const [prevNoteId, setPrevNoteId] = useState(note.id);
+  const [autoShowDone, setAutoShowDone] = useState(false);
+  if (note.id !== prevNoteId) {
+    setPrevNoteId(note.id);
+    setAutoShowDone(false);
+    setChatMode("hidden");
+    if (!isMeetingRecording) {
+      setViewMode("raw");
     }
-  }, [note.id, isMeetingRecording]);
+  }
 
-  // Auto-show chat when hook loads an existing conversation with messages
-  useEffect(() => {
-    if (
-      !autoShowDoneRef.current &&
-      embeddedChat.activeConversationId &&
-      embeddedChat.messages.length > 0
-    ) {
-      autoShowDoneRef.current = true;
-      setChatMode("floating");
-    }
-  }, [embeddedChat.activeConversationId, embeddedChat.messages.length]);
+  if (
+    !autoShowDone &&
+    embeddedChat.activeConversationId &&
+    embeddedChat.messages.length > 0
+  ) {
+    setAutoShowDone(true);
+    setChatMode("floating");
+  }
 
   useEffect(() => {
     if (titleRef.current && titleRef.current.textContent !== note.title) {
       titleRef.current.textContent = note.title || "";
     }
-  }, [note.title]);
+    editorRef.current?.commands.focus();
+  }, [note.id, note.title]);
 
   const handleTitleInput = useCallback(() => {
     if (titleRef.current) {
@@ -255,23 +247,17 @@ export default function NoteEditor({
     document.execCommand("insertText", false, text);
   }, []);
 
-  // Auto-switch to transcript view after recording stops and transcript is ready
-  const prevRecordingRef = useRef(false);
-  const pendingTranscriptSwitchRef = useRef(false);
+  const [prevRecording, setPrevRecording] = useState(false);
+  const [pendingTranscriptSwitch, setPendingTranscriptSwitch] = useState(false);
 
-  useEffect(() => {
-    if (isRecording && !prevRecordingRef.current) {
-      pendingTranscriptSwitchRef.current = true;
-    }
-    prevRecordingRef.current = isRecording;
-  }, [isRecording]);
-
-  useEffect(() => {
-    if (!isRecording && !isProcessing && pendingTranscriptSwitchRef.current && liveTranscript) {
-      pendingTranscriptSwitchRef.current = false;
-      setViewMode("transcript");
-    }
-  }, [isRecording, isProcessing, liveTranscript]);
+  if (isRecording !== prevRecording) {
+    setPrevRecording(isRecording);
+    if (isRecording) setPendingTranscriptSwitch(true);
+  }
+  if (!isRecording && !isProcessing && pendingTranscriptSwitch && liveTranscript) {
+    setPendingTranscriptSwitch(false);
+    setViewMode("transcript");
+  }
 
   const handleContentChange = useCallback(
     (newValue: string) => {

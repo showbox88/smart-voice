@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { useSettingsLayout } from "./SidebarModal";
+import { useSettingsLayout } from "./useSettingsLayout";
 import type { InferenceMode } from "../../types/electron";
 
 interface SettingsSectionProps {

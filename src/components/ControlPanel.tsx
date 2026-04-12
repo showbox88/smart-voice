@@ -6,7 +6,7 @@ import UpgradePrompt from "./UpgradePrompt";
 import { ConfirmDialog, AlertDialog } from "./ui/dialog";
 import { useDialogs } from "../hooks/useDialogs";
 import { useHotkey } from "../hooks/useHotkey";
-import { useToast } from "./ui/Toast";
+import { useToast } from "./ui/useToast";
 import { useUpdater } from "../hooks/useUpdater";
 import { useSettings } from "../hooks/useSettings";
 import { useAuth } from "../hooks/useAuth";
@@ -102,7 +102,7 @@ export default function ControlPanel() {
 
   useEffect(() => {
     loadTranscriptions();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

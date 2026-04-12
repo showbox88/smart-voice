@@ -72,18 +72,19 @@ import AgentModeSettings from "./settings/AgentModeSettings";
 import LanguageSelector from "./ui/LanguageSelector";
 import { Skeleton } from "./ui/skeleton";
 import { Progress } from "./ui/progress";
-import { useToast } from "./ui/Toast";
+import { useToast } from "./ui/useToast";
 import { useTheme } from "../hooks/useTheme";
 import type { GpuDevice, LocalTranscriptionProvider, InferenceMode } from "../types/electron";
 import logger from "../utils/logger";
 import { SettingsRow, InferenceModeSelector } from "./ui/SettingsSection";
 import type { InferenceModeOption } from "./ui/SettingsSection";
-import { useSettingsLayout } from "./ui/SidebarModal";
+import { useSettingsLayout } from "./ui/useSettingsLayout";
 import { useUsage } from "../hooks/useUsage";
 import { cn } from "./lib/utils";
 import { startMigration, useMigration } from "../stores/noteStore.js";
 import { formatBytes } from "../utils/formatBytes";
 import { useSettingsStore } from "../stores/settingsStore";
+import { canManageSystemAudioInApp } from "../utils/systemAudioAccess";
 
 const formatAmount = (cents: number, currency: string) =>
   (cents / 100).toLocaleString(undefined, { style: "currency", currency });
@@ -751,7 +752,7 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
 
   const migration = useMigration();
 
-  const whisperHook = useWhisper();
+  const { checkWhisperInstallation } = useWhisper();
   const permissionsHook = usePermissions(showAlertDialog);
   const systemAudio = useSystemAudioPermission();
   useClipboard(showAlertDialog);
@@ -1001,7 +1002,7 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
       if (version && mounted) setCurrentVersion(version);
 
       if (mounted) {
-        whisperHook.checkWhisperInstallation();
+        checkWhisperInstallation();
       }
     }, 100);
 
@@ -1009,7 +1010,7 @@ export default function SettingsPage({ activeSection = "general" }: SettingsPage
       mounted = false;
       clearTimeout(timer);
     };
-  }, [whisperHook.checkWhisperInstallation, getAppVersion]);
+  }, [checkWhisperInstallation, getAppVersion]);
 
   useEffect(() => {
     const checkHotkeyMode = async () => {
@@ -2702,7 +2703,7 @@ EOF`,
                       desc: t("settingsPage.general.waylandPaste.xclipDesc", {
                         defaultValue: "Clipboard tool for KDE Wayland paste (xclip or xsel)",
                       }),
-                      guide: [
+                      steps: [
                         {
                           title: t("settingsPage.general.waylandPaste.guide.xclip.step1Title", {
                             defaultValue: "Install xclip",
@@ -3437,17 +3438,19 @@ EOF`,
                   buttonText={t("settingsPage.permissions.grantAccess")}
                 />
 
-                {platform === "darwin" && (
+                {(platform === "darwin" || canManageSystemAudioInApp(systemAudio)) && (
                   <>
-                    <PermissionCard
-                      icon={Shield}
-                      title={t("settingsPage.permissions.accessibilityTitle")}
-                      description={t("settingsPage.permissions.accessibilityDescription")}
-                      granted={permissionsHook.accessibilityPermissionGranted}
-                      onRequest={permissionsHook.requestAccessibilityPermission}
-                      buttonText={t("settingsPage.permissions.grantAccess")}
-                    />
-                    {systemAudio.mode === "native" && (
+                    {platform === "darwin" && (
+                      <PermissionCard
+                        icon={Shield}
+                        title={t("settingsPage.permissions.accessibilityTitle")}
+                        description={t("settingsPage.permissions.accessibilityDescription")}
+                        granted={permissionsHook.accessibilityPermissionGranted}
+                        onRequest={permissionsHook.requestAccessibilityPermission}
+                        buttonText={t("settingsPage.permissions.grantAccess")}
+                      />
+                    )}
+                    {canManageSystemAudioInApp(systemAudio) && (
                       <PermissionCard
                         icon={Monitor}
                         title={t("settingsPage.permissions.systemAudioTitle")}
