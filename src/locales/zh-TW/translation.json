@@ -1813,7 +1813,6 @@
       "meetingAttendees": "會議參與者",
       "assignName": "指派姓名",
       "isThisPerson": "這是{{name}}嗎？",
-      "reassignTo": "重新指派給",
       "selected": "已選 {{n}} 個",
       "assignTo": "指派給…",
       "deselectAll": "取消全選",
