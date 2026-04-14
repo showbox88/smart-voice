@@ -330,15 +330,20 @@ export default function NoteEditor({
 
   useEffect(() => {
     const expectedSession = diarizationSessionId;
-    const cleanup = window.electronAPI?.onMeetingDiarizationComplete?.((data) => {
+    const cleanup = window.electronAPI?.onMeetingDiarizationComplete?.(async (data) => {
       if (!expectedSession || data?.sessionId !== expectedSession) return;
 
       setIsDiarizing(false);
 
       if (!data?.segments?.length) return;
 
+      const persisted = await window.electronAPI?.getNote?.(note.id);
+      const existing = persisted?.transcript
+        ? parseTranscriptSegments(persisted.transcript)
+        : displaySegmentsRef.current;
+
       const enriched = mergeTranscriptSegments(
-        displaySegmentsRef.current,
+        existing,
         data.segments.map((s: any, i: number) => ({
           ...s,
           id: s.id || `diarized-${i}`,

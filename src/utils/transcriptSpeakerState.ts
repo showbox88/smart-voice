@@ -128,66 +128,63 @@ export const mergeTranscriptSegments = (
   if (incomingSegments.length === 0) {
     return normalizeTranscriptSegments(existingSegments);
   }
+  if (existingSegments.length === 0) {
+    return incomingSegments.map((segment, index) =>
+      normalizeTranscriptSegment({ ...segment, id: segment.id || `merged-${index}` })
+    );
+  }
 
-  const existingById = new Map<string, TranscriptSegment>();
-  const existingByKey = new Map<string, Array<{ index: number; segment: TranscriptSegment }>>();
+  const existingById = new Map<string, number>();
+  const existingByKey = new Map<string, number[]>();
 
   existingSegments.forEach((segment, index) => {
-    if (segment.id) {
-      existingById.set(segment.id, segment);
-    }
-
+    if (segment.id) existingById.set(segment.id, index);
     const key = getSegmentMatchKey(segment);
     const bucket = existingByKey.get(key);
-    if (bucket) {
-      bucket.push({ index, segment });
-    } else {
-      existingByKey.set(key, [{ index, segment }]);
-    }
+    if (bucket) bucket.push(index);
+    else existingByKey.set(key, [index]);
   });
 
   const usedIndexes = new Set<number>();
+  const enrichedByIndex = new Map<number, TranscriptSegment>();
+  const unmatchedIncoming: TranscriptSegment[] = [];
 
-  return incomingSegments.map((segment, index) => {
-    const byId = segment.id ? existingById.get(segment.id) : undefined;
-    if (byId) {
-      const byIdIndex = existingSegments.findIndex((candidate) => candidate.id === byId.id);
-      if (byIdIndex >= 0) {
-        usedIndexes.add(byIdIndex);
-      }
-      return mergeSpeakerFields(byId, segment);
+  incomingSegments.forEach((segment, index) => {
+    const findUnused = (candidates?: number[]) =>
+      candidates?.find((candidateIndex) => !usedIndexes.has(candidateIndex));
+
+    let matchIndex = segment.id ? existingById.get(segment.id) : undefined;
+    if (matchIndex !== undefined && usedIndexes.has(matchIndex)) matchIndex = undefined;
+
+    if (matchIndex === undefined) {
+      matchIndex = findUnused(existingByKey.get(getSegmentMatchKey(segment)));
     }
 
-    const keyMatches = existingByKey.get(getSegmentMatchKey(segment)) || [];
-    const keyMatch = keyMatches.find(({ index: existingIndex }) => !usedIndexes.has(existingIndex));
-    if (keyMatch) {
-      usedIndexes.add(keyMatch.index);
-      return mergeSpeakerFields(keyMatch.segment, segment);
+    if (matchIndex === undefined) {
+      const fallbackIndex = existingSegments.findIndex(
+        (candidate, existingIndex) =>
+          !usedIndexes.has(existingIndex) &&
+          candidate.source === segment.source &&
+          candidate.text === segment.text
+      );
+      if (fallbackIndex >= 0) matchIndex = fallbackIndex;
     }
 
-    const fallbackIndex = existingSegments.findIndex(
-      (candidate, existingIndex) =>
-        !usedIndexes.has(existingIndex) &&
-        candidate.source === segment.source &&
-        candidate.text === segment.text
-    );
-
-    if (fallbackIndex >= 0) {
-      usedIndexes.add(fallbackIndex);
-      return mergeSpeakerFields(existingSegments[fallbackIndex], segment);
+    if (matchIndex !== undefined) {
+      usedIndexes.add(matchIndex);
+      enrichedByIndex.set(matchIndex, mergeSpeakerFields(existingSegments[matchIndex], segment));
+    } else {
+      unmatchedIncoming.push(
+        normalizeTranscriptSegment({ ...segment, id: segment.id || `merged-${index}` })
+      );
     }
-
-    const positionalMatch = existingSegments[index];
-    if (positionalMatch && !usedIndexes.has(index) && positionalMatch.source === segment.source) {
-      usedIndexes.add(index);
-      return mergeSpeakerFields(positionalMatch, segment);
-    }
-
-    return normalizeTranscriptSegment({
-      ...segment,
-      id: segment.id || `merged-${index}`,
-    });
   });
+
+  const preserved = existingSegments.map(
+    (segment, index) => enrichedByIndex.get(index) ?? normalizeTranscriptSegment(segment)
+  );
+
+  return [...preserved, ...unmatchedIncoming];
 };
 
 export const serializeTranscriptSegments = (segments: TranscriptSegment[]) =>
