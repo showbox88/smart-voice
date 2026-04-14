@@ -121,7 +121,7 @@ export default function PersonalNotesView({
     startTranscription,
     stopTranscription,
   } = useMeetingTranscription();
-  const meetingNoteIdRef = useRef<number | null>(null);
+  const recordingNoteIdRef = useRef<number | null>(null);
 
   const {
     folders,
@@ -164,13 +164,11 @@ export default function PersonalNotesView({
     });
   }, [activeNote?.calendar_event_id]);
 
-  // Note recording uses the same meeting transcription pipeline.
-  // The `isMeetingMode` ref distinguishes whether the recording was triggered
-  // by the meeting hotkey (creates a separate note) or the note record button.
   const isMeetingModeRef = useRef(false);
 
   const startRecording = useCallback(async () => {
     isMeetingModeRef.current = false;
+    recordingNoteIdRef.current = activeNoteRef.current;
     await startTranscription({ allowSystemAudio: true });
   }, [startTranscription]);
 
@@ -459,13 +457,12 @@ export default function PersonalNotesView({
 
   useEffect(() => {
     if (!meetingRecordingRequest || activeNoteId !== meetingRecordingRequest.noteId) return;
-    meetingNoteIdRef.current = meetingRecordingRequest.noteId;
+    recordingNoteIdRef.current = meetingRecordingRequest.noteId;
     isMeetingModeRef.current = true;
     startTranscription({ allowSystemAudio: false });
     onMeetingRecordingRequestHandled?.();
   }, [meetingRecordingRequest, activeNoteId, startTranscription, onMeetingRecordingRequestHandled]);
 
-  // Save transcript when any recording stops (meeting or note)
   const prevTranscribingRef = useRef(false);
 
   useEffect(() => {
@@ -481,20 +478,18 @@ export default function PersonalNotesView({
             )
           : realtimeTranscript;
 
-      // Meeting mode saves to the meeting note; regular recording saves to the active note
-      const noteId = isMeetingModeRef.current ? meetingNoteIdRef.current : activeNoteRef.current;
+      const noteId = recordingNoteIdRef.current;
       if (noteId && transcript) {
         window.electronAPI.updateNote(noteId, { transcript });
       }
-      if (isMeetingModeRef.current) {
-        meetingNoteIdRef.current = null;
-      }
+      recordingNoteIdRef.current = null;
       isMeetingModeRef.current = false;
     }
     prevTranscribingRef.current = isTranscribing;
   }, [isTranscribing, realtimeTranscript, realtimeSegments]);
 
   const isLocalSynced = activeNoteRef.current === activeNote?.id;
+  const isActiveNoteRecording = isTranscribing && recordingNoteIdRef.current === activeNote?.id;
   const editorNote = activeNote
     ? {
         ...activeNote,
@@ -883,14 +878,14 @@ export default function PersonalNotesView({
                     }
                   : undefined
               }
-              isMeetingRecording={isTranscribing && isMeetingModeRef.current}
+              isMeetingRecording={isActiveNoteRecording && isMeetingModeRef.current}
               diarizationSessionId={diarizationSessionId}
-              meetingTranscript={realtimeTranscript}
-              meetingSegments={realtimeSegments}
-              meetingMicPartial={micPartial}
-              meetingSystemPartial={systemPartial}
+              meetingTranscript={isActiveNoteRecording ? realtimeTranscript : ""}
+              meetingSegments={isActiveNoteRecording ? realtimeSegments : []}
+              meetingMicPartial={isActiveNoteRecording ? micPartial : ""}
+              meetingSystemPartial={isActiveNoteRecording ? systemPartial : ""}
               onStopMeetingRecording={stopTranscription}
-              liveTranscript={isTranscribing ? realtimeTranscript : ""}
+              liveTranscript={isActiveNoteRecording ? realtimeTranscript : ""}
               folderName={activeFolderName}
               calendarEventName={calendarEventName}
               folders={folders}
