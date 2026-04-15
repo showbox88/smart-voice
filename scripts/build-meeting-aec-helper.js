@@ -202,7 +202,7 @@ function configureCMake(cmakeManifestPath) {
   }
 
   if (process.platform === "win32" && targetArch === "x64") {
-    args.push("-A", "x64");
+    args.push("-A", "x64", "-T", "ClangCL");
   }
 
   return run("cmake", args);
