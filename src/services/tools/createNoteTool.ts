@@ -5,7 +5,7 @@ import { syncNoteToCloud } from "../../stores/noteStore";
 export const createNoteTool: ToolDefinition = {
   name: "create_note",
   description:
-    "Create a new note with a title and content, optionally in a specific folder. If the folder does not exist, it is created automatically. Use list_folders first to avoid creating near-duplicates of existing folders.",
+    "Always call list_folders first and reuse an existing folder when the user mentions one; only pass a new folder name when none fits. Creates a note with title, content, and optional folder (auto-created if missing).",
   parameters: {
     type: "object",
     properties: {
