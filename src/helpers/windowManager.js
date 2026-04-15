@@ -374,23 +374,14 @@ class WindowManager {
     }
 
     const MIN_HOLD_DURATION_MS = 150;
-    const MAX_PUSH_DURATION_MS = 120_000;
     const downTime = Date.now();
 
     this.showDictationPanel();
-
-    const safetyTimer = setTimeout(() => {
-      if (this.winPushState?.active) {
-        debugLogger.warn("[WindowManager] Push-to-talk safety timeout, force stopping");
-        this.handleWindowsPushKeyUp();
-      }
-    }, MAX_PUSH_DURATION_MS);
 
     this.winPushState = {
       active: true,
       downTime,
       isRecording: false,
-      safetyTimer,
     };
 
     setTimeout(() => {
@@ -411,9 +402,6 @@ class WindowManager {
     }
 
     const wasRecording = this.winPushState.isRecording;
-    if (this.winPushState.safetyTimer) {
-      clearTimeout(this.winPushState.safetyTimer);
-    }
     this.winPushState = null;
 
     if (wasRecording) {
@@ -424,10 +412,11 @@ class WindowManager {
   }
 
   resetWindowsPushState() {
-    if (this.winPushState?.safetyTimer) {
-      clearTimeout(this.winPushState.safetyTimer);
+    if (!this.winPushState?.active) {
+      return;
     }
-    this.winPushState = null;
+
+    this.handleWindowsPushKeyUp();
   }
 
   sendToggleDictation() {

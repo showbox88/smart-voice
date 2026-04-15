@@ -942,7 +942,6 @@ async function startApp() {
     });
   }
 
-  // Set up Windows Push-to-Talk handling
   if (process.platform === "win32") {
     debugLogger.debug("[Push-to-Talk] Windows Push-to-Talk setup starting");
 
@@ -973,8 +972,6 @@ async function startApp() {
     });
 
     windowsKeyManager.on("key-up", () => {
-      // Always process key-up to avoid stuck recording state, even if the
-      // window is temporarily unavailable (minimized, busy with transcription).
       if (windowManager.winPushState?.active) {
         windowManager.handleWindowsPushKeyUp();
       } else if (isLiveWindow(windowManager.mainWindow)) {
