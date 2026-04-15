@@ -973,11 +973,15 @@ async function startApp() {
     });
 
     windowsKeyManager.on("key-up", () => {
-      if (!isLiveWindow(windowManager.mainWindow)) return;
-
-      const activationMode = windowManager.getActivationMode();
-      if (activationMode === "push") {
+      // Always process key-up to avoid stuck recording state, even if the
+      // window is temporarily unavailable (minimized, busy with transcription).
+      if (windowManager.winPushState?.active) {
         windowManager.handleWindowsPushKeyUp();
+      } else if (isLiveWindow(windowManager.mainWindow)) {
+        const activationMode = windowManager.getActivationMode();
+        if (activationMode === "push") {
+          windowManager.handleWindowsPushKeyUp();
+        }
       }
     });
 

@@ -65,28 +65,29 @@ class WindowsKeyManager extends EventEmitter {
       return;
     }
 
+    let lineBuffer = "";
     this.process.stdout.setEncoding("utf8");
     this.process.stdout.on("data", (chunk) => {
-      chunk
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .forEach((line) => {
-          if (line === "READY") {
-            debugLogger.debug("[WindowsKeyManager] Listener ready", { key });
-            this.isReady = true;
-            this.emit("ready");
-          } else if (line === "KEY_DOWN") {
-            debugLogger.debug("[WindowsKeyManager] KEY_DOWN detected", { key });
-            this.emit("key-down", key);
-          } else if (line === "KEY_UP") {
-            debugLogger.debug("[WindowsKeyManager] KEY_UP detected", { key });
-            this.emit("key-up", key);
-          } else {
-            // Log unknown output at debug level (could be native binary's stderr info)
-            debugLogger.debug("[WindowsKeyManager] Unknown output", { line });
-          }
-        });
+      lineBuffer += chunk;
+      const lines = lineBuffer.split(/\r?\n/);
+      lineBuffer = lines.pop(); // keep incomplete trailing data for next chunk
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line) continue;
+        if (line === "READY") {
+          debugLogger.debug("[WindowsKeyManager] Listener ready", { key });
+          this.isReady = true;
+          this.emit("ready");
+        } else if (line === "KEY_DOWN") {
+          debugLogger.debug("[WindowsKeyManager] KEY_DOWN detected", { key });
+          this.emit("key-down", key);
+        } else if (line === "KEY_UP") {
+          debugLogger.debug("[WindowsKeyManager] KEY_UP detected", { key });
+          this.emit("key-up", key);
+        } else {
+          debugLogger.debug("[WindowsKeyManager] Unknown output", { line });
+        }
+      }
     });
 
     this.process.stderr.setEncoding("utf8");
