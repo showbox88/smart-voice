@@ -412,7 +412,11 @@ class WindowManager {
   }
 
   resetWindowsPushState() {
-    this.winPushState = null;
+    if (!this.winPushState?.active) {
+      return;
+    }
+
+    this.handleWindowsPushKeyUp();
   }
 
   sendToggleDictation() {

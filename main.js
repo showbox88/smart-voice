@@ -942,7 +942,6 @@ async function startApp() {
     });
   }
 
-  // Set up Windows Push-to-Talk handling
   if (process.platform === "win32") {
     debugLogger.debug("[Push-to-Talk] Windows Push-to-Talk setup starting");
 
@@ -973,11 +972,13 @@ async function startApp() {
     });
 
     windowsKeyManager.on("key-up", () => {
-      if (!isLiveWindow(windowManager.mainWindow)) return;
-
-      const activationMode = windowManager.getActivationMode();
-      if (activationMode === "push") {
+      if (windowManager.winPushState?.active) {
         windowManager.handleWindowsPushKeyUp();
+      } else if (isLiveWindow(windowManager.mainWindow)) {
+        const activationMode = windowManager.getActivationMode();
+        if (activationMode === "push") {
+          windowManager.handleWindowsPushKeyUp();
+        }
       }
     });
 
