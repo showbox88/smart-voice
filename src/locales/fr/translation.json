@@ -1232,6 +1232,8 @@
       },
       "clipboard": {
         "title": "Presse-papiers",
+        "autoPaste": "Collage automatique",
+        "autoPasteDescription": "Coller automatiquement le texte transcrit dans l'application active à la fin de la dictée",
         "keepInClipboard": "Garder la transcription dans le presse-papiers",
         "keepInClipboardDescription": "Conserver le texte dicté dans le presse-papiers pour pouvoir le coller manuellement si nécessaire"
       },

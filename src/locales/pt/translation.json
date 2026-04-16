@@ -1204,6 +1204,8 @@
       },
       "clipboard": {
         "title": "Área de transferência",
+        "autoPaste": "Colagem automática",
+        "autoPasteDescription": "Colar automaticamente o texto transcrito no aplicativo ativo ao finalizar o ditado",
         "keepInClipboard": "Manter transcrição na área de transferência",
         "keepInClipboardDescription": "Manter o texto ditado na área de transferência para poder colar manualmente se necessário"
       },
