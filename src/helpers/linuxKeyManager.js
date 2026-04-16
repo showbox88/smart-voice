@@ -1,10 +1,3 @@
-/**
- * LinuxKeyManager - Handles key up/down detection for Push-to-Talk on Linux
- *
- * Uses a native Linux keyboard hook to detect when specific keys are
- * pressed and released, enabling Push-to-Talk functionality.
- */
-
 const { spawn } = require("child_process");
 const path = require("path");
 const EventEmitter = require("events");
@@ -22,26 +15,53 @@ class LinuxKeyManager extends EventEmitter {
     this.watchdogTimer = null;
   }
 
-  /**
-   * Start listening for the specified key
-   * @param {string} key - The key to listen for (e.g., "`", "F8", "F11", "CommandOrControl+F11")
-   */
+  handleOutputLine(line, key) {
+    if (line === "READY") {
+      debugLogger.debug("[LinuxKeyManager] Listener ready", { key });
+      this.isReady = true;
+      this.emit("ready");
+      return;
+    }
+
+    if (line === "NO_PERMISSION") {
+      debugLogger.warn("[LinuxKeyManager] No permission to access input devices");
+      this.emit("permission-denied");
+      return;
+    }
+
+    if (line === "KEY_DOWN") {
+      debugLogger.debug("[LinuxKeyManager] KEY_DOWN detected", { key });
+      if (this.watchdogTimer) clearTimeout(this.watchdogTimer);
+      this.watchdogTimer = setTimeout(() => {
+        debugLogger.warn("[LinuxKeyManager] Watchdog: no KEY_UP within 30s, forcing release");
+        this.emit("key-up", this.currentKey);
+        this.watchdogTimer = null;
+      }, 30000);
+      this.emit("key-down", key);
+      return;
+    }
+
+    if (line === "KEY_UP") {
+      debugLogger.debug("[LinuxKeyManager] KEY_UP detected", { key });
+      if (this.watchdogTimer) {
+        clearTimeout(this.watchdogTimer);
+        this.watchdogTimer = null;
+      }
+      this.emit("key-up", key);
+      return;
+    }
+
+    debugLogger.debug("[LinuxKeyManager] Unknown output", { line });
+  }
+
   start(key = "`") {
-    if (!this.isSupported) {
-      return;
-    }
+    if (!this.isSupported) return;
+    if (this.process && this.currentKey === key) return;
 
-    // If already running with the same key, do nothing
-    if (this.process && this.currentKey === key) {
-      return;
-    }
-
-    // Stop any existing listener
     this.stop();
 
     const listenerPath = this.resolveListenerBinary();
     if (!listenerPath) {
-      // Binary not found - this is OK, Push-to-Talk will use fallback mode
       this.emit("unavailable", new Error("Linux key listener binary not found"));
       return;
     }
@@ -65,50 +85,23 @@ class LinuxKeyManager extends EventEmitter {
       return;
     }
 
+    let lineBuffer = "";
     this.process.stdout.setEncoding("utf8");
     this.process.stdout.on("data", (chunk) => {
-      chunk
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .forEach((line) => {
-          if (line === "READY") {
-            debugLogger.debug("[LinuxKeyManager] Listener ready", { key });
-            this.isReady = true;
-            this.emit("ready");
-          } else if (line === "NO_PERMISSION") {
-            debugLogger.warn("[LinuxKeyManager] No permission to access input devices");
-            this.emit("permission-denied");
-          } else if (line === "KEY_DOWN") {
-            debugLogger.debug("[LinuxKeyManager] KEY_DOWN detected", { key });
-            if (this.watchdogTimer) {
-              clearTimeout(this.watchdogTimer);
-            }
-            this.watchdogTimer = setTimeout(() => {
-              debugLogger.warn("[LinuxKeyManager] Watchdog: no KEY_UP received within 30s, forcing release");
-              this.emit("key-up", this.currentKey);
-              this.watchdogTimer = null;
-            }, 30000);
-            this.emit("key-down", key);
-          } else if (line === "KEY_UP") {
-            debugLogger.debug("[LinuxKeyManager] KEY_UP detected", { key });
-            if (this.watchdogTimer) {
-              clearTimeout(this.watchdogTimer);
-              this.watchdogTimer = null;
-            }
-            this.emit("key-up", key);
-          } else {
-            // Log unknown output at debug level (could be native binary's stderr info)
-            debugLogger.debug("[LinuxKeyManager] Unknown output", { line });
-          }
-        });
+      lineBuffer += chunk;
+      const lines = lineBuffer.split(/\r?\n/);
+      lineBuffer = lines.pop();
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line) continue;
+        this.handleOutputLine(line, key);
+      }
     });
 
     this.process.stderr.setEncoding("utf8");
     this.process.stderr.on("data", (data) => {
       const message = data.toString().trim();
       if (message.length > 0) {
-        // Native binary logs to stderr for info messages, don't treat as error
         debugLogger.debug("[LinuxKeyManager] Native stderr", { message });
       }
     });
@@ -121,6 +114,12 @@ class LinuxKeyManager extends EventEmitter {
     });
 
     proc.on("exit", (code, signal) => {
+      const trailingLine = lineBuffer.trim();
+      if (trailingLine) {
+        this.handleOutputLine(trailingLine, key);
+        lineBuffer = "";
+      }
+
       if (this.process === proc) {
         this.process = null;
         this.isReady = false;
@@ -135,9 +134,6 @@ class LinuxKeyManager extends EventEmitter {
     });
   }
 
-  /**
-   * Stop the key listener
-   */
   stop() {
     if (this.watchdogTimer) {
       clearTimeout(this.watchdogTimer);
@@ -147,37 +143,25 @@ class LinuxKeyManager extends EventEmitter {
       debugLogger.debug("[LinuxKeyManager] Stopping key listener");
       try {
         this.process.kill();
-      } catch {
-        // Ignore kill errors
-      }
+      } catch {}
       this.process = null;
     }
     this.isReady = false;
     this.currentKey = null;
   }
 
-  /**
-   * Check if the listener is available and ready
-   */
   isAvailable() {
     return this.resolveListenerBinary() !== null;
   }
 
-  /**
-   * Report an error (only once per session to avoid log spam)
-   */
   reportError(error) {
-    if (this.hasReportedError) {
-      return;
-    }
+    if (this.hasReportedError) return;
     this.hasReportedError = true;
 
     if (this.process) {
       try {
         this.process.kill();
-      } catch {
-        // Ignore
-      } finally {
+      } catch {} finally {
         this.process = null;
       }
     }
@@ -186,9 +170,6 @@ class LinuxKeyManager extends EventEmitter {
     this.emit("error", error);
   }
 
-  /**
-   * Find the listener binary in various possible locations
-   */
   resolveListenerBinary() {
     const arch = process.arch;
     const binaryNameWithArch = `linux-key-listener-${arch}`;
@@ -210,7 +191,6 @@ class LinuxKeyManager extends EventEmitter {
       ].forEach((candidate) => candidates.add(candidate));
     }
 
-    // Fallback: same paths without arch suffix
     [
       path.join(__dirname, "..", "..", "resources", "bin", binaryNameNoArch),
       path.join(__dirname, "..", "..", "resources", binaryNameNoArch),
@@ -227,14 +207,10 @@ class LinuxKeyManager extends EventEmitter {
       ].forEach((candidate) => candidates.add(candidate));
     }
 
-    const candidatePaths = [...candidates];
-
-    for (const candidate of candidatePaths) {
+    for (const candidate of [...candidates]) {
       try {
         const stats = fs.statSync(candidate);
-        if (stats.isFile()) {
-          return candidate;
-        }
+        if (stats.isFile()) return candidate;
       } catch {
         continue;
       }

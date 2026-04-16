@@ -4,8 +4,6 @@
  * Uses the evdev subsystem to detect key up/down events across all keyboards.
  * Accepts a hotkey string as command line argument (same format as Windows variant).
  * Outputs "KEY_DOWN" and "KEY_UP" to stdout.
- *
- * Compile with: gcc -O2 -Wall -Wextra -o linux-key-listener linux-key-listener.c
  */
 
 #define _GNU_SOURCE

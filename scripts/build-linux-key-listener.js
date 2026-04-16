@@ -1,10 +1,5 @@
 #!/usr/bin/env node
 
-// package.json integration notes:
-//   - Add "compile:linux-key-listener": "node scripts/build-linux-key-listener.js" to scripts
-//   - Add "npm run compile:linux-key-listener" to the "compile:native" chain
-//   - The predev / prestart hooks already run compile:native, so no changes needed there
-
 const { spawnSync } = require("child_process");
 const crypto = require("crypto");
 const fs = require("fs");
