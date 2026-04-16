@@ -118,6 +118,17 @@ class WindowManager {
     }
   }
 
+  setNotificationInteractivity(interactive) {
+    if (!this.notificationWindow || this.notificationWindow.isDestroyed()) {
+      return;
+    }
+    if (interactive) {
+      this.notificationWindow.setIgnoreMouseEvents(false);
+    } else {
+      this.notificationWindow.setIgnoreMouseEvents(true, { forward: true });
+    }
+  }
+
   resizeMainWindow(sizeKey) {
     if (!this.mainWindow || this.mainWindow.isDestroyed()) {
       return { success: false, message: "Window not available" };
@@ -1109,6 +1120,10 @@ class WindowManager {
       ...NOTIFICATION_WINDOW_CONFIG,
       ...position,
     });
+
+    if (process.platform === "darwin") {
+      this.notificationWindow.setIgnoreMouseEvents(true, { forward: true });
+    }
 
     WindowPositionUtil.setupAlwaysOnTop(this.notificationWindow);
 

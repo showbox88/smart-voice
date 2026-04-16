@@ -465,6 +465,10 @@ declare global {
         noteId: number,
         format: "txt" | "md"
       ) => Promise<{ success: boolean; error?: string }>;
+      exportTranscript: (
+        noteId: number,
+        format: "txt" | "srt" | "json"
+      ) => Promise<{ success: boolean; error?: string }>;
       searchNotes: (query: string, limit?: number) => Promise<NoteItem[]>;
       semanticSearchNotes: (query: string, limit?: number) => Promise<NoteItem[]>;
       semanticReindexAll: () => Promise<{ success: boolean; indexed?: number; error?: string }>;
@@ -732,6 +736,7 @@ declare global {
       startWindowDrag: () => Promise<void>;
       stopWindowDrag: () => Promise<void>;
       setMainWindowInteractivity: (interactive: boolean) => Promise<void>;
+      setNotificationInteractivity: (interactive: boolean) => Promise<void>;
 
       // App management
       appQuit: () => Promise<void>;
@@ -1139,6 +1144,7 @@ declare global {
           title: string;
           archived_at?: string;
           cloud_id?: string;
+          client_conversation_id?: string;
           created_at: string;
           updated_at: string;
         }>
@@ -1385,6 +1391,16 @@ declare global {
           startTime: number;
           endTime: number;
         }) => void
+      ) => () => void;
+      onMeetingSpeakersMerged?: (
+        callback: (
+          merges: Array<{
+            keep: string;
+            remove: string;
+            displayName?: string | null;
+            similarity: number;
+          }>
+        ) => void
       ) => () => void;
       onMeetingTranscriptionError?: (callback: (error: string) => void) => () => void;
 

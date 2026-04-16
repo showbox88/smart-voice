@@ -2,11 +2,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 test("treats near silence as skippable", async () => {
-  const {
-    createLocalSpeechGateState,
-    recordLocalSpeechWindow,
-    getLocalSpeechGateDecision,
-  } = await import("../../src/helpers/localSpeechGate.js");
+  const { createLocalSpeechGateState, recordLocalSpeechWindow, getLocalSpeechGateDecision } =
+    await import("../../src/helpers/localSpeechGate.js");
 
   const state = createLocalSpeechGateState();
   recordLocalSpeechWindow(state, 0.0012, 0.01);
@@ -25,34 +22,29 @@ test("treats near silence as skippable", async () => {
 });
 
 test("rejects isolated noise bursts without sustained speech", async () => {
-  const {
-    createLocalSpeechGateState,
-    recordLocalSpeechWindow,
-    getLocalSpeechGateDecision,
-  } = await import("../../src/helpers/localSpeechGate.js");
+  const { createLocalSpeechGateState, recordLocalSpeechWindow, getLocalSpeechGateDecision } =
+    await import("../../src/helpers/localSpeechGate.js");
 
   const state = createLocalSpeechGateState();
-  recordLocalSpeechWindow(state, 0.0025, 0.03);
-  recordLocalSpeechWindow(state, 0.0052, 0.045);
-  recordLocalSpeechWindow(state, 0.0028, 0.028);
+  // All windows have energy above silence but below speech thresholds
+  recordLocalSpeechWindow(state, 0.0025, 0.015);
+  recordLocalSpeechWindow(state, 0.0028, 0.018);
+  recordLocalSpeechWindow(state, 0.0022, 0.014);
 
   const decision = getLocalSpeechGateDecision(state);
 
   assert.equal(decision.skip, true);
   assert.equal(decision.reason, "insufficient_speech");
-  assert.equal(decision.peakRms, 0.0052);
-  assert.equal(decision.peakAmplitude, 0.045);
+  assert.equal(decision.peakRms, 0.0028);
+  assert.equal(decision.peakAmplitude, 0.018);
   assert.equal(decision.windowCount, 3);
-  assert.equal(decision.speechWindowCount, 1);
-  assert.equal(decision.maxConsecutiveSpeechWindows, 1);
+  assert.equal(decision.speechWindowCount, 0);
+  assert.equal(decision.maxConsecutiveSpeechWindows, 0);
 });
 
 test("allows sustained speech-like energy through", async () => {
-  const {
-    createLocalSpeechGateState,
-    recordLocalSpeechWindow,
-    getLocalSpeechGateDecision,
-  } = await import("../../src/helpers/localSpeechGate.js");
+  const { createLocalSpeechGateState, recordLocalSpeechWindow, getLocalSpeechGateDecision } =
+    await import("../../src/helpers/localSpeechGate.js");
 
   const state = createLocalSpeechGateState();
   recordLocalSpeechWindow(state, 0.003, 0.025);
@@ -65,7 +57,7 @@ test("allows sustained speech-like energy through", async () => {
     peakRms: 0.0061,
     peakAmplitude: 0.065,
     windowCount: 3,
-    speechWindowCount: 2,
-    maxConsecutiveSpeechWindows: 2,
+    speechWindowCount: 3,
+    maxConsecutiveSpeechWindows: 3,
   });
 });

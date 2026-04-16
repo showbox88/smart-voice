@@ -168,10 +168,7 @@ export default function PersonalNotesView({
     });
   }, [activeNote?.calendar_event_id]);
 
-  const isMeetingModeRef = useRef(false);
-
   const startRecording = useCallback(async () => {
-    isMeetingModeRef.current = false;
     recordingNoteIdRef.current = activeNoteRef.current;
     const note = notes.find((n) => n.id === activeNoteRef.current);
     const seedSegments = note?.transcript ? parseTranscriptSegments(note.transcript) : [];
@@ -203,6 +200,13 @@ export default function PersonalNotesView({
         setLocalTitle(activeNote.title);
         setLocalContent(activeNote.content);
         setLocalEnhancedContent(activeNote.enhanced_content ?? null);
+      } else if (activeNote && activeNote.id === activeNoteRef.current && !saveTimeoutRef.current) {
+        // External update (e.g. AI chat tool) — resync only when no user save is pending
+        if (activeNote.title !== localTitleRef.current) setLocalTitle(activeNote.title);
+        if (activeNote.content !== localContentRef.current) setLocalContent(activeNote.content);
+        if ((activeNote.enhanced_content ?? null) !== localEnhancedContent) {
+          setLocalEnhancedContent(activeNote.enhanced_content ?? null);
+        }
       }
       if (!activeNote) {
         if (saveTimeoutRef.current) {
@@ -220,7 +224,7 @@ export default function PersonalNotesView({
       }
     };
     syncNote();
-  }, [activeNote]);
+  }, [activeNote, localEnhancedContent]);
 
   const debouncedSave = useCallback((noteId: number, title: string, content: string) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -454,6 +458,14 @@ export default function PersonalNotesView({
     [activeNoteId]
   );
 
+  const handleExportTranscript = useCallback(
+    async (format: "txt" | "srt" | "json") => {
+      if (!activeNoteId) return;
+      await window.electronAPI.exportTranscript(activeNoteId, format);
+    },
+    [activeNoteId]
+  );
+
   // Pre-warm WebSocket when entering meeting mode (before user hits record)
   useEffect(() => {
     if (isMeetingMode) {
@@ -464,7 +476,6 @@ export default function PersonalNotesView({
   useEffect(() => {
     if (!meetingRecordingRequest || activeNoteId !== meetingRecordingRequest.noteId) return;
     recordingNoteIdRef.current = meetingRecordingRequest.noteId;
-    isMeetingModeRef.current = true;
     const note = notes.find((n) => n.id === meetingRecordingRequest.noteId);
     const seedSegments = note?.transcript ? parseTranscriptSegments(note.transcript) : [];
     startTranscription({ seedSegments });
@@ -495,10 +506,23 @@ export default function PersonalNotesView({
         window.electronAPI.updateNote(noteId, { transcript });
       }
       recordingNoteIdRef.current = null;
-      isMeetingModeRef.current = false;
     }
     prevTranscribingRef.current = isTranscribing;
   }, [isTranscribing, realtimeTranscript, realtimeSegments]);
+
+  useEffect(() => {
+    if (!isTranscribing) return;
+
+    const interval = setInterval(() => {
+      const noteId = recordingNoteIdRef.current;
+      if (!noteId || realtimeSegments.length === 0) return;
+      window.electronAPI.updateNote(noteId, {
+        transcript: serializeTranscriptSegments(realtimeSegments),
+      });
+    }, 30_000);
+
+    return () => clearInterval(interval);
+  }, [isTranscribing, realtimeSegments]);
 
   const isLocalSynced = activeNoteRef.current === activeNote?.id;
   const isActiveNoteRecording = isTranscribing && recordingNoteIdRef.current === activeNote?.id;
@@ -518,7 +542,7 @@ export default function PersonalNotesView({
     <div className="flex h-full">
       <div
         className="shrink-0 overflow-hidden transition-[width] duration-300 ease-out"
-        style={{ width: isMeetingMode ? 0 : "13rem" }}
+        style={{ width: isMeetingMode || isActiveNoteRecording ? 0 : "13rem" }}
       >
         <div className="w-52 shrink-0 border-r border-border/15 dark:border-white/4 flex flex-col h-full">
           <div className="px-2 pt-2 pb-1 shrink-0 space-y-0.5">
@@ -881,6 +905,7 @@ export default function PersonalNotesView({
               onStartRecording={startRecording}
               onStopRecording={stopRecording}
               onExportNote={handleExportNote}
+              onExportTranscript={handleExportTranscript}
               enhancement={
                 localEnhancedContent
                   ? {
@@ -890,7 +915,6 @@ export default function PersonalNotesView({
                     }
                   : undefined
               }
-              isMeetingRecording={isActiveNoteRecording && isMeetingModeRef.current}
               diarizationSessionId={diarizationSessionId}
               meetingTranscript={isActiveNoteRecording ? realtimeTranscript : ""}
               meetingSegments={isActiveNoteRecording ? realtimeSegments : []}
@@ -902,7 +926,6 @@ export default function PersonalNotesView({
               meetingSystemPartialSpeakerName={
                 isActiveNoteRecording ? systemPartialSpeakerName : undefined
               }
-              onStopMeetingRecording={stopTranscription}
               onLiveSpeakerLock={lockSpeaker}
               liveTranscript={isActiveNoteRecording ? realtimeTranscript : ""}
               folderName={activeFolderName}

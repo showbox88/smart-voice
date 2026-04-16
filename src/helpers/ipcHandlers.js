@@ -445,6 +445,11 @@ class IPCHandlers {
       return { success: true };
     });
 
+    ipcMain.handle("set-notification-interactivity", (event, interactive) => {
+      this.windowManager.setNotificationInteractivity(Boolean(interactive));
+      return { success: true };
+    });
+
     ipcMain.handle("resize-main-window", (event, sizeKey) => {
       return this.windowManager.resizeMainWindow(sizeKey);
     });
@@ -511,6 +516,8 @@ class IPCHandlers {
           provider: metadata?.provider || null,
           model: metadata?.model || null,
         });
+        const updated = this.databaseManager.getTranscriptionById(id);
+        if (updated) this.broadcastToWindows("transcription-updated", updated);
       }
       return result;
     });
@@ -933,33 +940,69 @@ class IPCHandlers {
 
     // Notes sync
     ipcMain.handle("db-get-pending-notes", () => this.databaseManager.getPendingNotes());
-    ipcMain.handle("db-get-pending-note-deletes", () => this.databaseManager.getPendingNoteDeletes());
-    ipcMain.handle("db-get-note-by-client-id", (_, clientNoteId) => this.databaseManager.getNoteByClientId(clientNoteId));
-    ipcMain.handle("db-upsert-note-from-cloud", (_, cloudNote, localFolderId) => this.databaseManager.upsertNoteFromCloud(cloudNote, localFolderId));
-    ipcMain.handle("db-mark-note-synced", (_, id, cloudId) => this.databaseManager.markNoteSynced(id, cloudId));
-    ipcMain.handle("db-mark-note-sync-error", (_, id) => this.databaseManager.markNoteSyncError(id));
+    ipcMain.handle("db-get-pending-note-deletes", () =>
+      this.databaseManager.getPendingNoteDeletes()
+    );
+    ipcMain.handle("db-get-note-by-client-id", (_, clientNoteId) =>
+      this.databaseManager.getNoteByClientId(clientNoteId)
+    );
+    ipcMain.handle("db-upsert-note-from-cloud", (_, cloudNote, localFolderId) =>
+      this.databaseManager.upsertNoteFromCloud(cloudNote, localFolderId)
+    );
+    ipcMain.handle("db-mark-note-synced", (_, id, cloudId) =>
+      this.databaseManager.markNoteSynced(id, cloudId)
+    );
+    ipcMain.handle("db-mark-note-sync-error", (_, id) =>
+      this.databaseManager.markNoteSyncError(id)
+    );
     ipcMain.handle("db-hard-delete-note", (_, id) => this.databaseManager.hardDeleteNote(id));
 
     // Folders sync
     ipcMain.handle("db-get-pending-folders", () => this.databaseManager.getPendingFolders());
-    ipcMain.handle("db-get-folder-by-client-id", (_, clientFolderId) => this.databaseManager.getFolderByClientId(clientFolderId));
-    ipcMain.handle("db-upsert-folder-from-cloud", (_, cloudFolder) => this.databaseManager.upsertFolderFromCloud(cloudFolder));
-    ipcMain.handle("db-mark-folder-synced", (_, id, cloudId) => this.databaseManager.markFolderSynced(id, cloudId));
+    ipcMain.handle("db-get-folder-by-client-id", (_, clientFolderId) =>
+      this.databaseManager.getFolderByClientId(clientFolderId)
+    );
+    ipcMain.handle("db-upsert-folder-from-cloud", (_, cloudFolder) =>
+      this.databaseManager.upsertFolderFromCloud(cloudFolder)
+    );
+    ipcMain.handle("db-mark-folder-synced", (_, id, cloudId) =>
+      this.databaseManager.markFolderSynced(id, cloudId)
+    );
     ipcMain.handle("db-get-folder-id-map", () => this.databaseManager.getFolderIdMap());
 
     // Conversations sync
-    ipcMain.handle("db-get-pending-conversations", () => this.databaseManager.getPendingConversations());
-    ipcMain.handle("db-get-pending-conversation-deletes", () => this.databaseManager.getPendingConversationDeletes());
-    ipcMain.handle("db-get-conversation-by-client-id", (_, clientId) => this.databaseManager.getConversationByClientId(clientId));
-    ipcMain.handle("db-upsert-conversation-from-cloud", (_, cloudConv, messages) => this.databaseManager.upsertConversationFromCloud(cloudConv, messages));
-    ipcMain.handle("db-mark-conversation-synced", (_, id, cloudId) => this.databaseManager.markConversationSynced(id, cloudId));
-    ipcMain.handle("db-hard-delete-conversation", (_, id) => this.databaseManager.hardDeleteConversation(id));
+    ipcMain.handle("db-get-pending-conversations", () =>
+      this.databaseManager.getPendingConversations()
+    );
+    ipcMain.handle("db-get-pending-conversation-deletes", () =>
+      this.databaseManager.getPendingConversationDeletes()
+    );
+    ipcMain.handle("db-get-conversation-by-client-id", (_, clientId) =>
+      this.databaseManager.getConversationByClientId(clientId)
+    );
+    ipcMain.handle("db-upsert-conversation-from-cloud", (_, cloudConv, messages) =>
+      this.databaseManager.upsertConversationFromCloud(cloudConv, messages)
+    );
+    ipcMain.handle("db-mark-conversation-synced", (_, id, cloudId) =>
+      this.databaseManager.markConversationSynced(id, cloudId)
+    );
+    ipcMain.handle("db-hard-delete-conversation", (_, id) =>
+      this.databaseManager.hardDeleteConversation(id)
+    );
 
     // Transcriptions sync
-    ipcMain.handle("db-get-pending-transcriptions", () => this.databaseManager.getPendingTranscriptions());
-    ipcMain.handle("db-get-transcription-by-client-id", (_, clientId) => this.databaseManager.getTranscriptionByClientId(clientId));
-    ipcMain.handle("db-upsert-transcription-from-cloud", (_, cloudTranscription) => this.databaseManager.upsertTranscriptionFromCloud(cloudTranscription));
-    ipcMain.handle("db-mark-transcription-synced", (_, id, cloudId) => this.databaseManager.markTranscriptionSynced(id, cloudId));
+    ipcMain.handle("db-get-pending-transcriptions", () =>
+      this.databaseManager.getPendingTranscriptions()
+    );
+    ipcMain.handle("db-get-transcription-by-client-id", (_, clientId) =>
+      this.databaseManager.getTranscriptionByClientId(clientId)
+    );
+    ipcMain.handle("db-upsert-transcription-from-cloud", (_, cloudTranscription) =>
+      this.databaseManager.upsertTranscriptionFromCloud(cloudTranscription)
+    );
+    ipcMain.handle("db-mark-transcription-synced", (_, id, cloudId) =>
+      this.databaseManager.markTranscriptionSynced(id, cloudId)
+    );
 
     ipcMain.handle("export-note", async (event, noteId, format) => {
       try {
@@ -998,6 +1041,151 @@ class IPCHandlers {
         return { success: true };
       } catch (error) {
         debugLogger.error("Error exporting note", { error: error.message }, "notes");
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle("export-transcript", async (event, noteId, format) => {
+      try {
+        const note = this.databaseManager.getNote(noteId);
+        if (!note) return { success: false, error: "Note not found" };
+
+        const segments = JSON.parse(note.transcript || "[]");
+        if (!segments.length) return { success: false, error: "No transcript available" };
+
+        const speakerMappingsArr = this.databaseManager.getSpeakerMappings(noteId);
+        const speakerMappings = {};
+        for (const m of speakerMappingsArr) {
+          speakerMappings[m.speaker_id] = m.display_name;
+        }
+
+        const title = note.title || "Untitled";
+        const noteDate = new Date(note.created_at);
+        const dateStr =
+          noteDate.toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }) +
+          " " +
+          noteDate.toLocaleTimeString(undefined, {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        let participants = [];
+        try {
+          const parsed = JSON.parse(note.participants || "[]");
+          participants = parsed.map((p) => p.name).filter(Boolean);
+        } catch {}
+
+        const { dialog } = require("electron");
+        const fs = require("fs");
+        const ext = format === "srt" ? "srt" : format === "json" ? "json" : "txt";
+        const safeName = title.replace(/[/\\?%*:|"<>]/g, "-");
+
+        const result = await dialog.showSaveDialog({
+          defaultPath: `${safeName}.${ext}`,
+          filters: [
+            { name: "Text", extensions: ["txt"] },
+            { name: "SubRip Subtitles", extensions: ["srt"] },
+            { name: "JSON", extensions: ["json"] },
+          ],
+        });
+
+        if (result.canceled || !result.filePath) return { success: false };
+
+        const resolveSpeaker = (seg) => {
+          if (seg.speakerName && !seg.speakerIsPlaceholder) return seg.speakerName;
+          if (seg.speaker && speakerMappings[seg.speaker]) return speakerMappings[seg.speaker];
+          if (seg.speaker === "you") return "You";
+          if (seg.speaker) {
+            const num = parseInt(seg.speaker.replace("speaker_", ""), 10);
+            return isNaN(num) ? "Unknown Speaker" : `Speaker ${num + 1}`;
+          }
+          return "Unknown Speaker";
+        };
+
+        const formatTs = (seconds) => {
+          const s = Math.floor(seconds);
+          const h = Math.floor(s / 3600);
+          const m = Math.floor((s % 3600) / 60);
+          const sec = s % 60;
+          return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+        };
+
+        const formatSrtTs = (seconds) => {
+          const s = Math.floor(seconds);
+          const ms = Math.round((seconds - s) * 1000);
+          const h = Math.floor(s / 3600);
+          const m = Math.floor((s % 3600) / 60);
+          const sec = s % 60;
+          return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")},${String(ms).padStart(3, "0")}`;
+        };
+
+        const merged = [];
+        for (const seg of segments) {
+          if (!seg.text?.trim()) continue;
+          const ts = seg.timestamp || 0;
+          const last = merged[merged.length - 1];
+          if (last && last.speaker === (seg.speaker || "") && ts - last.timestamp < 2) {
+            last.text = last.text + " " + seg.text.trim();
+            last.timestamp = ts;
+          } else {
+            merged.push({ ...seg, timestamp: ts, text: seg.text.trim() });
+          }
+        }
+
+        let exportContent;
+        if (format === "txt") {
+          const lines = [title, dateStr];
+          if (participants.length) lines.push(`Participants: ${participants.join(", ")}`);
+          lines.push("", "──────────────────────────────────", "");
+          for (const seg of merged) {
+            lines.push(`[${formatTs(seg.timestamp)}] ${resolveSpeaker(seg)}:`);
+            lines.push(seg.text);
+            lines.push("");
+          }
+          exportContent = lines.join("\n");
+        } else if (format === "srt") {
+          const entries = [];
+          for (let i = 0; i < merged.length; i++) {
+            const seg = merged[i];
+            const nextTs = i + 1 < merged.length ? merged[i + 1].timestamp : seg.timestamp + 3;
+            entries.push(`${i + 1}`);
+            entries.push(`${formatSrtTs(seg.timestamp)} --> ${formatSrtTs(nextTs)}`);
+            entries.push(`${resolveSpeaker(seg)}: ${seg.text}`);
+            entries.push("");
+          }
+          exportContent = entries.join("\n");
+        } else {
+          const speakersSet = new Set();
+          for (const seg of merged) speakersSet.add(resolveSpeaker(seg));
+          const lastSeg = merged[merged.length - 1];
+          exportContent = JSON.stringify(
+            {
+              metadata: {
+                title,
+                date: dateStr,
+                duration_seconds: lastSeg ? Math.round(lastSeg.timestamp) : 0,
+                speaker_count: speakersSet.size,
+                segment_count: merged.length,
+              },
+              speakers: [...speakersSet],
+              segments: merged.map((seg) => ({
+                speaker: resolveSpeaker(seg),
+                timestamp: seg.timestamp,
+                text: seg.text,
+              })),
+            },
+            null,
+            2
+          );
+        }
+
+        fs.writeFileSync(result.filePath, exportContent, "utf-8");
+        return { success: true };
+      } catch (error) {
+        debugLogger.error("Error exporting transcript", { error: error.message }, "notes");
         return { success: false, error: error.message };
       }
     });
@@ -3540,6 +3728,7 @@ class IPCHandlers {
     let meetingLiveSpeakerActive = false;
     let meetingLiveSpeakerState = null;
     let meetingLiveSpeakerStartedAt = null;
+    let meetingReclusterTimer = null;
 
     let meetingLocalMode = false;
     let meetingLocalBuffers = { mic: [], system: [] };
@@ -3670,6 +3859,11 @@ class IPCHandlers {
         return null;
       }
 
+      if (meetingReclusterTimer) {
+        clearInterval(meetingReclusterTimer);
+        meetingReclusterTimer = null;
+      }
+
       meetingLiveSpeakerActive = false;
       meetingLiveSpeakerState = await liveSpeakerIdentifier.stop();
       return meetingLiveSpeakerState;
@@ -3729,6 +3923,23 @@ class IPCHandlers {
 
       if (started) {
         meetingLiveSpeakerActive = true;
+        meetingReclusterTimer = setInterval(async () => {
+          if (!meetingLiveSpeakerActive || !win || win.isDestroyed()) return;
+
+          const merges = await liveSpeakerIdentifier.recluster();
+          if (!merges.length) return;
+
+          for (const { keep, remove, displayName } of merges) {
+            for (const seg of meetingDiarizationSegments) {
+              if (seg.speaker === remove) {
+                seg.speaker = keep;
+                if (displayName) seg.speakerName = displayName;
+              }
+            }
+          }
+
+          win.webContents.send("meeting-speakers-merged", merges);
+        }, 30_000);
       } else {
         meetingLiveSpeakerStartedAt = null;
       }
@@ -3918,6 +4129,10 @@ class IPCHandlers {
       if (meetingLocalTimer) {
         clearInterval(meetingLocalTimer);
         meetingLocalTimer = null;
+      }
+      if (meetingReclusterTimer) {
+        clearInterval(meetingReclusterTimer);
+        meetingReclusterTimer = null;
       }
       void stopLiveSpeakerIdentification();
       meetingLiveSpeakerState = null;
@@ -6341,7 +6556,7 @@ class IPCHandlers {
             );
             const similarity = speakerEmbeddings.cosineSimilarity(profileEmb, speakerEmb);
 
-            if (similarity > 0.7) {
+            if (similarity > 0.6) {
               this.databaseManager.setSpeakerMapping(
                 noteId,
                 emb.speaker_id,
@@ -6449,7 +6664,7 @@ class IPCHandlers {
         }
       }
 
-      if (!bestEntry || bestSimilarity <= 0.7) {
+      if (!bestEntry || bestSimilarity <= 0.6) {
         continue;
       }
 
@@ -6526,6 +6741,12 @@ class IPCHandlers {
         );
         for (const speakerId of Object.keys(liveSpeakerState || {})) {
           observedSpeakerIds.add(speakerId);
+        }
+
+        if (observedSpeakerIds.size > 10) {
+          debugLogger.warn("Excessive speaker count from live identification", {
+            observedSpeakers: observedSpeakerIds.size,
+          });
         }
 
         const expectedSpeakerCount =
@@ -6627,7 +6848,7 @@ class IPCHandlers {
                   }
                 }
 
-                if (bestProfile && bestSim > 0.7) {
+                if (bestProfile && bestSim > 0.6) {
                   for (const seg of enrichedSegments) {
                     if (seg.speaker === mappedId) {
                       applyConfirmedSpeaker(seg, {
@@ -6638,7 +6859,7 @@ class IPCHandlers {
                       });
                     }
                   }
-                } else if (bestProfile && bestSim > 0.55) {
+                } else if (bestProfile && bestSim > 0.5) {
                   for (const seg of enrichedSegments) {
                     if (seg.speaker === mappedId) {
                       if (isSpeakerLocked(seg)) {

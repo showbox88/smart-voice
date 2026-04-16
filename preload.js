@@ -84,6 +84,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateNote: (id, updates) => ipcRenderer.invoke("db-update-note", id, updates),
   deleteNote: (id) => ipcRenderer.invoke("db-delete-note", id),
   exportNote: (noteId, format) => ipcRenderer.invoke("export-note", noteId, format),
+  exportTranscript: (noteId, format) => ipcRenderer.invoke("export-transcript", noteId, format),
   searchNotes: (query, limit) => ipcRenderer.invoke("db-search-notes", query, limit),
   semanticSearchNotes: (query, limit) =>
     ipcRenderer.invoke("db-semantic-search-notes", query, limit),
@@ -294,6 +295,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   stopWindowDrag: () => ipcRenderer.invoke("stop-window-drag"),
   setMainWindowInteractivity: (interactive) =>
     ipcRenderer.invoke("set-main-window-interactivity", interactive),
+  setNotificationInteractivity: (interactive) =>
+    ipcRenderer.invoke("set-notification-interactivity", interactive),
   resizeMainWindow: (sizeKey) => ipcRenderer.invoke("resize-main-window", sizeKey),
 
   // Update functions
@@ -522,6 +525,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     "meeting-speaker-identified",
     (callback) => (_event, data) => callback(data)
   ),
+  onMeetingSpeakersMerged: registerListener(
+    "meeting-speakers-merged",
+    (callback) => (_event, data) => callback(data)
+  ),
   onMeetingTranscriptionError: registerListener(
     "meeting-transcription-error",
     (callback) => (_event, data) => callback(data)
@@ -587,7 +594,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("dictation-key-active", listener);
   },
   onWindowsPushToTalkUnavailable: registerListener("windows-ptt-unavailable"),
-  onLinuxPttPermissionDenied: registerListener("linux-ptt-permission-denied", (callback) => () => callback()),
+  onLinuxPttPermissionDenied: registerListener(
+    "linux-ptt-permission-denied",
+    (callback) => () => callback()
+  ),
 
   // Settings shortcut (Cmd+, / Ctrl+,)
   onShowSettings: registerListener("show-settings", (callback) => () => callback()),

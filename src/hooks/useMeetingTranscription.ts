@@ -72,7 +72,7 @@ const MEETING_MIC_PRIMARY_AUDIO_CONSTRAINTS = {
 
 const REALTIME_MODELS = new Set(["gpt-4o-mini-transcribe", "gpt-4o-transcribe"]);
 const SPEAKER_IDENTIFICATION_RETENTION_MS = 30_000;
-const SYSTEM_SPEAKER_CARRY_FORWARD_MS = 2_500;
+const SYSTEM_SPEAKER_CARRY_FORWARD_MS = 8_000;
 const buildTranscriptText = (segments: TranscriptSegment[]) =>
   segments
     .map((segment) => segment.text)
@@ -508,7 +508,7 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
             nowMs - candidate.timestamp <= SYSTEM_SPEAKER_CARRY_FORWARD_MS
         );
 
-      if (previousSystemSegment?.speaker && previousSystemSegment.speakerIsPlaceholder) {
+      if (previousSystemSegment?.speaker) {
         reserveSpeakerIndex(previousSystemSegment.speaker);
         return normalizeTranscriptSegment({
           ...segment,
@@ -890,6 +890,42 @@ export function useMeetingTranscription(): UseMeetingTranscriptionReturn {
           });
         });
         if (speakerCleanup) ipcCleanupsRef.current.push(speakerCleanup);
+
+        const mergeCleanup = window.electronAPI?.onMeetingSpeakersMerged?.((merges) => {
+          setSegments((prev) => {
+            let next = prev;
+            for (const { keep, remove, displayName } of merges) {
+              next = next.map((seg) => {
+                if (seg.speaker !== remove || seg.speakerLocked) return seg;
+                return normalizeTranscriptSegment({
+                  ...seg,
+                  speaker: keep,
+                  speakerName: displayName ?? seg.speakerName,
+                });
+              });
+            }
+            segmentsRef.current = next;
+            return next;
+          });
+
+          for (const { keep, remove, displayName } of merges) {
+            if (recentSystemSpeakerRef.current?.speakerId === remove) {
+              recentSystemSpeakerRef.current.speakerId = keep;
+              if (displayName) recentSystemSpeakerRef.current.speakerName = displayName;
+            }
+
+            for (const id of speakerIdentificationsRef.current) {
+              if (id.speakerId === remove) id.speakerId = keep;
+            }
+
+            const lockedName = speakerLocksRef.current.get(remove);
+            if (lockedName) {
+              speakerLocksRef.current.set(keep, lockedName);
+              speakerLocksRef.current.delete(remove);
+            }
+          }
+        });
+        if (mergeCleanup) ipcCleanupsRef.current.push(mergeCleanup);
 
         const errorCleanup = window.electronAPI?.onMeetingTranscriptionError?.((err) => {
           setError(err);

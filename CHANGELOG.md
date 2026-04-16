@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.9] - 2026-04-16
+
+### Added
+
+- **Transcript Export**: Export transcripts to disk as TXT, SRT, or JSON files
+- **Disable Auto-Paste Toggle**: New setting to disable automatic pasting after dictation
+- **Cloud Sync**: Bidirectional cloud sync for notes, folders, conversations, and transcriptions
+- **Linux Push-to-Talk**: Native push-to-talk support on Linux via evdev with permission UX and setup guide
+- **Agent Folder Tools**: Agent can list, create, and auto-create folders with semantic folder matching
+- **API Keys Management UI**: Manage API keys from within Settings
+- **Documentation Link**: Added documentation link to the support dropdown menu
+- **Notification Dismiss Circle**: Hover-reveal dismiss circle on notification overlays
+
+### Changed
+
+- **Electron 41 & Node 24**: Upgraded from Electron 39 to 41 and Node 22 to 24
+- **Dependency Upgrades**: Bumped TipTap packages, Tailwind CSS/Vite, and other major dependencies
+- **Provider Tab Redesign**: Redesigned provider tabs as compact pill buttons
+- **Local Model Spec Links**: Replaced local model descriptions with clickable spec links
+- **llama.cpp Endpoint Detection**: Detect llama.cpp via `/v1/models` and prefer `/chat/completions` over `/v1/responses`
+- **README Overhaul**: Simplified README from 907 to ~130 lines with improved keywords, privacy messaging, and feature parity highlights
+
+### Fixed
+
+- **Windows Hotkey After Lock/Unlock**: Prevent false hotkey activation after Win+L lock/unlock on Windows
+- **Windows Push-to-Talk Stuck Recording**: Prevent stuck recording when push-to-talk key-up is missed; remove timeout cleanup
+- **Speech Gate Thresholds**: Relaxed speech gate thresholds and added no-audio toast for failed transcriptions
+- **Transcription Retry Button**: Show retry button on failed transcriptions
+- **Note Editor Sync**: Sync editor content when a note is updated externally
+- **Speaker Diarization Thresholds**: Tuned thresholds to prevent excessive speaker creation
+- **Live Transcription Preview**: Wired up live transcription preview toggle and restored missing IPC handlers
+- **Speaker Reclustering**: Added periodic speaker reclustering, unified recording modes, and autosave transcript
+- **Floating Icon Position**: Persist floating icon position setting across restarts
+- **TLS/Certificate Errors**: Surface TLS/certificate errors in model download UI
+- **llama.cpp Probe**: Made llama.cpp probe one-shot and removed fragile hasMeta heuristic
+- **Agent Folder Navigation**: Refetch notes when opening a note in a different folder
+- **Notification Window Sizing**: Fixed notification window sizing and dismiss circle visibility
+- **Japanese Translations**: Added missing Japanese translations and reordered handler for consistency
+- **German Locale**: Fixed invalid JSON in German locale file
+- **i18n Spec Links**: Fixed i18n spec link text and renamed to "Learn more"
+
 ## [1.6.8] - 2026-04-14
 
 ### Added

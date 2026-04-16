@@ -123,6 +123,11 @@ export const useAudioRecording = (toast, options = {}) => {
 
           if (!transcribedText) {
             window.electronAPI?.hideDictationPreview?.();
+            toast({
+              title: t("hooks.audioRecording.noAudio.title"),
+              description: t("hooks.audioRecording.noAudio.description"),
+              variant: "default",
+            });
             return;
           }
 

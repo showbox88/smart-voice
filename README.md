@@ -57,7 +57,7 @@ npm install
 npm run dev
 ```
 
-Requires Node.js 22+. See the [full documentation](https://docs.openwhispr.com/quickstart) for setup guides, platform-specific instructions, and build details.
+Requires Node.js 24+. See the [full documentation](https://docs.openwhispr.com/quickstart) for setup guides, platform-specific instructions, and build details.
 
 ## Documentation
 
@@ -71,7 +71,7 @@ Visit **[docs.openwhispr.com](https://docs.openwhispr.com)** for:
 
 ## Tech stack
 
-React 19, TypeScript, Tailwind CSS v4, Electron 39, better-sqlite3, whisper.cpp, sherpa-onnx, shadcn/ui
+React 19, TypeScript, Tailwind CSS v4, Electron 41, better-sqlite3, whisper.cpp, sherpa-onnx, shadcn/ui
 
 ## Star History
 

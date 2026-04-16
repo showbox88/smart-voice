@@ -79,11 +79,11 @@ interface NoteEditorProps {
   onStartRecording: () => void;
   onStopRecording: () => void;
   onExportNote?: (format: "md" | "txt") => void;
+  onExportTranscript?: (format: "txt" | "srt" | "json") => void;
   enhancement?: Enhancement;
   actionPicker?: React.ReactNode;
   actionProcessingState?: ActionProcessingState;
   actionName?: string | null;
-  isMeetingRecording?: boolean;
   diarizationSessionId?: string | null;
   meetingTranscript?: string;
   meetingSegments?: TranscriptSegment[];
@@ -91,7 +91,6 @@ interface NoteEditorProps {
   meetingSystemPartial?: string;
   meetingSystemPartialSpeakerId?: string | null;
   meetingSystemPartialSpeakerName?: string | null;
-  onStopMeetingRecording?: () => void;
   onLiveSpeakerLock?: (speakerId: string, displayName: string) => void;
   liveTranscript?: string;
   folderName?: string | null;
@@ -111,11 +110,11 @@ export default function NoteEditor({
   onStartRecording,
   onStopRecording,
   onExportNote,
+  onExportTranscript,
   enhancement,
   actionPicker,
   actionProcessingState,
   actionName,
-  isMeetingRecording,
   diarizationSessionId,
   meetingTranscript,
   meetingSegments,
@@ -123,7 +122,6 @@ export default function NoteEditor({
   meetingSystemPartial,
   meetingSystemPartialSpeakerId,
   meetingSystemPartialSpeakerName,
-  onStopMeetingRecording,
   onLiveSpeakerLock,
   liveTranscript,
   folderName,
@@ -166,7 +164,7 @@ export default function NoteEditor({
   }, []);
 
   const effectiveTranscript = liveTranscript || meetingTranscript || note.transcript || "";
-  const hasMeetingTranscript = !isMeetingRecording && !!effectiveTranscript;
+  const hasMeetingTranscript = !isRecording && !!effectiveTranscript;
 
   const filteredFolders = useMemo(
     () =>
@@ -177,13 +175,11 @@ export default function NoteEditor({
   );
 
   const displaySegments = useMemo<TranscriptSegment[]>(() => {
-    if (isMeetingRecording) {
-      return meetingSegments ?? [];
-    }
+    if (isRecording) return meetingSegments ?? [];
     if (diarizedSegments && diarizedSegments.length > 0) return diarizedSegments;
     if (meetingSegments && meetingSegments.length > 0) return meetingSegments;
     return parseTranscriptSegments(note.transcript || "");
-  }, [diarizedSegments, isMeetingRecording, meetingSegments, note.transcript]);
+  }, [diarizedSegments, isRecording, meetingSegments, note.transcript]);
 
   useEffect(() => {
     displaySegmentsRef.current = displaySegments;
@@ -281,7 +277,7 @@ export default function NoteEditor({
         setDiarizedSegments(null);
         setIsDiarizing(false);
         setSpeakerMappings({});
-        if (!isMeetingRecording) {
+        if (!isRecording) {
           setViewMode("raw");
         }
         if (titleRef.current && titleRef.current.textContent !== note.title) {
@@ -290,7 +286,7 @@ export default function NoteEditor({
         editorRef.current?.commands.focus();
       });
     }
-  }, [isMeetingRecording, note.id, note.title, scheduleUiUpdate]);
+  }, [isRecording, note.id, note.title, scheduleUiUpdate]);
 
   useEffect(() => {
     window.electronAPI?.getSpeakerMappings?.(note.id).then((mappings) => {
@@ -318,15 +314,15 @@ export default function NoteEditor({
     }
   }, [note.title]);
 
-  const prevMeetingRecordingRef = useRef(false);
+  const prevRecordingForDiarizationRef = useRef(false);
   useEffect(() => {
-    if (prevMeetingRecordingRef.current && !isMeetingRecording && diarizationSessionId) {
+    if (prevRecordingForDiarizationRef.current && !isRecording && diarizationSessionId) {
       const cancelScheduledUpdate = scheduleUiUpdate(() => setIsDiarizing(true));
-      prevMeetingRecordingRef.current = !!isMeetingRecording;
+      prevRecordingForDiarizationRef.current = isRecording;
       return cancelScheduledUpdate;
     }
-    prevMeetingRecordingRef.current = !!isMeetingRecording;
-  }, [diarizationSessionId, isMeetingRecording, scheduleUiUpdate]);
+    prevRecordingForDiarizationRef.current = isRecording;
+  }, [diarizationSessionId, isRecording, scheduleUiUpdate]);
 
   useEffect(() => {
     const expectedSession = diarizationSessionId;
@@ -413,14 +409,13 @@ export default function NoteEditor({
             })
           : s
       );
-      await persistDisplaySegments(currentSegments, !!diarizedSegments || !isMeetingRecording);
+      await persistDisplaySegments(currentSegments, !!diarizedSegments || !isRecording);
 
       refreshSpeakerProfiles();
     },
     [
       diarizedSegments,
       displaySegments,
-      isMeetingRecording,
       isRecording,
       note.id,
       onLiveSpeakerLock,
@@ -456,9 +451,9 @@ export default function NoteEditor({
             })
           : s
       );
-      await persistDisplaySegments(currentSegments, !!diarizedSegments || !isMeetingRecording);
+      await persistDisplaySegments(currentSegments, !!diarizedSegments || !isRecording);
     },
-    [displaySegments, diarizedSegments, isMeetingRecording, persistDisplaySegments]
+    [displaySegments, diarizedSegments, isRecording, persistDisplaySegments]
   );
 
   const [selectedSegmentIds, setSelectedSegmentIds] = useState<Set<string>>(new Set());
@@ -530,25 +525,12 @@ export default function NoteEditor({
   }, []);
 
   const prevRecordingRef = useRef(false);
-  const pendingTranscriptSwitchRef = useRef(false);
-
   useEffect(() => {
     if (isRecording && !prevRecordingRef.current) {
-      if (isMeetingRecording) {
-        scheduleUiUpdate(() => setViewMode("transcript"));
-      } else {
-        pendingTranscriptSwitchRef.current = true;
-      }
+      scheduleUiUpdate(() => setViewMode("transcript"));
     }
     prevRecordingRef.current = isRecording;
-  }, [isRecording, isMeetingRecording, scheduleUiUpdate]);
-
-  useEffect(() => {
-    if (!isRecording && !isProcessing && pendingTranscriptSwitchRef.current && liveTranscript) {
-      pendingTranscriptSwitchRef.current = false;
-      return scheduleUiUpdate(() => setViewMode("transcript"));
-    }
-  }, [isRecording, isProcessing, liveTranscript, scheduleUiUpdate]);
+  }, [isRecording, scheduleUiUpdate]);
 
   const handleContentChange = useCallback(
     (newValue: string) => {
@@ -723,7 +705,7 @@ export default function NoteEditor({
             )}
             <div className="flex-1" />
             <div className="flex items-center gap-1">
-              {(enhancement || hasMeetingTranscript || hasChatSegments || isMeetingRecording) && (
+              {(enhancement || hasMeetingTranscript || hasChatSegments || isRecording) && (
                 <div
                   ref={segmentContainerRef}
                   className="relative flex items-center shrink-0 rounded-md bg-foreground/3 dark:bg-white/3 p-0.5"
@@ -732,7 +714,7 @@ export default function NoteEditor({
                     className="absolute top-0.5 left-0 rounded bg-background dark:bg-surface-2 shadow-sm transition-[width,height,transform,opacity] duration-200 ease-out pointer-events-none"
                     style={indicatorStyle}
                   />
-                  {(hasMeetingTranscript || hasChatSegments || isMeetingRecording) && (
+                  {(hasMeetingTranscript || hasChatSegments || isRecording) && (
                     <button
                       data-segment-button
                       data-segment-value="transcript"
@@ -786,7 +768,7 @@ export default function NoteEditor({
                   )}
                 </div>
               )}
-              {onExportNote && (
+              {(onExportNote || onExportTranscript) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -797,14 +779,48 @@ export default function NoteEditor({
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" sideOffset={4}>
-                    <DropdownMenuItem onClick={() => onExportNote("md")} className="text-xs gap-2">
-                      <FileText size={13} className="text-foreground/40" />
-                      {t("notes.editor.asMarkdown")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onExportNote("txt")} className="text-xs gap-2">
-                      <FileText size={13} className="text-foreground/40" />
-                      {t("notes.editor.asPlainText")}
-                    </DropdownMenuItem>
+                    {viewMode === "transcript" && onExportTranscript ? (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => onExportTranscript("txt")}
+                          className="text-xs gap-2"
+                        >
+                          <FileText size={13} className="text-foreground/40" />
+                          {t("notes.editor.asTranscriptText")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onExportTranscript("srt")}
+                          className="text-xs gap-2"
+                        >
+                          <FileText size={13} className="text-foreground/40" />
+                          {t("notes.editor.asSubtitles")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onExportTranscript("json")}
+                          className="text-xs gap-2"
+                        >
+                          <FileText size={13} className="text-foreground/40" />
+                          {t("notes.editor.asJson")}
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => onExportNote?.("md")}
+                          className="text-xs gap-2"
+                        >
+                          <FileText size={13} className="text-foreground/40" />
+                          {t("notes.editor.asMarkdown")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onExportNote?.("txt")}
+                          className="text-xs gap-2"
+                        >
+                          <FileText size={13} className="text-foreground/40" />
+                          {t("notes.editor.asPlainText")}
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -814,28 +830,24 @@ export default function NoteEditor({
 
         <div className="flex-1 relative min-h-0">
           <div className="h-full overflow-y-auto">
-            {viewMode === "transcript" && (hasChatSegments || isMeetingRecording) ? (
+            {viewMode === "transcript" && (hasChatSegments || isRecording) ? (
               <MeetingTranscriptChat
                 segments={displaySegments}
-                micPartial={isMeetingRecording ? meetingMicPartial : undefined}
-                systemPartial={isMeetingRecording ? meetingSystemPartial : undefined}
-                systemPartialSpeakerId={
-                  isMeetingRecording ? meetingSystemPartialSpeakerId : undefined
-                }
-                systemPartialSpeakerName={
-                  isMeetingRecording ? meetingSystemPartialSpeakerName : undefined
-                }
+                micPartial={isRecording ? meetingMicPartial : undefined}
+                systemPartial={isRecording ? meetingSystemPartial : undefined}
+                systemPartialSpeakerId={isRecording ? meetingSystemPartialSpeakerId : undefined}
+                systemPartialSpeakerName={isRecording ? meetingSystemPartialSpeakerName : undefined}
                 speakerMappings={speakerMappings}
                 speakerProfiles={knownSpeakers}
                 participants={parsedParticipants}
-                isRecording={isMeetingRecording}
+                isRecording={isRecording}
                 isDiarizing={isDiarizing}
                 onMapSpeaker={handleMapSpeaker}
                 onConfirmSuggestion={handleConfirmSuggestion}
                 onDismissSuggestion={handleDismissSuggestion}
                 onAttachSpeakerEmail={handleAttachSpeakerEmail}
-                selectedSegmentIds={!isMeetingRecording ? selectedSegmentIds : undefined}
-                onToggleSelect={!isMeetingRecording ? handleToggleSelect : undefined}
+                selectedSegmentIds={!isRecording ? selectedSegmentIds : undefined}
+                onToggleSelect={!isRecording ? handleToggleSelect : undefined}
               />
             ) : viewMode === "transcript" && hasMeetingTranscript ? (
               <RichTextEditor value={effectiveTranscript} disabled />
@@ -861,7 +873,7 @@ export default function NoteEditor({
               background: "linear-gradient(to bottom, transparent, var(--color-background))",
             }}
           />
-          {!isMeetingRecording && selectedSegmentIds.size > 0 && (
+          {!isRecording && selectedSegmentIds.size > 0 && (
             <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
               <SelectionBar
                 count={selectedSegmentIds.size}
@@ -874,15 +886,13 @@ export default function NoteEditor({
             </div>
           )}
           <NoteBottomBar
-            isRecording={isRecording || !!isMeetingRecording}
+            isRecording={isRecording}
             isProcessing={isProcessing}
             onStartRecording={onStartRecording}
-            onStopRecording={
-              isMeetingRecording ? (onStopMeetingRecording ?? onStopRecording) : onStopRecording
-            }
+            onStopRecording={onStopRecording}
             onAskSubmit={handleAskSubmit}
             onInputFocus={handleChatInputFocus}
-            actionPicker={isMeetingRecording ? undefined : actionPicker}
+            actionPicker={isRecording ? undefined : actionPicker}
             hideInput={chatMode !== "hidden"}
           />
           {chatMode === "floating" && (
