@@ -12,6 +12,33 @@ import type { Message } from "./chat/types";
 const MIN_HEIGHT = 200;
 const MIN_WIDTH = 360;
 
+// ──────────────────────────────────────────────────────────────────────
+// XiaoZhi TTS playback helper
+// Speaks the assistant's final reply via Edge Read Aloud (cloud).
+// Controlled by localStorage key "xiaozhi.tts.enabled" (default: true).
+// ──────────────────────────────────────────────────────────────────────
+const TTS_ENABLED_KEY = "xiaozhi.tts.enabled";
+const TTS_VOICE_KEY = "xiaozhi.tts.voice";
+
+/**
+ * Strip markdown-ish syntax that sounds weird when read aloud:
+ * **bold**, *italic*, `code`, ``` fences ```, [link](url), list bullets,
+ * headings, and HTML-style tags.
+ */
+function sanitizeForTts(raw: string): string {
+  return raw
+    .replace(/```[\s\S]*?```/g, " ") // code fences
+    .replace(/`([^`]+)`/g, "$1") // inline code
+    .replace(/!?\[([^\]]+)\]\([^)]+\)/g, "$1") // links / images
+    .replace(/^#{1,6}\s+/gm, "") // headings
+    .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, "$1") // bold/italic
+    .replace(/^\s*[-*+]\s+/gm, "") // list bullets
+    .replace(/^\s*\d+\.\s+/gm, "") // numbered lists
+    .replace(/<[^>]+>/g, " ") // html tags
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export default function AgentOverlay() {
   const { t } = useTranslation();
   const [partialTranscript, setPartialTranscript] = useState("");
@@ -21,11 +48,81 @@ export default function AgentOverlay() {
   const persistence = useChatPersistence();
   const { messages, setMessages, handleNewChat: persistenceNewChat } = persistence;
 
+  // TTS playback — cancel any previous speech when a new one starts.
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsUrlRef = useRef<string | null>(null);
+  const stopTts = useCallback(() => {
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current.src = "";
+      ttsAudioRef.current = null;
+    }
+    if (ttsUrlRef.current) {
+      URL.revokeObjectURL(ttsUrlRef.current);
+      ttsUrlRef.current = null;
+    }
+  }, []);
+
+  const speakAssistant = useCallback(
+    async (text: string) => {
+      try {
+        const enabled = localStorage.getItem(TTS_ENABLED_KEY);
+        if (enabled === "false") return;
+
+        const cleaned = sanitizeForTts(text || "");
+        if (!cleaned) return;
+
+        const voice = localStorage.getItem(TTS_VOICE_KEY) || undefined;
+        const res = await window.electronAPI?.ttsSynthesize?.(cleaned, voice ? { voice } : {});
+        if (!res || !res.success) {
+          console.warn("[xiaozhi-tts] synth failed", res);
+          return;
+        }
+
+        // Cancel any in-flight playback first.
+        stopTts();
+
+        const bytes =
+          res.audio instanceof Uint8Array ? res.audio : new Uint8Array(res.audio as ArrayBuffer);
+        const blob = new Blob([bytes], { type: res.mime || "audio/mp3" });
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        ttsAudioRef.current = audio;
+        ttsUrlRef.current = url;
+        audio.addEventListener("ended", () => {
+          if (ttsUrlRef.current === url) {
+            URL.revokeObjectURL(url);
+            ttsUrlRef.current = null;
+            ttsAudioRef.current = null;
+          }
+        });
+        audio.addEventListener("error", () => {
+          console.warn("[xiaozhi-tts] audio element error");
+          if (ttsUrlRef.current === url) {
+            URL.revokeObjectURL(url);
+            ttsUrlRef.current = null;
+            ttsAudioRef.current = null;
+          }
+        });
+        await audio.play().catch((err) => {
+          console.warn("[xiaozhi-tts] play() rejected", err);
+        });
+      } catch (err) {
+        console.warn("[xiaozhi-tts] unexpected error", err);
+      }
+    },
+    [stopTts]
+  );
+
+  useEffect(() => stopTts, [stopTts]);
+
   const streaming = useChatStreaming({
     messages,
     setMessages,
     onStreamComplete: (_assistantId, content, toolCalls) => {
       persistence.saveAssistantMessage(content, toolCalls);
+      // Fire-and-forget; no need to block message persistence.
+      void speakAssistant(content);
     },
   });
 

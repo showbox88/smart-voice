@@ -868,6 +868,21 @@ declare global {
       checkFFmpegAvailability: () => Promise<FFmpegAvailabilityResult>;
       getAudioDiagnostics: () => Promise<AudioDiagnosticsResult>;
 
+      // TTS (Edge Read Aloud)
+      ttsListVoices: () => Promise<Array<{ id: string; label: string }>>;
+      ttsSynthesize: (
+        text: string,
+        options?: {
+          voice?: string;
+          rate?: string | number;
+          pitch?: string;
+          volume?: string;
+        }
+      ) => Promise<
+        | { success: true; mime: string; audio: Uint8Array | Buffer }
+        | { success: false; error: string }
+      >;
+
       // System settings helpers
       requestMicrophoneAccess?: () => Promise<{ granted: boolean }>;
       checkMicrophoneAccess?: () => Promise<{ granted: boolean; status: string }>;

@@ -117,6 +117,7 @@ class IPCHandlers {
     this.textEditMonitor = managers.textEditMonitor;
     this.getTrayManager = managers.getTrayManager;
     this.whisperCudaManager = managers.whisperCudaManager;
+    this.ttsManager = managers.ttsManager;
     this.googleCalendarManager = managers.googleCalendarManager;
     this.meetingDetectionEngine = managers.meetingDetectionEngine;
     this.audioTapManager = managers.audioTapManager;
@@ -1574,6 +1575,39 @@ class IPCHandlers {
 
     ipcMain.handle("check-ffmpeg-availability", async (event) => {
       return this.whisperManager.checkFFmpegAvailability();
+    });
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TTS (Edge Read Aloud) — XiaoZhi voice output
+    // ──────────────────────────────────────────────────────────────────────
+    ipcMain.handle("tts-list-voices", async () => {
+      const TtsManagerCtor = require("./ttsManager");
+      return TtsManagerCtor.listVoices();
+    });
+
+    ipcMain.handle("tts-synthesize", async (_event, text, options = {}) => {
+      if (!this.ttsManager) {
+        return { success: false, error: "TTS manager not initialized" };
+      }
+      try {
+        const audioBuffer = await this.ttsManager.synthesize(text, options);
+        if (!audioBuffer) {
+          return { success: false, error: "empty_audio" };
+        }
+        // Send as plain object { data: Uint8Array } — Electron's structured
+        // clone handles typed arrays efficiently.
+        return {
+          success: true,
+          mime: "audio/mp3",
+          audio: audioBuffer,
+        };
+      } catch (err) {
+        debugLogger.error("tts-synthesize failed", {
+          error: err.message,
+          textPreview: (text || "").slice(0, 80),
+        });
+        return { success: false, error: err.message };
+      }
     });
 
     ipcMain.handle("transcribe-local-parakeet", async (event, audioBlob, options = {}) => {

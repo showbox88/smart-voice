@@ -208,6 +208,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   checkFFmpegAvailability: () => ipcRenderer.invoke("check-ffmpeg-availability"),
   getAudioDiagnostics: () => ipcRenderer.invoke("get-audio-diagnostics"),
 
+  // TTS (Edge Read Aloud) — XiaoZhi voice output
+  ttsListVoices: () => ipcRenderer.invoke("tts-list-voices"),
+  ttsSynthesize: (text, options) => ipcRenderer.invoke("tts-synthesize", text, options),
+
   // Whisper server functions (faster repeated transcriptions)
   whisperServerStart: (modelName) => ipcRenderer.invoke("whisper-server-start", modelName),
   whisperServerStop: () => ipcRenderer.invoke("whisper-server-stop"),
