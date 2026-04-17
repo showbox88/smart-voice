@@ -5,7 +5,10 @@
 ## 项目背景（Claude 必读）
 
 - **目标**：基于 OpenWhispr (fork, MIT) 改造成一个叫"小智"的 Windows 漂浮窗语音助手
-- **核心加法**：Workflow 引擎——LLM 判定意图后，读 `skills/*.md` 技能说明，把自然语言转成 JSON 派发给 webhook/API/智能家居
+- **核心加法**：
+  1. TTS 输出（Edge Read Aloud + ElevenLabs 克隆，Phase 5 已完成）
+  2. **Claude Code CLI 语音遥控**（Phase 6 已完成，说一句话 → 转文字 → 发给 `claude` CLI → 流式回复 + TTS 朗读）
+  3. Workflow 引擎（Phase 3，仍待做）
 - **仓库**：https://github.com/showbox88/smart-voice （private）
 - **完整规划**：见另一台机器 `~/.claude/plans/windows-win-drifting-hearth.md`（可能需要重新生成）
 - **上游原项目**：https://github.com/OpenWhispr/openwhispr （已移除 remote，不会误推）
@@ -17,9 +20,15 @@
 | Node.js | **24.x 精确**（CI 锁死 24，别用 22/26） | `node --version` |
 | npm | 11.x | `npm --version` |
 | git | any | `git --version` |
+| Claude Code CLI | v2.1+（Phase 6 需要） | `claude --version` |
 | D 盘或大容量盘 | ≥ 10GB 可用 | - |
+| NVIDIA 驱动 | 新（CUDA 12+，用于 GPU Whisper） | `nvidia-smi` 看 CUDA Version 列 |
 
 **没装 Node 24** → `winget install OpenJS.NodeJS.LTS` 然后重开终端。
+
+**没装 Claude Code CLI** → `npm i -g @anthropic-ai/claude-code`，装完 `claude` → `/login` 登录你的 claude.ai 账号。
+
+**NVIDIA 驱动老了**（CUDA 11.x 以下）→ 去 nvidia.com 下最新 Game Ready / Studio driver 装上重启，CUDA Whisper 才能加速。
 
 ## 一次性完整安装（按顺序跑）
 
@@ -139,6 +148,82 @@ npm run dev
 3. 文字应该 1-3 秒内出现在光标位置
 4. 说"小智，今天天气怎么样"→ Overlay 弹出 Claude 流式回复
 
+## Phase 5 · TTS 语音输出 (已完成)
+
+Agent Mode 回复可以用语音读出来，两种 provider 可切换：
+
+### Edge Read Aloud (免费, 默认)
+- Control Panel → Settings → Agent Mode → 滚到最下面"语音输出"
+- 开启开关，选 Tab "Edge Read Aloud (免费)"
+- 下拉选音色：晓晓 / 晓伊 / 云希 / 云夏 / **东北话晓贝** / **陕西话晓妮** / 台湾曉臻 / 粤语曉曼 等 14 种
+- 点试听验证
+
+### ElevenLabs 克隆 (可选, 付费)
+- elevenlabs.io 注册，**Voices → + Instant Voice Clone → 传 30s-1min 音频**
+- 拿 API Key 和 Voice ID
+- Settings → Agent Mode → 语音输出 → Tab "ElevenLabs (克隆)"
+- 填 API Key (sk_...) + Voice ID，点试听
+- 克隆音色会被 Agent 自动使用
+
+**TTS 设置存储**（localStorage，每台机器独立）：
+- `xiaozhi.tts.enabled` / `xiaozhi.tts.provider` / `xiaozhi.tts.voice`
+- `xiaozhi.tts.elevenlabs.apiKey` / `xiaozhi.tts.elevenlabs.voiceId`
+
+## Phase 6 · Claude Code CLI 语音遥控 (已完成)
+
+**这是最重要的新功能**：说一句话 → XiaoZhi 转文字 → 发给 `claude` CLI 当作输入 → Claude 读文件/改代码/跑命令 → 回复流式出现 + 晓晓朗读。
+
+### 前置条件
+
+1. 装 Claude Code CLI：`npm i -g @anthropic-ai/claude-code`
+2. 登录：打开任意目录跑 `claude`，输入 `/login` → 浏览器 OAuth（用 Pro/Max 账号）
+3. 第一次进项目目录跑 `claude` 一次，过 workspace trust 提示
+
+### 用法
+
+1. XiaoZhi 跑起来，打开 Control Panel
+2. **左栏底部** 有个 Terminal 图标的 **"Claude Code"** 条目，点进
+3. 顶栏：
+   - 点 **选目录** → 挑你要 Claude 操作的项目文件夹
+   - **权限模式下拉** 默认 "自动批准文件编辑（推荐）"
+     - `acceptEdits`：自动批准 Write/Edit，Bash 还会问（因 `--print` 模式没法问，实际就是不让跑）
+     - `bypassPermissions`：全部自动过，包括 Bash（完全放手）
+     - `plan`：只规划不执行
+4. 底部：
+   - **麦克风按钮**：点开始录，再点停止 → 转录自动填入文本框
+   - 或直接打字
+   - **Send** 按钮发送（Shift+Enter 换行，Enter 发送）
+5. 回复：
+   - 流式显示在灰色气泡
+   - 工具调用显示 🔧 图标（Write / Bash / Read 等）
+   - 每完成一句话立即 TTS 朗读（用 Agent Mode 设置的音色）
+6. 右上 **新会话** 按钮 = 清空上下文，开始新 topic
+
+### 实测例子
+
+说："做一个简单的 hello world 网页，保存到桌面 test 文件夹"
+- Claude 会调 Write 工具创建 `C:\Users\你\Desktop\test\index.html`
+- 回复类似"已创建 hello-world 网页" → TTS 朗读
+
+### 关键文件（以后改造时）
+
+| 文件 | 作用 |
+|------|------|
+| `src/helpers/claudeCodeSession.js` | spawn `claude --print --output-format stream-json`，解析 NDJSON 事件 |
+| `src/helpers/sentenceChunker.js` | 流式文本按句子 flush，给 TTS 用 |
+| `src/helpers/ttsManager.js` | Edge + ElevenLabs 双 provider |
+| `src/helpers/ipcHandlers.js` | `claude-code:*` 和 `tts-*` 的 IPC 处理器 |
+| `src/components/ClaudeCodeView.tsx` | 主 UI（录音/文本框/Send/消息列表/权限下拉） |
+| `src/components/ControlPanelSidebar.tsx` | 侧栏加 "Claude Code" 条目 |
+| `src/components/settings/AgentModeSettings.tsx` | 里面有 TtsVoiceSettings 组件 |
+
+### 已知限制 / 待做
+
+- **没有全局热键**：必须从 Control Panel 进入（Phase 6.2 会做独立 overlay + Ctrl+Alt+C 热键）
+- **无 Bash 工具自动批准对话**：用 `bypassPermissions` 模式才能跑命令
+- **无工具使用细节展示**：只显示 🔧 图标，没显示具体参数和差异
+- **session 持久化**：程序重启后 session_id 丢失，需要新会话
+
 ## 日常开发
 
 ```bash
@@ -156,21 +241,22 @@ git pull
 npm install
 ```
 
-## 后续开发路线图（还没做）
+## 路线图（已完成 vs 待做）
 
-见 `windows-win-drifting-hearth.md` plan，Phase 3+ 还没开工：
+**已完成**：
+- [x] Phase 1：基线跑通（OpenWhispr fork + Whisper Turbo + CUDA）
+- [x] Phase 5：TTS（Edge Read Aloud + ElevenLabs），音色选择器，试听
+- [x] Phase 6.1：Claude Code CLI 语音遥控 MVP（Control Panel 内面板）
 
+**待做**：
 - [ ] Phase 2：UI 重做成小漂浮球（当前还是 OpenWhispr 原生 UI）
 - [ ] Phase 3 **核心**：Workflow 引擎
   - `src/helpers/skillLoader.js` — 读 `skills/*.md`
   - `src/helpers/router.js` — 模式分发（dictation / chat / workflow）
   - `src/helpers/skillDispatcher.js` — http/webhook/exec 派发
-  - 两段式 LLM：选 skill → 填表
-  - Settings 页加 skill 管理 UI
-- [ ] Phase 4：唤醒词"小智小智"（Porcupine）+ TTS（SAPI / Voicebox）
-- [ ] Phase 5：打包 NSIS 安装包、中文文档
-
-当前代码基本是原版 OpenWhispr，Workflow 层完全还没写。
+- [ ] Phase 4：唤醒词"小智小智"（Porcupine）
+- [ ] Phase 6.2：Claude Code 独立 overlay + 全局热键 + tool_use 细节展示
+- [ ] Phase 7：打包 NSIS 安装包、中文文档
 
 ## 关键文件位置（改造时参考）
 

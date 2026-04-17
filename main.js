@@ -202,6 +202,7 @@ const LinuxKeyManager = require("./src/helpers/linuxKeyManager");
 const TextEditMonitor = require("./src/helpers/textEditMonitor");
 const WhisperCudaManager = require("./src/helpers/whisperCudaManager");
 const TtsManager = require("./src/helpers/ttsManager");
+const ClaudeCodeSession = require("./src/helpers/claudeCodeSession");
 const GoogleCalendarManager = require("./src/helpers/googleCalendarManager");
 const MeetingProcessDetector = require("./src/helpers/meetingProcessDetector");
 const AudioActivityDetector = require("./src/helpers/audioActivityDetector");
@@ -230,6 +231,7 @@ let linuxKeyManager = null;
 let textEditMonitor = null;
 let whisperCudaManager = null;
 let ttsManager = null;
+let claudeCodeSession = null;
 let googleCalendarManager = null;
 let meetingDetectionEngine = null;
 let audioTapManager = null;
@@ -299,6 +301,7 @@ function initializeCoreManagers() {
     whisperCudaManager = new WhisperCudaManager();
   }
   ttsManager = new TtsManager();
+  claudeCodeSession = new ClaudeCodeSession({});
   parakeetManager = new ParakeetManager();
   diarizationManager = new DiarizationManager();
   googleCalendarManager = new GoogleCalendarManager(databaseManager, windowManager);
@@ -335,6 +338,7 @@ function initializeCoreManagers() {
     textEditMonitor,
     whisperCudaManager,
     ttsManager,
+    claudeCodeSession,
     googleCalendarManager,
     meetingDetectionEngine,
     audioTapManager,

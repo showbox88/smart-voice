@@ -18,7 +18,10 @@ const MIN_WIDTH = 360;
 // Controlled by localStorage key "xiaozhi.tts.enabled" (default: true).
 // ──────────────────────────────────────────────────────────────────────
 const TTS_ENABLED_KEY = "xiaozhi.tts.enabled";
-const TTS_VOICE_KEY = "xiaozhi.tts.voice";
+const TTS_PROVIDER_KEY = "xiaozhi.tts.provider"; // "edge" | "elevenlabs"
+const TTS_VOICE_KEY = "xiaozhi.tts.voice"; // Edge voice ShortName
+const TTS_ELEVEN_VOICE_KEY = "xiaozhi.tts.elevenlabs.voiceId";
+const TTS_ELEVEN_KEY_KEY = "xiaozhi.tts.elevenlabs.apiKey";
 
 /**
  * Strip markdown-ish syntax that sounds weird when read aloud:
@@ -72,8 +75,23 @@ export default function AgentOverlay() {
         const cleaned = sanitizeForTts(text || "");
         if (!cleaned) return;
 
-        const voice = localStorage.getItem(TTS_VOICE_KEY) || undefined;
-        const res = await window.electronAPI?.ttsSynthesize?.(cleaned, voice ? { voice } : {});
+        const provider = (localStorage.getItem(TTS_PROVIDER_KEY) as "edge" | "elevenlabs" | null) || "edge";
+        const opts: Record<string, unknown> = { provider };
+        if (provider === "elevenlabs") {
+          const vId = localStorage.getItem(TTS_ELEVEN_VOICE_KEY);
+          const key = localStorage.getItem(TTS_ELEVEN_KEY_KEY);
+          if (!vId || !key) {
+            console.warn("[xiaozhi-tts] elevenlabs not configured — skip");
+            return;
+          }
+          opts.voice = vId;
+          opts.elevenLabsApiKey = key;
+        } else {
+          const v = localStorage.getItem(TTS_VOICE_KEY);
+          if (v) opts.voice = v;
+        }
+
+        const res = await window.electronAPI?.ttsSynthesize?.(cleaned, opts);
         if (!res || !res.success) {
           console.warn("[xiaozhi-tts] synth failed", res);
           return;

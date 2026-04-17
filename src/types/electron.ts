@@ -868,15 +868,74 @@ declare global {
       checkFFmpegAvailability: () => Promise<FFmpegAvailabilityResult>;
       getAudioDiagnostics: () => Promise<AudioDiagnosticsResult>;
 
-      // TTS (Edge Read Aloud)
+      // Claude Code CLI voice remote (Phase 6)
+      claudeCodeConfigure: (config: {
+        cwd?: string;
+        claudePath?: string;
+        permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan";
+      }) => Promise<{
+        success: boolean;
+        cwd?: string;
+        claudePath?: string;
+        permissionMode?: string;
+        sessionId?: string | null;
+        error?: string;
+      }>;
+      claudeCodeStatus: () => Promise<{
+        configured: boolean;
+        cwd: string | null;
+        claudePath?: string;
+        permissionMode?: string;
+        sessionId?: string | null;
+        busy?: boolean;
+      }>;
+      claudeCodeSend: (text: string) => Promise<
+        | {
+            success: true;
+            sessionId: string | null;
+            result: string;
+            durationMs: number;
+            costUsd?: number;
+          }
+        | { success: false; error: string }
+      >;
+      claudeCodeCancel: () => Promise<{ success: boolean }>;
+      claudeCodeReset: () => Promise<{ success: boolean }>;
+      claudeCodePickCwd: () => Promise<
+        { success: true; cwd: string } | { success: false; canceled?: boolean }
+      >;
+      onClaudeCodeEvent: (
+        channel:
+          | "turn-start"
+          | "assistant-text"
+          | "sentence"
+          | "tool-use"
+          | "tool-result"
+          | "turn-end"
+          | "error"
+          | "exit",
+        handler: (payload: unknown) => void
+      ) => () => void;
+
+      // TTS (Edge Read Aloud / ElevenLabs)
       ttsListVoices: () => Promise<Array<{ id: string; label: string }>>;
       ttsSynthesize: (
         text: string,
         options?: {
+          provider?: "edge" | "elevenlabs";
           voice?: string;
+          // Edge only
           rate?: string | number;
           pitch?: string;
           volume?: string;
+          // ElevenLabs only
+          elevenLabsApiKey?: string;
+          elevenLabsModel?: string;
+          stability?: number;
+          similarity?: number;
+          style?: number;
+          // Catchall for forward-compat
+          [key: string]: unknown;
         }
       ) => Promise<
         | { success: true; mime: string; audio: Uint8Array | Buffer }

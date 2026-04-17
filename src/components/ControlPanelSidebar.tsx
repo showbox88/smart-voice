@@ -12,6 +12,7 @@ import {
   UserCircle,
   X,
   Search,
+  Terminal,
 } from "lucide-react";
 import logoIcon from "../assets/icon.png";
 import { useTranslation } from "react-i18next";
@@ -27,7 +28,8 @@ export type ControlPanelView =
   | "personal-notes"
   | "dictionary"
   | "upload"
-  | "integrations";
+  | "integrations"
+  | "claude-code";
 
 interface ControlPanelSidebarProps {
   activeView: ControlPanelView;
@@ -90,6 +92,7 @@ export default function ControlPanelSidebar({
     { id: "upload", label: t("sidebar.upload"), icon: Upload },
     { id: "dictionary", label: t("sidebar.dictionary"), icon: BookOpen },
     { id: "integrations", label: t("sidebar.integrations"), icon: Blocks },
+    { id: "claude-code", label: "Claude Code", icon: Terminal },
   ];
 
   return (

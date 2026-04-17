@@ -118,6 +118,7 @@ class IPCHandlers {
     this.getTrayManager = managers.getTrayManager;
     this.whisperCudaManager = managers.whisperCudaManager;
     this.ttsManager = managers.ttsManager;
+    this.claudeCodeSession = managers.claudeCodeSession;
     this.googleCalendarManager = managers.googleCalendarManager;
     this.meetingDetectionEngine = managers.meetingDetectionEngine;
     this.audioTapManager = managers.audioTapManager;
@@ -1583,6 +1584,105 @@ class IPCHandlers {
     ipcMain.handle("tts-list-voices", async () => {
       const TtsManagerCtor = require("./ttsManager");
       return TtsManagerCtor.listVoices();
+    });
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Claude Code CLI voice remote (Phase 6)
+    // Wraps `claude --print --output-format stream-json` so a voice session
+    // can pipe transcribed text into Claude Code and stream the reply back
+    // into the renderer (which plays it via TTS).
+    // ──────────────────────────────────────────────────────────────────────
+    if (this.claudeCodeSession) {
+      const ccForward = (channel) => (payload) => {
+        try {
+          for (const win of BrowserWindow.getAllWindows()) {
+            if (!win.isDestroyed()) {
+              win.webContents.send(`claude-code:${channel}`, payload);
+            }
+          }
+        } catch (err) {
+          debugLogger.warn("claude-code: event forward failed", {
+            channel,
+            error: err.message,
+          });
+        }
+      };
+      this.claudeCodeSession.on("turn-start", ccForward("turn-start"));
+      this.claudeCodeSession.on("assistant-text", ccForward("assistant-text"));
+      this.claudeCodeSession.on("sentence", ccForward("sentence"));
+      this.claudeCodeSession.on("tool-use", ccForward("tool-use"));
+      this.claudeCodeSession.on("tool-result", ccForward("tool-result"));
+      this.claudeCodeSession.on("turn-end", ccForward("turn-end"));
+      this.claudeCodeSession.on("error", ccForward("error"));
+      this.claudeCodeSession.on("exit", ccForward("exit"));
+    }
+
+    ipcMain.handle("claude-code:configure", async (_event, config = {}) => {
+      if (!this.claudeCodeSession) return { success: false, error: "not_init" };
+      if (config.cwd) this.claudeCodeSession.cwd = config.cwd;
+      if (config.claudePath) this.claudeCodeSession.claudePath = config.claudePath;
+      if (config.permissionMode) {
+        this.claudeCodeSession.permissionMode = config.permissionMode;
+      }
+      return {
+        success: true,
+        cwd: this.claudeCodeSession.cwd,
+        claudePath: this.claudeCodeSession.claudePath,
+        permissionMode: this.claudeCodeSession.permissionMode,
+        sessionId: this.claudeCodeSession.sessionId,
+      };
+    });
+
+    ipcMain.handle("claude-code:send", async (_event, text) => {
+      if (!this.claudeCodeSession) return { success: false, error: "not_init" };
+      if (!this.claudeCodeSession.cwd) {
+        return { success: false, error: "no_cwd_configured" };
+      }
+      if (this.claudeCodeSession.isBusy()) {
+        return { success: false, error: "busy" };
+      }
+      try {
+        const result = await this.claudeCodeSession.send(text);
+        return { success: true, ...result };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    });
+
+    ipcMain.handle("claude-code:cancel", async () => {
+      if (!this.claudeCodeSession) return { success: false };
+      this.claudeCodeSession.cancel();
+      return { success: true };
+    });
+
+    ipcMain.handle("claude-code:reset", async () => {
+      if (!this.claudeCodeSession) return { success: false };
+      this.claudeCodeSession.reset();
+      return { success: true };
+    });
+
+    ipcMain.handle("claude-code:status", async () => {
+      if (!this.claudeCodeSession) return { configured: false };
+      return {
+        configured: !!this.claudeCodeSession.cwd,
+        cwd: this.claudeCodeSession.cwd || null,
+        claudePath: this.claudeCodeSession.claudePath,
+        permissionMode: this.claudeCodeSession.permissionMode,
+        sessionId: this.claudeCodeSession.sessionId,
+        busy: this.claudeCodeSession.isBusy(),
+      };
+    });
+
+    ipcMain.handle("claude-code:pick-cwd", async () => {
+      const { dialog } = require("electron");
+      const result = await dialog.showOpenDialog({
+        title: "选择 Claude Code 工作目录",
+        properties: ["openDirectory"],
+      });
+      if (result.canceled || !result.filePaths?.[0]) {
+        return { success: false, canceled: true };
+      }
+      return { success: true, cwd: result.filePaths[0] };
     });
 
     ipcMain.handle("tts-synthesize", async (_event, text, options = {}) => {

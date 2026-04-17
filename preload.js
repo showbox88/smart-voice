@@ -212,6 +212,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ttsListVoices: () => ipcRenderer.invoke("tts-list-voices"),
   ttsSynthesize: (text, options) => ipcRenderer.invoke("tts-synthesize", text, options),
 
+  // Claude Code CLI voice remote (Phase 6)
+  claudeCodeConfigure: (config) => ipcRenderer.invoke("claude-code:configure", config),
+  claudeCodeStatus: () => ipcRenderer.invoke("claude-code:status"),
+  claudeCodeSend: (text) => ipcRenderer.invoke("claude-code:send", text),
+  claudeCodeCancel: () => ipcRenderer.invoke("claude-code:cancel"),
+  claudeCodeReset: () => ipcRenderer.invoke("claude-code:reset"),
+  claudeCodePickCwd: () => ipcRenderer.invoke("claude-code:pick-cwd"),
+  onClaudeCodeEvent: (channel, handler) => {
+    const fullChannel = `claude-code:${channel}`;
+    const listener = (_evt, payload) => handler(payload);
+    ipcRenderer.on(fullChannel, listener);
+    return () => ipcRenderer.removeListener(fullChannel, listener);
+  },
+
   // Whisper server functions (faster repeated transcriptions)
   whisperServerStart: (modelName) => ipcRenderer.invoke("whisper-server-start", modelName),
   whisperServerStop: () => ipcRenderer.invoke("whisper-server-stop"),

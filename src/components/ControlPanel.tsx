@@ -38,6 +38,7 @@ const UploadAudioView = React.lazy(() => import("./notes/UploadAudioView"));
 const IntegrationsView = React.lazy(() => import("./IntegrationsView"));
 const ChatView = React.lazy(() => import("./chat/ChatView"));
 const CommandSearch = React.lazy(() => import("./CommandSearch"));
+const ClaudeCodeView = React.lazy(() => import("./ClaudeCodeView"));
 
 export default function ControlPanel() {
   const { t } = useTranslation();
@@ -813,6 +814,11 @@ export default function ControlPanel() {
             {activeView === "integrations" && (
               <Suspense fallback={null}>
                 <IntegrationsView />
+              </Suspense>
+            )}
+            {activeView === "claude-code" && (
+              <Suspense fallback={null}>
+                <ClaudeCodeView />
               </Suspense>
             )}
           </div>
