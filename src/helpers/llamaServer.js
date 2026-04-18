@@ -39,10 +39,14 @@ class LlamaServerManager {
     const ext = platform === "win32" ? ".exe" : "";
 
     const resolveBinary = (name) => {
+      // Look under bin/llama/ first (isolated from whisper/sherpa ggml DLLs),
+      // then fall back to bin/ for legacy / dev installs.
       const candidates = [];
       if (process.resourcesPath) {
+        candidates.push(path.join(process.resourcesPath, "bin", "llama", name));
         candidates.push(path.join(process.resourcesPath, "bin", name));
       }
+      candidates.push(path.join(__dirname, "..", "..", "resources", "bin", "llama", name));
       candidates.push(path.join(__dirname, "..", "..", "resources", "bin", name));
 
       for (const candidate of candidates) {
@@ -73,12 +77,14 @@ class LlamaServerManager {
         if (fs.existsSync(vulkanPath)) vulkanBin = vulkanPath;
       } catch {}
 
+      const cudaBin = resolveBinary(`llama-server-${platformArch}-cuda${ext}`);
       const cpuBin =
         resolveBinary(`llama-server-${platformArch}-cpu${ext}`) ||
         resolveBinary(`llama-server-${platformArch}${ext}`) ||
         resolveBinary(`llama-server${ext}`);
 
       paths = {};
+      if (cudaBin) paths.cuda = cudaBin;
       if (vulkanBin) paths.vulkan = vulkanBin;
       if (cpuBin) paths.cpu = cpuBin;
     }
@@ -146,6 +152,11 @@ class LlamaServerManager {
       "--threads",
       String(options.threads || 4),
       "--jinja",
+      // Cap context at 8K. Voice-assistant prompts never exceed this, and the
+      // default (Qwen3.5 = 262K) makes the KV cache alone exceed a 12GB GPU,
+      // forcing paging that tanks inference from ~40 tok/s to <1 tok/s.
+      "--ctx-size",
+      String(options.ctxSize || 8192),
     ];
 
     if (process.platform === "darwin") {
@@ -172,6 +183,24 @@ class LlamaServerManager {
   async _startWithGpuFallback(binaryPaths, baseArgs, options) {
     const gpuArgs = [...baseArgs, "--n-gpu-layers", "99"];
     const cpuArgs = baseArgs;
+
+    if (binaryPaths.cuda) {
+      try {
+        debugLogger.debug("Attempting CUDA backend startup");
+        await this._startWithBinary(
+          binaryPaths.cuda,
+          gpuArgs,
+          this._buildEnv(binaryPaths.cuda),
+          STARTUP_TIMEOUT_MS
+        );
+        this.activeBackend = "cuda";
+        return;
+      } catch (err) {
+        debugLogger.warn("CUDA backend failed, trying next backend", { error: err.message });
+        await this._killCurrentProcess();
+        this.port = await this.findAvailablePort();
+      }
+    }
 
     if (binaryPaths.vulkan) {
       try {

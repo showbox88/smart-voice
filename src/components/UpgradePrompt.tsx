@@ -1,4 +1,4 @@
-import { Dialog, DialogContent } from "./ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "./ui/dialog";
 import { ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useUsage } from "../hooks/useUsage";
@@ -25,10 +25,10 @@ export default function UpgradePrompt({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <div className="text-center space-y-2 pt-2">
-          <h2 className="text-xl font-semibold text-foreground">
+          <DialogTitle className="text-xl font-semibold text-foreground">
             {isPastDue ? t("upgradePrompt.paymentFailed") : t("upgradePrompt.weeklyLimit")}
-          </h2>
-          <p className="text-sm text-muted-foreground">
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
             {(isPastDue
               ? t("upgradePrompt.pastDueDescription", { limit: limit.toLocaleString() })
               : t("upgradePrompt.limitDescription", {
@@ -43,7 +43,7 @@ export default function UpgradePrompt({
                   {i < arr.length - 1 && <br />}
                 </span>
               ))}
-          </p>
+          </DialogDescription>
         </div>
 
         <div className="space-y-2 pt-2">

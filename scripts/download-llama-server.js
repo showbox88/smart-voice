@@ -38,6 +38,13 @@ const BINARIES = {
     outputName: "llama-server-win32-x64-cpu.exe",
     libPattern: "*.dll",
   },
+  "win32-x64-cuda": {
+    platformArch: "win32-x64",
+    assetPattern: /^llama-.*-bin-win-cuda-12\.4-x64\.zip$/,
+    binaryPath: "build/bin/llama-server.exe",
+    outputName: "llama-server-win32-x64-cuda.exe",
+    libPattern: "*.dll",
+  },
   "linux-x64-cpu": {
     platformArch: "linux-x64",
     assetPattern: /^llama-.*-bin-ubuntu-x64\.tar\.gz$/,
@@ -47,7 +54,10 @@ const BINARIES = {
   },
 };
 
-const BIN_DIR = path.join(__dirname, "..", "resources", "bin");
+// llama.cpp ships its own ggml.dll / ggml-base.dll that ABI-conflict with the
+// versions whisper-server / sherpa-onnx use. Keep everything in a subdirectory
+// so they never collide on the DLL search path.
+const BIN_DIR = path.join(__dirname, "..", "resources", "bin", "llama");
 
 let cachedRelease = null;
 

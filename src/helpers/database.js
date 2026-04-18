@@ -260,6 +260,35 @@ class DatabaseManager {
         "CREATE INDEX IF NOT EXISTS idx_agent_conversations_note ON agent_conversations(note_id)"
       );
 
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS claude_conversations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL DEFAULT 'Untitled',
+          cwd TEXT,
+          claude_session_id TEXT,
+          permission_mode TEXT NOT NULL DEFAULT 'acceptEdits',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      this.db.exec(
+        "CREATE INDEX IF NOT EXISTS idx_claude_conversations_updated ON claude_conversations(updated_at DESC)"
+      );
+
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS claude_messages (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          conversation_id INTEGER NOT NULL REFERENCES claude_conversations(id) ON DELETE CASCADE,
+          role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+          text TEXT NOT NULL DEFAULT '',
+          tools_json TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      this.db.exec(
+        "CREATE INDEX IF NOT EXISTS idx_claude_messages_conv ON claude_messages(conversation_id, created_at)"
+      );
+
       const actionCount = this.db.prepare("SELECT COUNT(*) as count FROM actions").get();
       if (actionCount.count === 0) {
         this.db
@@ -2319,6 +2348,107 @@ class DatabaseManager {
       debugLogger.error("Error removing speaker mapping", { error: error.message }, "database");
       throw error;
     }
+  }
+
+  // ─── Claude Code conversations ────────────────────────────────────────
+  createClaudeConversation({ title, cwd, permissionMode } = {}) {
+    if (!this.db) throw new Error("Database not initialized");
+    const info = this.db
+      .prepare(
+        `INSERT INTO claude_conversations (title, cwd, permission_mode)
+         VALUES (?, ?, ?)`
+      )
+      .run(title || "新会话", cwd || null, permissionMode || "acceptEdits");
+    return info.lastInsertRowid;
+  }
+
+  listClaudeConversations() {
+    if (!this.db) throw new Error("Database not initialized");
+    return this.db
+      .prepare(
+        `SELECT c.id, c.title, c.cwd, c.claude_session_id, c.permission_mode,
+                c.created_at, c.updated_at,
+                (SELECT COUNT(*) FROM claude_messages m WHERE m.conversation_id = c.id) AS message_count
+         FROM claude_conversations c
+         ORDER BY c.updated_at DESC`
+      )
+      .all();
+  }
+
+  getClaudeConversation(id) {
+    if (!this.db) throw new Error("Database not initialized");
+    const conv = this.db
+      .prepare(`SELECT * FROM claude_conversations WHERE id = ?`)
+      .get(id);
+    if (!conv) return null;
+    const messages = this.db
+      .prepare(
+        `SELECT id, role, text, tools_json, created_at
+         FROM claude_messages WHERE conversation_id = ? ORDER BY id ASC`
+      )
+      .all(id);
+    return { ...conv, messages };
+  }
+
+  updateClaudeConversation(id, patch = {}) {
+    if (!this.db) throw new Error("Database not initialized");
+    const fields = [];
+    const values = [];
+    for (const key of ["title", "cwd", "claude_session_id", "permission_mode"]) {
+      if (Object.prototype.hasOwnProperty.call(patch, key)) {
+        fields.push(`${key} = ?`);
+        values.push(patch[key]);
+      }
+    }
+    if (fields.length === 0) return;
+    fields.push("updated_at = CURRENT_TIMESTAMP");
+    values.push(id);
+    this.db
+      .prepare(`UPDATE claude_conversations SET ${fields.join(", ")} WHERE id = ?`)
+      .run(...values);
+  }
+
+  touchClaudeConversation(id) {
+    if (!this.db) throw new Error("Database not initialized");
+    this.db
+      .prepare(`UPDATE claude_conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+      .run(id);
+  }
+
+  deleteClaudeConversation(id) {
+    if (!this.db) throw new Error("Database not initialized");
+    this.db.prepare(`DELETE FROM claude_conversations WHERE id = ?`).run(id);
+  }
+
+  appendClaudeMessage(conversationId, { role, text = "", toolsJson = null } = {}) {
+    if (!this.db) throw new Error("Database not initialized");
+    const info = this.db
+      .prepare(
+        `INSERT INTO claude_messages (conversation_id, role, text, tools_json)
+         VALUES (?, ?, ?, ?)`
+      )
+      .run(conversationId, role, text, toolsJson);
+    this.touchClaudeConversation(conversationId);
+    return info.lastInsertRowid;
+  }
+
+  updateClaudeMessage(id, patch = {}) {
+    if (!this.db) throw new Error("Database not initialized");
+    const fields = [];
+    const values = [];
+    if (Object.prototype.hasOwnProperty.call(patch, "text")) {
+      fields.push("text = ?");
+      values.push(patch.text);
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "toolsJson")) {
+      fields.push("tools_json = ?");
+      values.push(patch.toolsJson);
+    }
+    if (fields.length === 0) return;
+    values.push(id);
+    this.db
+      .prepare(`UPDATE claude_messages SET ${fields.join(", ")} WHERE id = ?`)
+      .run(...values);
   }
 }
 

@@ -7,6 +7,7 @@ import { listFoldersTool } from "./listFoldersTool";
 import { clipboardTool } from "./clipboardTool";
 import { webSearchTool } from "./webSearchTool";
 import { calendarTool } from "./calendarTool";
+import { listSmartDevicesTool, setDevicePowerTool } from "./vesyncTool";
 
 export { ToolRegistry } from "./ToolRegistry";
 export type { ToolDefinition, ToolResult } from "./ToolRegistry";
@@ -15,6 +16,7 @@ interface ToolRegistrySettings {
   isSignedIn: boolean;
   gcalConnected: boolean;
   cloudBackupEnabled: boolean;
+  vesyncAvailable: boolean;
 }
 
 export function createToolRegistry(settings: ToolRegistrySettings): ToolRegistry {
@@ -34,6 +36,11 @@ export function createToolRegistry(settings: ToolRegistrySettings): ToolRegistry
 
   if (settings.gcalConnected) {
     registry.register(calendarTool);
+  }
+
+  if (settings.vesyncAvailable) {
+    registry.register(listSmartDevicesTool);
+    registry.register(setDevicePowerTool);
   }
 
   return registry;

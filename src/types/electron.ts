@@ -868,7 +868,73 @@ declare global {
       checkFFmpegAvailability: () => Promise<FFmpegAvailabilityResult>;
       getAudioDiagnostics: () => Promise<AudioDiagnosticsResult>;
 
-      // Claude Code CLI voice remote (Phase 6)
+      // Claude Code CLI voice remote (Phase 6) — multi-conversation
+      claudeCodeConvList: () => Promise<{
+        success: boolean;
+        items: Array<{
+          id: number;
+          title: string;
+          cwd: string | null;
+          claude_session_id: string | null;
+          permission_mode: string;
+          created_at: string;
+          updated_at: string;
+          message_count: number;
+        }>;
+        error?: string;
+      }>;
+      claudeCodeConvCreate: (config?: {
+        title?: string;
+        cwd?: string;
+        permissionMode?: string;
+      }) => Promise<{ success: true; id: number } | { success: false; error: string }>;
+      claudeCodeConvSwitch: (id: number) => Promise<
+        | {
+            success: true;
+            conversation: {
+              id: number;
+              title: string;
+              cwd: string | null;
+              claude_session_id: string | null;
+              permission_mode: string;
+              messages: Array<{
+                id: number;
+                role: "user" | "assistant";
+                text: string;
+                tools_json: string | null;
+                created_at: string;
+              }>;
+            };
+          }
+        | { success: false; error: string }
+      >;
+      claudeCodeConvGet: (id: number) => Promise<
+        | {
+            success: true;
+            conversation: {
+              id: number;
+              title: string;
+              cwd: string | null;
+              claude_session_id: string | null;
+              permission_mode: string;
+              messages: Array<{
+                id: number;
+                role: "user" | "assistant";
+                text: string;
+                tools_json: string | null;
+                created_at: string;
+              }>;
+            };
+          }
+        | { success: false; error: string }
+      >;
+      claudeCodeConvRename: (
+        id: number,
+        title: string
+      ) => Promise<{ success: boolean; error?: string }>;
+      claudeCodeConvDelete: (
+        id: number
+      ) => Promise<{ success: boolean; error?: string }>;
       claudeCodeConfigure: (config: {
         cwd?: string;
         claudePath?: string;
@@ -883,6 +949,7 @@ declare global {
       }>;
       claudeCodeStatus: () => Promise<{
         configured: boolean;
+        activeConvId?: number | null;
         cwd: string | null;
         claudePath?: string;
         permissionMode?: string;
@@ -900,7 +967,6 @@ declare global {
         | { success: false; error: string }
       >;
       claudeCodeCancel: () => Promise<{ success: boolean }>;
-      claudeCodeReset: () => Promise<{ success: boolean }>;
       claudeCodePickCwd: () => Promise<
         { success: true; cwd: string } | { success: false; canceled?: boolean }
       >;
@@ -912,10 +978,45 @@ declare global {
           | "tool-use"
           | "tool-result"
           | "turn-end"
+          | "cancelled"
           | "error"
-          | "exit",
+          | "exit"
+          | "conv-list-changed",
         handler: (payload: unknown) => void
       ) => () => void;
+
+      // VeSync smart-home (cloud API)
+      getVeSyncEmail: () => Promise<string>;
+      saveVeSyncEmail: (email: string) => Promise<{ success: boolean }>;
+      getVeSyncPassword: () => Promise<string>;
+      saveVeSyncPassword: (password: string) => Promise<{ success: boolean }>;
+      getVeSyncCountryCode: () => Promise<string>;
+      saveVeSyncCountryCode: (code: string) => Promise<{ success: boolean }>;
+      vesyncLogin: (opts?: { force?: boolean }) => Promise<{
+        success: boolean;
+        cached?: boolean;
+        error?: string;
+      }>;
+      vesyncListDevices: (opts?: { refresh?: boolean }) => Promise<{
+        success: boolean;
+        error?: string;
+        devices: Array<{
+          cid: string;
+          uuid: string | null;
+          name: string;
+          type: string;
+          category: string;
+          status: "on" | "off" | string;
+          online: boolean;
+          mac: string | null;
+          region: string | null;
+        }>;
+      }>;
+      vesyncToggle: (
+        cid: string,
+        desired?: "on" | "off"
+      ) => Promise<{ success: boolean; cid?: string; status?: string; error?: string }>;
+      vesyncLogout: () => Promise<{ success: boolean }>;
 
       // TTS (Edge Read Aloud / ElevenLabs)
       ttsListVoices: () => Promise<Array<{ id: string; label: string }>>;

@@ -13,6 +13,7 @@ import {
   X,
   Search,
   Terminal,
+  Plug,
 } from "lucide-react";
 import logoIcon from "../assets/icon.png";
 import { useTranslation } from "react-i18next";
@@ -29,7 +30,8 @@ export type ControlPanelView =
   | "dictionary"
   | "upload"
   | "integrations"
-  | "claude-code";
+  | "claude-code"
+  | "smart-home";
 
 interface ControlPanelSidebarProps {
   activeView: ControlPanelView;
@@ -93,6 +95,7 @@ export default function ControlPanelSidebar({
     { id: "dictionary", label: t("sidebar.dictionary"), icon: BookOpen },
     { id: "integrations", label: t("sidebar.integrations"), icon: Blocks },
     { id: "claude-code", label: "Claude Code", icon: Terminal },
+    { id: "smart-home", label: "智能家居", icon: Plug },
   ];
 
   return (

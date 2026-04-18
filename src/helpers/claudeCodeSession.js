@@ -39,6 +39,7 @@ class ClaudeCodeSession extends EventEmitter {
     this._proc = null;
     this._chunker = null;
     this._buffer = ""; // Line buffer for NDJSON split
+    this._cancelled = false;
   }
 
   isBusy() {
@@ -81,6 +82,7 @@ class ClaudeCodeSession extends EventEmitter {
         this._proc = null;
         this._chunker = null;
         this._buffer = "";
+        this._cancelled = false;
         fn(arg);
       };
 
@@ -166,6 +168,12 @@ class ClaudeCodeSession extends EventEmitter {
 
         this.emit("exit", { code, signal });
 
+        if (this._cancelled) {
+          this.emit("cancelled", { sessionId: finalResult.sessionId || null });
+          finish(reject, new Error("cancelled"));
+          return;
+        }
+
         if (code === 0) {
           this.emit("turn-end", finalResult);
           finish(resolve, finalResult);
@@ -183,6 +191,7 @@ class ClaudeCodeSession extends EventEmitter {
   /** Kill any in-flight subprocess (e.g. user cancels). */
   cancel() {
     if (this._proc) {
+      this._cancelled = true;
       try {
         this._proc.kill();
       } catch (err) {

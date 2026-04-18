@@ -39,6 +39,7 @@ const IntegrationsView = React.lazy(() => import("./IntegrationsView"));
 const ChatView = React.lazy(() => import("./chat/ChatView"));
 const CommandSearch = React.lazy(() => import("./CommandSearch"));
 const ClaudeCodeView = React.lazy(() => import("./ClaudeCodeView"));
+const SmartHomeView = React.lazy(() => import("./SmartHomeView"));
 
 export default function ControlPanel() {
   const { t } = useTranslation();
@@ -56,6 +57,10 @@ export default function ControlPanel() {
   const [showSearch, setShowSearch] = useState(false);
   const [showCloudMigrationBanner, setShowCloudMigrationBanner] = useState(false);
   const [activeView, setActiveView] = useState<ControlPanelView>("home");
+  const [claudeCodeEverOpened, setClaudeCodeEverOpened] = useState(false);
+  useEffect(() => {
+    if (activeView === "claude-code") setClaudeCodeEverOpened(true);
+  }, [activeView]);
   const [isMeetingMode, setIsMeetingMode] = useState(false);
   const [meetingRecordingRequest, setMeetingRecordingRequest] = useState<{
     noteId: number;
@@ -816,9 +821,19 @@ export default function ControlPanel() {
                 <IntegrationsView />
               </Suspense>
             )}
-            {activeView === "claude-code" && (
+            {claudeCodeEverOpened && (
+              <div
+                className="h-full w-full"
+                style={{ display: activeView === "claude-code" ? "flex" : "none" }}
+              >
+                <Suspense fallback={null}>
+                  <ClaudeCodeView />
+                </Suspense>
+              </div>
+            )}
+            {activeView === "smart-home" && (
               <Suspense fallback={null}>
-                <ClaudeCodeView />
+                <SmartHomeView />
               </Suspense>
             )}
           </div>

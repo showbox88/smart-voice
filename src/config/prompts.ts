@@ -164,6 +164,10 @@ const TOOL_INSTRUCTIONS: Record<string, string> = {
     "Use copy_to_clipboard when the user asks you to copy something to their clipboard.",
   get_calendar_events:
     "Use get_calendar_events to check the user's schedule, upcoming meetings, or calendar events.",
+  list_smart_devices:
+    "Use list_smart_devices to see the user's VeSync smart home devices (lights, plugs, switches) and their current on/off state. Call this first if you're unsure which device the user means.",
+  set_device_power:
+    "Use set_device_power to turn a smart home device on or off. The device parameter is fuzzy-matched — pass what the user said (e.g. 'Light 1', '灯一', 'the second light'). If the user's phrasing is ambiguous, call list_smart_devices first.",
 };
 
 export function getAgentSystemPrompt(availableTools?: string[], noteContext?: string): string {

@@ -30,6 +30,9 @@ const PERSISTED_KEYS = [
   "WHISPER_CUDA_ENABLED",
   "TRANSCRIPTION_GPU_INDEX",
   "INTELLIGENCE_GPU_INDEX",
+  "VESYNC_EMAIL",
+  "VESYNC_PASSWORD",
+  "VESYNC_COUNTRY_CODE",
 ];
 
 class EnvironmentManager {
@@ -94,6 +97,30 @@ class EnvironmentManager {
 
   saveGeminiKey(key) {
     return this._saveKey("GEMINI_API_KEY", key);
+  }
+
+  getVeSyncEmail() {
+    return this._getKey("VESYNC_EMAIL");
+  }
+
+  saveVeSyncEmail(email) {
+    return this._saveKey("VESYNC_EMAIL", email);
+  }
+
+  getVeSyncPassword() {
+    return this._getKey("VESYNC_PASSWORD");
+  }
+
+  saveVeSyncPassword(password) {
+    return this._saveKey("VESYNC_PASSWORD", password);
+  }
+
+  getVeSyncCountryCode() {
+    return this._getKey("VESYNC_COUNTRY_CODE") || "US";
+  }
+
+  saveVeSyncCountryCode(code) {
+    return this._saveKey("VESYNC_COUNTRY_CODE", code);
   }
 
   getGroqKey() {

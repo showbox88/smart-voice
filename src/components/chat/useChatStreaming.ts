@@ -69,10 +69,19 @@ export function useChatStreaming({
   const noteContextRef = useRef(externalNoteContext);
   noteContextRef.current = externalNoteContext;
   const toolRegistryRef = useRef<{ key: string; registry: ToolRegistry } | null>(null);
+  const vesyncAvailableRef = useRef(false);
 
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  useEffect(() => {
+    (async () => {
+      const email = await window.electronAPI?.getVeSyncEmail?.();
+      const password = await window.electronAPI?.getVeSyncPassword?.();
+      vesyncAvailableRef.current = Boolean(email && password);
+    })();
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -106,7 +115,8 @@ export function useChatStreaming({
 
       let registry: ToolRegistry | null = null;
       if (supportsTools) {
-        const cacheKey = `${settings.isSignedIn}-${settings.gcalConnected}-${settings.cloudBackupEnabled}`;
+        const vesyncAvailable = vesyncAvailableRef.current;
+        const cacheKey = `${settings.isSignedIn}-${settings.gcalConnected}-${settings.cloudBackupEnabled}-${vesyncAvailable}`;
         if (toolRegistryRef.current?.key === cacheKey) {
           registry = toolRegistryRef.current.registry;
         } else {
@@ -114,6 +124,7 @@ export function useChatStreaming({
             isSignedIn: settings.isSignedIn,
             gcalConnected: settings.gcalConnected,
             cloudBackupEnabled: settings.cloudBackupEnabled,
+            vesyncAvailable,
           });
           toolRegistryRef.current = { key: cacheKey, registry };
         }

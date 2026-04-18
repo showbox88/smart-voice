@@ -118,7 +118,8 @@ class IPCHandlers {
     this.getTrayManager = managers.getTrayManager;
     this.whisperCudaManager = managers.whisperCudaManager;
     this.ttsManager = managers.ttsManager;
-    this.claudeCodeSession = managers.claudeCodeSession;
+    this.claudeCodeManager = managers.claudeCodeManager;
+    this.vesyncManager = managers.vesyncManager;
     this.googleCalendarManager = managers.googleCalendarManager;
     this.meetingDetectionEngine = managers.meetingDetectionEngine;
     this.audioTapManager = managers.audioTapManager;
@@ -1592,7 +1593,7 @@ class IPCHandlers {
     // can pipe transcribed text into Claude Code and stream the reply back
     // into the renderer (which plays it via TTS).
     // ──────────────────────────────────────────────────────────────────────
-    if (this.claudeCodeSession) {
+    if (this.claudeCodeManager) {
       const ccForward = (channel) => (payload) => {
         try {
           for (const win of BrowserWindow.getAllWindows()) {
@@ -1607,42 +1608,97 @@ class IPCHandlers {
           });
         }
       };
-      this.claudeCodeSession.on("turn-start", ccForward("turn-start"));
-      this.claudeCodeSession.on("assistant-text", ccForward("assistant-text"));
-      this.claudeCodeSession.on("sentence", ccForward("sentence"));
-      this.claudeCodeSession.on("tool-use", ccForward("tool-use"));
-      this.claudeCodeSession.on("tool-result", ccForward("tool-result"));
-      this.claudeCodeSession.on("turn-end", ccForward("turn-end"));
-      this.claudeCodeSession.on("error", ccForward("error"));
-      this.claudeCodeSession.on("exit", ccForward("exit"));
+      const forwardChannels = [
+        "turn-start",
+        "assistant-text",
+        "sentence",
+        "tool-use",
+        "tool-result",
+        "turn-end",
+        "cancelled",
+        "error",
+        "exit",
+        "conv-list-changed",
+      ];
+      for (const ch of forwardChannels) {
+        this.claudeCodeManager.on(ch, ccForward(ch));
+      }
     }
 
-    ipcMain.handle("claude-code:configure", async (_event, config = {}) => {
-      if (!this.claudeCodeSession) return { success: false, error: "not_init" };
-      if (config.cwd) this.claudeCodeSession.cwd = config.cwd;
-      if (config.claudePath) this.claudeCodeSession.claudePath = config.claudePath;
-      if (config.permissionMode) {
-        this.claudeCodeSession.permissionMode = config.permissionMode;
+    ipcMain.handle("claude-code:conv-list", async () => {
+      if (!this.claudeCodeManager) return { success: false, error: "not_init", items: [] };
+      try {
+        return { success: true, items: this.claudeCodeManager.listConversations() };
+      } catch (err) {
+        return { success: false, error: err.message, items: [] };
       }
-      return {
-        success: true,
-        cwd: this.claudeCodeSession.cwd,
-        claudePath: this.claudeCodeSession.claudePath,
-        permissionMode: this.claudeCodeSession.permissionMode,
-        sessionId: this.claudeCodeSession.sessionId,
-      };
+    });
+
+    ipcMain.handle("claude-code:conv-create", async (_event, config = {}) => {
+      if (!this.claudeCodeManager) return { success: false, error: "not_init" };
+      try {
+        const id = this.claudeCodeManager.createConversation(config);
+        return { success: true, id };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    });
+
+    ipcMain.handle("claude-code:conv-switch", async (_event, id) => {
+      if (!this.claudeCodeManager) return { success: false, error: "not_init" };
+      try {
+        const conv = this.claudeCodeManager.switchConversation(id);
+        return { success: true, conversation: conv };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    });
+
+    ipcMain.handle("claude-code:conv-get", async (_event, id) => {
+      if (!this.claudeCodeManager) return { success: false, error: "not_init" };
+      try {
+        const conv = this.claudeCodeManager.getConversation(id);
+        if (!conv) return { success: false, error: "not_found" };
+        return { success: true, conversation: conv };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    });
+
+    ipcMain.handle("claude-code:conv-rename", async (_event, id, title) => {
+      if (!this.claudeCodeManager) return { success: false, error: "not_init" };
+      try {
+        this.claudeCodeManager.renameConversation(id, title);
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    });
+
+    ipcMain.handle("claude-code:conv-delete", async (_event, id) => {
+      if (!this.claudeCodeManager) return { success: false, error: "not_init" };
+      try {
+        this.claudeCodeManager.deleteConversation(id);
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    });
+
+    ipcMain.handle("claude-code:configure", async (_event, config = {}) => {
+      if (!this.claudeCodeManager) return { success: false, error: "not_init" };
+      try {
+        const state = this.claudeCodeManager.configureActive(config);
+        return { success: true, ...state };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
     });
 
     ipcMain.handle("claude-code:send", async (_event, text) => {
-      if (!this.claudeCodeSession) return { success: false, error: "not_init" };
-      if (!this.claudeCodeSession.cwd) {
-        return { success: false, error: "no_cwd_configured" };
-      }
-      if (this.claudeCodeSession.isBusy()) {
-        return { success: false, error: "busy" };
-      }
+      if (!this.claudeCodeManager) return { success: false, error: "not_init" };
       try {
-        const result = await this.claudeCodeSession.send(text);
+        const result = await this.claudeCodeManager.send(text);
         return { success: true, ...result };
       } catch (err) {
         return { success: false, error: err.message };
@@ -1650,26 +1706,17 @@ class IPCHandlers {
     });
 
     ipcMain.handle("claude-code:cancel", async () => {
-      if (!this.claudeCodeSession) return { success: false };
-      this.claudeCodeSession.cancel();
-      return { success: true };
-    });
-
-    ipcMain.handle("claude-code:reset", async () => {
-      if (!this.claudeCodeSession) return { success: false };
-      this.claudeCodeSession.reset();
+      if (!this.claudeCodeManager) return { success: false };
+      this.claudeCodeManager.cancel();
       return { success: true };
     });
 
     ipcMain.handle("claude-code:status", async () => {
-      if (!this.claudeCodeSession) return { configured: false };
+      if (!this.claudeCodeManager) return { configured: false };
+      const s = this.claudeCodeManager.status();
       return {
-        configured: !!this.claudeCodeSession.cwd,
-        cwd: this.claudeCodeSession.cwd || null,
-        claudePath: this.claudeCodeSession.claudePath,
-        permissionMode: this.claudeCodeSession.permissionMode,
-        sessionId: this.claudeCodeSession.sessionId,
-        busy: this.claudeCodeSession.isBusy(),
+        configured: !!s.cwd,
+        ...s,
       };
     });
 
@@ -1683,6 +1730,43 @@ class IPCHandlers {
         return { success: false, canceled: true };
       }
       return { success: true, cwd: result.filePaths[0] };
+    });
+
+    // ─────── VeSync cloud smart-home integration ───────
+    ipcMain.handle("get-vesync-email", () => this.environmentManager.getVeSyncEmail());
+    ipcMain.handle("save-vesync-email", (_e, email) =>
+      this.environmentManager.saveVeSyncEmail(email)
+    );
+    ipcMain.handle("get-vesync-password", () => this.environmentManager.getVeSyncPassword());
+    ipcMain.handle("save-vesync-password", (_e, password) =>
+      this.environmentManager.saveVeSyncPassword(password)
+    );
+    ipcMain.handle("get-vesync-country-code", () =>
+      this.environmentManager.getVeSyncCountryCode()
+    );
+    ipcMain.handle("save-vesync-country-code", (_e, code) =>
+      this.environmentManager.saveVeSyncCountryCode(code)
+    );
+
+    ipcMain.handle("vesync:login", async (_e, opts = {}) => {
+      if (!this.vesyncManager) return { success: false, error: "not_init" };
+      return this.vesyncManager.login(opts);
+    });
+
+    ipcMain.handle("vesync:list-devices", async (_e, opts = {}) => {
+      if (!this.vesyncManager) return { success: false, error: "not_init", devices: [] };
+      return this.vesyncManager.listDevices(opts);
+    });
+
+    ipcMain.handle("vesync:toggle", async (_e, cid, desired) => {
+      if (!this.vesyncManager) return { success: false, error: "not_init" };
+      return this.vesyncManager.toggle(cid, desired);
+    });
+
+    ipcMain.handle("vesync:logout", async () => {
+      if (!this.vesyncManager) return { success: false };
+      this.vesyncManager.logout();
+      return { success: true };
     });
 
     ipcMain.handle("tts-synthesize", async (_event, text, options = {}) => {

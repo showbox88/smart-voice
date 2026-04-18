@@ -212,12 +212,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ttsListVoices: () => ipcRenderer.invoke("tts-list-voices"),
   ttsSynthesize: (text, options) => ipcRenderer.invoke("tts-synthesize", text, options),
 
-  // Claude Code CLI voice remote (Phase 6)
+  // Claude Code CLI voice remote (Phase 6) — multi-conversation
+  claudeCodeConvList: () => ipcRenderer.invoke("claude-code:conv-list"),
+  claudeCodeConvCreate: (config) => ipcRenderer.invoke("claude-code:conv-create", config),
+  claudeCodeConvSwitch: (id) => ipcRenderer.invoke("claude-code:conv-switch", id),
+  claudeCodeConvGet: (id) => ipcRenderer.invoke("claude-code:conv-get", id),
+  claudeCodeConvRename: (id, title) =>
+    ipcRenderer.invoke("claude-code:conv-rename", id, title),
+  claudeCodeConvDelete: (id) => ipcRenderer.invoke("claude-code:conv-delete", id),
   claudeCodeConfigure: (config) => ipcRenderer.invoke("claude-code:configure", config),
   claudeCodeStatus: () => ipcRenderer.invoke("claude-code:status"),
   claudeCodeSend: (text) => ipcRenderer.invoke("claude-code:send", text),
   claudeCodeCancel: () => ipcRenderer.invoke("claude-code:cancel"),
-  claudeCodeReset: () => ipcRenderer.invoke("claude-code:reset"),
   claudeCodePickCwd: () => ipcRenderer.invoke("claude-code:pick-cwd"),
   onClaudeCodeEvent: (channel, handler) => {
     const fullChannel = `claude-code:${channel}`;
@@ -225,6 +231,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on(fullChannel, listener);
     return () => ipcRenderer.removeListener(fullChannel, listener);
   },
+
+  // VeSync smart-home (cloud API)
+  getVeSyncEmail: () => ipcRenderer.invoke("get-vesync-email"),
+  saveVeSyncEmail: (email) => ipcRenderer.invoke("save-vesync-email", email),
+  getVeSyncPassword: () => ipcRenderer.invoke("get-vesync-password"),
+  saveVeSyncPassword: (password) => ipcRenderer.invoke("save-vesync-password", password),
+  getVeSyncCountryCode: () => ipcRenderer.invoke("get-vesync-country-code"),
+  saveVeSyncCountryCode: (code) => ipcRenderer.invoke("save-vesync-country-code", code),
+  vesyncLogin: (opts) => ipcRenderer.invoke("vesync:login", opts || {}),
+  vesyncListDevices: (opts) => ipcRenderer.invoke("vesync:list-devices", opts || {}),
+  vesyncToggle: (cid, desired) => ipcRenderer.invoke("vesync:toggle", cid, desired),
+  vesyncLogout: () => ipcRenderer.invoke("vesync:logout"),
 
   // Whisper server functions (faster repeated transcriptions)
   whisperServerStart: (modelName) => ipcRenderer.invoke("whisper-server-start", modelName),
