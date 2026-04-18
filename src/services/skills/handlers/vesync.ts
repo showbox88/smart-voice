@@ -42,23 +42,44 @@ async function fetchDevices(
 // Generic class aliases: user says "灯" / "light" → match every light-like device.
 // Keyed by the normalized user query (lowercased, whitespace-stripped). Value is
 // a list of keywords to look for in the device's name / type / category.
+// The sentinel "*" means "match every device regardless of type" (for 全部/所有/all).
+const LIGHT_KW = ["light", "lamp", "bulb", "灯"];
+const PLUG_KW = ["plug", "outlet", "socket", "插"];
+const SWITCH_KW = ["switch", "开关"];
 const GENERIC_ALIASES: Record<string, string[]> = {
-  灯: ["light", "lamp", "bulb", "灯"],
-  灯光: ["light", "lamp", "bulb", "灯"],
-  所有灯: ["light", "lamp", "bulb", "灯"],
-  全部灯: ["light", "lamp", "bulb", "灯"],
-  light: ["light", "lamp", "bulb", "灯"],
-  lights: ["light", "lamp", "bulb", "灯"],
-  lamp: ["light", "lamp", "bulb", "灯"],
-  lamps: ["light", "lamp", "bulb", "灯"],
-  插座: ["plug", "outlet", "socket", "插"],
-  所有插座: ["plug", "outlet", "socket", "插"],
-  plug: ["plug", "outlet", "socket", "插"],
-  plugs: ["plug", "outlet", "socket", "插"],
-  outlet: ["plug", "outlet", "socket", "插"],
-  开关: ["switch", "开关"],
-  switch: ["switch", "开关"],
-  switches: ["switch", "开关"],
+  // Lights — simplified + traditional Chinese variants.
+  灯: LIGHT_KW,
+  燈: LIGHT_KW,
+  灯光: LIGHT_KW,
+  燈光: LIGHT_KW,
+  所有灯: LIGHT_KW,
+  所有燈: LIGHT_KW,
+  全部灯: LIGHT_KW,
+  全部燈: LIGHT_KW,
+  light: LIGHT_KW,
+  lights: LIGHT_KW,
+  lamp: LIGHT_KW,
+  lamps: LIGHT_KW,
+  // Plugs.
+  插座: PLUG_KW,
+  所有插座: PLUG_KW,
+  plug: PLUG_KW,
+  plugs: PLUG_KW,
+  outlet: PLUG_KW,
+  // Switches — simplified + traditional.
+  开关: SWITCH_KW,
+  開關: SWITCH_KW,
+  switch: SWITCH_KW,
+  switches: SWITCH_KW,
+  // "all-device" aliases — match every device regardless of category.
+  全部: ["*"],
+  所有: ["*"],
+  全部设备: ["*"],
+  全部設備: ["*"],
+  所有设备: ["*"],
+  所有設備: ["*"],
+  all: ["*"],
+  everything: ["*"],
 };
 
 function matchDevice(
@@ -77,8 +98,12 @@ function matchDevice(
   if (matches.length > 0) return { matches, isGeneric: false };
 
   // Generic class alias — "灯" matches every device that looks like a light.
+  // "*" sentinel matches every device regardless of type (全部/所有/all).
   const aliasKeywords = GENERIC_ALIASES[q];
   if (aliasKeywords) {
+    if (aliasKeywords.includes("*")) {
+      return { matches: devices, isGeneric: true };
+    }
     const hit = devices.filter((d) => {
       const hay = normalize(`${d.name} ${d.type} ${d.category}`);
       return aliasKeywords.some((kw) => hay.includes(normalize(kw)));

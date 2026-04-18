@@ -6,6 +6,8 @@ interface AgentInputProps {
   partialTranscript: string;
   onTextSubmit?: (text: string) => void;
   onCancel?: () => void;
+  pendingSubmitText?: string | null;
+  onPendingSubmitConsumed?: () => void;
 }
 
 export function AgentInput(props: AgentInputProps) {

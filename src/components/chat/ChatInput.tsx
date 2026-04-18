@@ -10,6 +10,11 @@ interface ChatInputProps {
   onTextSubmit?: (text: string) => void;
   onCancel?: () => void;
   autoFocus?: boolean;
+  // When set, ChatInput fills its input box with this text and auto-submits
+  // (simulating the user typing + Enter). Used by the voice-hotkey flow so the
+  // transcription is visible in the input box before submission.
+  pendingSubmitText?: string | null;
+  onPendingSubmitConsumed?: () => void;
 }
 
 function RecordingIndicator() {
@@ -46,6 +51,8 @@ export function ChatInput({
   onTextSubmit,
   onCancel,
   autoFocus = false,
+  pendingSubmitText,
+  onPendingSubmitConsumed,
 }: ChatInputProps) {
   const { t } = useTranslation();
   const [inputText, setInputText] = useState("");
@@ -58,6 +65,27 @@ export function ChatInput({
     setInputText("");
     requestAnimationFrame(() => inputRef.current?.focus());
   }, [inputText, onTextSubmit]);
+
+  // Auto-fill-and-submit: when a voice transcription arrives (pendingSubmitText
+  // becomes non-empty), briefly show it in the input and fire submit. We submit
+  // directly with the text here (not via handleSubmit) because handleSubmit
+  // reads from inputText state, which won't yet reflect setInputText above.
+  useEffect(() => {
+    if (!pendingSubmitText) return;
+    const text = pendingSubmitText.trim();
+    if (!text) {
+      onPendingSubmitConsumed?.();
+      return;
+    }
+    setInputText(text);
+    requestAnimationFrame(() => inputRef.current?.focus());
+    const timer = setTimeout(() => {
+      onTextSubmit?.(text);
+      setInputText("");
+      onPendingSubmitConsumed?.();
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [pendingSubmitText, onTextSubmit, onPendingSubmitConsumed]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {

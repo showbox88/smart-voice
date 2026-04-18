@@ -45,8 +45,14 @@ function sanitizeForTts(raw: string): string {
 export default function AgentOverlay() {
   const { t } = useTranslation();
   const [partialTranscript, setPartialTranscript] = useState("");
+  // Voice-hotkey flow: transcription arrives here, gets shown briefly in the
+  // input box, then auto-submitted (Enter). Gives the user visual confirmation
+  // of what was heard before it lands in the chat.
+  const [pendingSubmitText, setPendingSubmitText] = useState<string | null>(null);
   const audioManagerRef = useRef<InstanceType<typeof AudioManager> | null>(null);
   const agentStateRef = useRef<string>("idle");
+  // Mic recording state sourced from AudioManager (agentState doesn't expose it).
+  const isRecordingRef = useRef<boolean>(false);
 
   const persistence = useChatPersistence();
   const { messages, setMessages, handleNewChat: persistenceNewChat } = persistence;
@@ -188,18 +194,37 @@ export default function AgentOverlay() {
     [t, messages, setMessages, persistence, streaming]
   );
 
+  // Keep callbacks fresh in refs so we can init AudioManager ONCE. Recreating it
+  // every render (as before) orphans in-flight recordings — cleanup() nulls
+  // onTranscriptionComplete, so the transcript never makes it back to React.
+  const onTranscriptionCompleteRef = useRef(handleTranscriptionComplete);
+  const addSystemMessageRef = useRef(addSystemMessage);
+  useEffect(() => {
+    onTranscriptionCompleteRef.current = handleTranscriptionComplete;
+  }, [handleTranscriptionComplete]);
+  useEffect(() => {
+    addSystemMessageRef.current = addSystemMessage;
+  }, [addSystemMessage]);
+
   useEffect(() => {
     const am = new AudioManager();
     am.setSkipReasoning(true);
     am.setContext("agent");
     am.setCallbacks({
-      onStateChange: () => {},
+      onStateChange: (s: { isRecording?: boolean }) => {
+        isRecordingRef.current = !!s?.isRecording;
+      },
       onError: (error: { message?: string }) => {
         const msg = error?.message || (typeof error === "string" ? error : "Transcription failed");
-        addSystemMessage(`${t("agentMode.chat.errorPrefix")}: ${msg}`);
+        addSystemMessageRef.current(`${t("agentMode.chat.errorPrefix")}: ${msg}`);
       },
       onTranscriptionComplete: (result: { text: string }) => {
-        handleTranscriptionComplete(result.text);
+        const text = result?.text?.trim() || "";
+        if (!text) return;
+        // Route through the input box for visible feedback, then auto-submit.
+        // ChatInput's useEffect picks up pendingSubmitText and fires submit,
+        // which calls onTextSubmit (handleTranscriptionComplete) below.
+        setPendingSubmitText(text);
       },
       onPartialTranscript: (text: string) => {
         setPartialTranscript(text);
@@ -212,7 +237,7 @@ export default function AgentOverlay() {
       window.removeEventListener("api-key-changed", (am as any)._onApiKeyChanged);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addSystemMessage, handleTranscriptionComplete]);
+  }, []);
 
   const handleResizeStart = useCallback((e: React.MouseEvent, direction: string) => {
     e.preventDefault();
@@ -276,10 +301,11 @@ export default function AgentOverlay() {
     });
 
     const unsubToggle = window.electronAPI?.onAgentToggleRecording?.(() => {
-      const state = agentStateRef.current;
-      if (state === "listening") {
+      // Use real mic state, not agentState (which only tracks AI pipeline phases
+      // like thinking/streaming — "listening" is never set anywhere).
+      if (isRecordingRef.current) {
         audioManagerRef.current?.stopRecording();
-      } else if (state === "idle") {
+      } else if (agentStateRef.current === "idle") {
         audioManagerRef.current?.startRecording();
       }
     });
@@ -319,6 +345,8 @@ export default function AgentOverlay() {
           partialTranscript={partialTranscript}
           onTextSubmit={handleTranscriptionComplete}
           onCancel={streaming.cancelStream}
+          pendingSubmitText={pendingSubmitText}
+          onPendingSubmitConsumed={() => setPendingSubmitText(null)}
         />
       </div>
 

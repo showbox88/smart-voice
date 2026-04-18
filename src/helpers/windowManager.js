@@ -702,6 +702,31 @@ class WindowManager {
     }
   }
 
+  // One-press variant used by the dedicated numpad-decimal hotkey: show the
+  // overlay AND start recording immediately, so the user can speak without
+  // pressing the hotkey a second time. Pressing again while visible toggles
+  // recording (stop → agent processes) like the normal agent hotkey.
+  showAgentOverlayAndRecord() {
+    if (!this.agentWindow || this.agentWindow.isDestroyed()) return;
+
+    // Already visible: toggle — start if idle, stop if currently recording.
+    if (this.agentWindow.isVisible()) {
+      this.agentWindow.webContents.send("agent-toggle-recording");
+      return;
+    }
+    // Not visible: show window, then start recording once the renderer is ready.
+    this.showAgentOverlay();
+    setTimeout(() => {
+      if (
+        this.agentWindow &&
+        !this.agentWindow.isDestroyed() &&
+        this.agentWindow.isVisible()
+      ) {
+        this.agentWindow.webContents.send("agent-start-recording");
+      }
+    }, 250);
+  }
+
   showAgentOverlay() {
     if (!this.agentWindow || this.agentWindow.isDestroyed()) return;
 

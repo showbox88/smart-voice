@@ -645,6 +645,22 @@ async function startApp() {
     }
   }
 
+  // Hardcoded numpad "." shortcut — opens Agent overlay and immediately starts
+  // recording. Runs in parallel with the user-configurable AGENT_KEY above.
+  try {
+    const numpadRegistered = globalShortcut.register("numdec", () => {
+      if (hotkeyManager.isInListeningMode()) return;
+      windowManager.showAgentOverlayAndRecord();
+    });
+    if (!numpadRegistered) {
+      debugLogger.warn("Failed to register numpad '.' shortcut", {}, "hotkey");
+    } else {
+      debugLogger.info("Numpad '.' agent shortcut registered", {}, "hotkey");
+    }
+  } catch (err) {
+    debugLogger.warn("Error registering numpad '.' shortcut", { error: err?.message }, "hotkey");
+  }
+
   // Set up meeting mode hotkey
   const meetingHotkeyCallback = () => {
     if (hotkeyManager.isInListeningMode()) return;
