@@ -1018,6 +1018,55 @@ declare global {
       ) => Promise<{ success: boolean; cid?: string; status?: string; error?: string }>;
       vesyncLogout: () => Promise<{ success: boolean }>;
 
+      // Music (VLC)
+      getMusicFolder: () => Promise<string>;
+      saveMusicFolder: (folder: string) => Promise<boolean>;
+      getVlcPath: () => Promise<string>;
+      saveVlcPath: (p: string) => Promise<boolean>;
+      musicPickFolder: () => Promise<{ success: boolean; folder?: string; canceled?: boolean }>;
+      musicVlcStatus: () => Promise<{ available: boolean; path?: string | null }>;
+      musicList: (opts?: {
+        root?: string;
+        refresh?: boolean;
+      }) => Promise<{ success: boolean; files?: string[]; error?: string; cached?: boolean }>;
+      musicPlay: (
+        files: string[]
+      ) => Promise<{ success: boolean; playing?: string; queued?: number; error?: string }>;
+      musicPause: () => Promise<{ success: boolean; error?: string }>;
+      musicResume: () => Promise<{ success: boolean; error?: string }>;
+      musicNext: () => Promise<{ success: boolean; error?: string }>;
+      musicPrevious: () => Promise<{ success: boolean; error?: string }>;
+      musicStop: () => Promise<{ success: boolean; error?: string; alreadyStopped?: boolean }>;
+      musicVolume: (v: number) => Promise<{ success: boolean; value?: number; error?: string }>;
+      musicSetRepeat: (
+        mode: "off" | "all" | "one"
+      ) => Promise<{
+        success: boolean;
+        mode?: "off" | "all" | "one";
+        loop?: boolean;
+        repeat?: boolean;
+        error?: string;
+      }>;
+      musicSetShuffle: (
+        on: boolean
+      ) => Promise<{ success: boolean; shuffle?: boolean; error?: string }>;
+      musicStatus: () => Promise<{
+        success: boolean;
+        running?: boolean;
+        state?: string | null;
+        time?: number;
+        length?: number;
+        volume?: number;
+        title?: string | null;
+        error?: string;
+      }>;
+      musicImportPaths: (paths: string[]) => Promise<{
+        success: boolean;
+        error?: string;
+        copied?: string[];
+        skipped?: Array<{ src: string; reason: string }>;
+      }>;
+
       // TTS (Edge Read Aloud / ElevenLabs)
       ttsListVoices: () => Promise<Array<{ id: string; label: string }>>;
       ttsSynthesize: (

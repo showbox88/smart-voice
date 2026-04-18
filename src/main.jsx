@@ -254,6 +254,23 @@ function isOAuthBrowserRedirect() {
   return false;
 }
 
+// Chromium's default behaviour for a file dropped on the window is to navigate
+// to that file's URL — which breaks any drop-zone UI. Block it unconditionally.
+window.addEventListener(
+  "dragover",
+  (e) => {
+    if (e.dataTransfer?.types?.includes("Files")) e.preventDefault();
+  },
+  false
+);
+window.addEventListener(
+  "drop",
+  (e) => {
+    if (e.dataTransfer?.types?.includes("Files")) e.preventDefault();
+  },
+  false
+);
+
 if (!isOAuthBrowserRedirect()) {
   mountApp();
 }

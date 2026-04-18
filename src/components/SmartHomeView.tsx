@@ -7,6 +7,12 @@ import {
   LogOut,
   Loader2,
   AlertCircle,
+  Music,
+  FolderOpen,
+  Play,
+  Square,
+  UploadCloud,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "./lib/utils";
 
@@ -33,6 +39,19 @@ export default function SmartHomeView() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [togglingCid, setTogglingCid] = useState<string | null>(null);
 
+  // Music state
+  const [musicFolder, setMusicFolder] = useState("");
+  const [vlcAvailable, setVlcAvailable] = useState(false);
+  const [vlcPath, setVlcPath] = useState<string | null>(null);
+  const [trackCount, setTrackCount] = useState<number | null>(null);
+  const [musicBusy, setMusicBusy] = useState(false);
+  const [musicError, setMusicError] = useState("");
+  const [dropActive, setDropActive] = useState(false);
+  const [importReport, setImportReport] = useState<{
+    copied: number;
+    skipped: number;
+  } | null>(null);
+
   // Load saved credentials on mount
   useEffect(() => {
     (async () => {
@@ -56,6 +75,157 @@ export default function SmartHomeView() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const refreshMusicStatus = useCallback(async (folder: string) => {
+    const vlc = await window.electronAPI?.musicVlcStatus?.();
+    setVlcAvailable(Boolean(vlc?.available));
+    setVlcPath(vlc?.path || null);
+    if (folder) {
+      const r = await window.electronAPI?.musicList?.({ root: folder });
+      if (r?.success) {
+        setTrackCount(r.files?.length || 0);
+        setMusicError("");
+      } else if (r?.error === "root_not_found") {
+        setTrackCount(null);
+        setMusicError("文件夹不存在");
+      } else {
+        setTrackCount(null);
+      }
+    } else {
+      setTrackCount(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const f = (await window.electronAPI?.getMusicFolder?.()) || "";
+      setMusicFolder(f);
+      await refreshMusicStatus(f);
+    })();
+  }, [refreshMusicStatus]);
+
+  // Chromium navigates to dropped files by default — suppress it globally
+  // while this view is mounted so our drop zone can actually receive them.
+  useEffect(() => {
+    const prevent = (e: DragEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("dragover", prevent);
+    window.addEventListener("drop", prevent);
+    return () => {
+      window.removeEventListener("dragover", prevent);
+      window.removeEventListener("drop", prevent);
+    };
+  }, []);
+
+  const handlePickMusicFolder = useCallback(async () => {
+    const r = await window.electronAPI?.musicPickFolder?.();
+    if (!r?.success || !r.folder) return;
+    setMusicBusy(true);
+    setMusicError("");
+    await window.electronAPI?.saveMusicFolder?.(r.folder);
+    setMusicFolder(r.folder);
+    await refreshMusicStatus(r.folder);
+    setMusicBusy(false);
+  }, [refreshMusicStatus]);
+
+  const handleRescanMusic = useCallback(async () => {
+    if (!musicFolder) return;
+    setMusicBusy(true);
+    setMusicError("");
+    const r = await window.electronAPI?.musicList?.({ root: musicFolder, refresh: true });
+    if (r?.success) {
+      setTrackCount(r.files?.length || 0);
+    } else {
+      setMusicError(r?.error || "扫描失败");
+    }
+    setMusicBusy(false);
+  }, [musicFolder]);
+
+  const handleTestPlay = useCallback(async () => {
+    if (!musicFolder) return;
+    setMusicBusy(true);
+    setMusicError("");
+    const r = await window.electronAPI?.musicList?.({ root: musicFolder });
+    if (!r?.success || !r.files?.length) {
+      setMusicError("文件夹里没有音频文件");
+      setMusicBusy(false);
+      return;
+    }
+    const pick = r.files[Math.floor(Math.random() * r.files.length)];
+    const play = await window.electronAPI?.musicPlay?.([pick]);
+    if (!play?.success) {
+      setMusicError(play?.error || "播放失败");
+    }
+    setMusicBusy(false);
+  }, [musicFolder]);
+
+  const handleStopMusic = useCallback(async () => {
+    await window.electronAPI?.musicStop?.();
+  }, []);
+
+  const importDroppedFiles = useCallback(
+    async (files: FileList | File[]) => {
+      if (!musicFolder) {
+        setMusicError("请先选择音乐文件夹");
+        return;
+      }
+      const list = Array.from(files);
+      if (list.length === 0) return;
+      const paths = list
+        .map((f) => {
+          try {
+            return window.electronAPI?.getPathForFile?.(f) || "";
+          } catch {
+            return "";
+          }
+        })
+        .filter(Boolean);
+      if (paths.length === 0) {
+        setMusicError("无法读取文件路径");
+        return;
+      }
+      setMusicBusy(true);
+      setMusicError("");
+      setImportReport(null);
+      const r = await window.electronAPI?.musicImportPaths?.(paths);
+      if (r?.success) {
+        setImportReport({
+          copied: r.copied?.length || 0,
+          skipped: r.skipped?.length || 0,
+        });
+        await refreshMusicStatus(musicFolder);
+      } else {
+        setMusicError(r?.error || "导入失败");
+      }
+      setMusicBusy(false);
+    },
+    [musicFolder, refreshMusicStatus]
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropActive(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropActive(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDropActive(false);
+      if (e.dataTransfer?.files?.length) {
+        importDroppedFiles(e.dataTransfer.files);
+      }
+    },
+    [importDroppedFiles]
+  );
 
   const fetchDevices = useCallback(async () => {
     setBusy(true);
@@ -351,6 +521,153 @@ export default function SmartHomeView() {
             })}
           </div>
         )}
+
+        {/* Music section */}
+        <div className="mt-8 pt-6 border-t border-border/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Music size={14} className="text-primary" />
+            <h3 className="text-sm font-medium">音乐播放（VLC）</h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            指定一个音乐文件夹，Agent 就能通过语音播放里面的曲目（递归扫描子文件夹）。播放走本机 VLC 窗口。
+          </p>
+
+          <div className="space-y-3 max-w-2xl">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1.5">音乐文件夹</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={musicFolder}
+                  readOnly
+                  placeholder="（未设置）"
+                  className="flex-1 text-sm bg-background border border-border/50 rounded-md px-3 py-2 font-mono text-xs"
+                />
+                <button
+                  onClick={handlePickMusicFolder}
+                  disabled={musicBusy}
+                  className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md border border-border/50 hover:bg-foreground/5 disabled:opacity-40"
+                >
+                  <FolderOpen size={12} />
+                  选择
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={cn(
+                    "w-2 h-2 rounded-full",
+                    vlcAvailable ? "bg-green-500" : "bg-muted-foreground/40"
+                  )}
+                />
+                VLC: {vlcAvailable ? "已检测到" : "未找到"}
+                {vlcPath && (
+                  <span className="font-mono text-[10px] opacity-60 ml-1 truncate max-w-60">
+                    {vlcPath}
+                  </span>
+                )}
+              </div>
+              {trackCount !== null && <span>· {trackCount} 首曲目</span>}
+            </div>
+
+            {/* Drop zone — drag audio files here to copy into the folder */}
+            <div
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={cn(
+                "relative rounded-md border-2 border-dashed px-4 py-6 text-center transition-colors",
+                dropActive
+                  ? "border-primary bg-primary/5"
+                  : "border-border/40 hover:border-border/60",
+                !musicFolder && "opacity-50 pointer-events-none"
+              )}
+            >
+              <UploadCloud
+                size={20}
+                className={cn(
+                  "mx-auto mb-1.5",
+                  dropActive ? "text-primary" : "text-muted-foreground"
+                )}
+              />
+              <div className="text-xs">
+                {musicBusy ? (
+                  <span className="text-muted-foreground inline-flex items-center gap-1.5">
+                    <Loader2 size={11} className="animate-spin" /> 导入中…
+                  </span>
+                ) : dropActive ? (
+                  <span className="text-primary font-medium">松开鼠标导入到音乐文件夹</span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    拖放 MP3 / FLAC / WAV 等音频文件到此处导入
+                  </span>
+                )}
+              </div>
+              {!musicFolder && (
+                <div className="text-[10px] text-muted-foreground mt-1">
+                  请先选择音乐文件夹
+                </div>
+              )}
+            </div>
+
+            {importReport && (
+              <div className="text-xs text-green-700 dark:text-green-400 border border-green-500/30 bg-green-500/5 rounded-md p-2 flex items-start gap-2">
+                <CheckCircle2 size={12} className="mt-0.5 shrink-0" />
+                <span>
+                  已导入 {importReport.copied} 个文件
+                  {importReport.skipped > 0 && `（跳过 ${importReport.skipped} 个非音频/无效文件）`}
+                </span>
+              </div>
+            )}
+
+            {musicError && (
+              <div className="text-xs text-destructive border border-destructive/30 bg-destructive/5 rounded-md p-2 flex items-start gap-2">
+                <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                <span>{musicError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={handleRescanMusic}
+                disabled={!musicFolder || musicBusy}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md border border-border/50 hover:bg-foreground/5 disabled:opacity-40"
+              >
+                {musicBusy ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <RefreshCw size={12} />
+                )}
+                重新扫描
+              </button>
+              <button
+                onClick={handleTestPlay}
+                disabled={!musicFolder || !vlcAvailable || musicBusy}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md border border-border/50 hover:bg-foreground/5 disabled:opacity-40"
+              >
+                <Play size={12} />
+                测试播放（随机）
+              </button>
+              <button
+                onClick={handleStopMusic}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md border border-border/50 hover:bg-foreground/5"
+              >
+                <Square size={12} />
+                停止
+              </button>
+            </div>
+
+            {!vlcAvailable && (
+              <p className="text-[11px] text-muted-foreground/80 leading-snug">
+                VLC 未检测到。常见路径：<span className="font-mono">C:\Program Files\VideoLAN\VLC\vlc.exe</span>。
+                装好后重启应用即可；也可以把路径写入 .env 的 <span className="font-mono">VLC_PATH</span>。
+              </p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -70,6 +70,7 @@ export function useChatStreaming({
   noteContextRef.current = externalNoteContext;
   const toolRegistryRef = useRef<{ key: string; registry: ToolRegistry } | null>(null);
   const vesyncAvailableRef = useRef(false);
+  const musicAvailableRef = useRef(false);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -80,6 +81,10 @@ export function useChatStreaming({
       const email = await window.electronAPI?.getVeSyncEmail?.();
       const password = await window.electronAPI?.getVeSyncPassword?.();
       vesyncAvailableRef.current = Boolean(email && password);
+
+      const folder = await window.electronAPI?.getMusicFolder?.();
+      const vlc = await window.electronAPI?.musicVlcStatus?.();
+      musicAvailableRef.current = Boolean(folder && vlc?.available);
     })();
   }, []);
 
@@ -115,8 +120,21 @@ export function useChatStreaming({
 
       let registry: ToolRegistry | null = null;
       if (supportsTools) {
+        try {
+          const [email, password, folder, vlc] = await Promise.all([
+            window.electronAPI?.getVeSyncEmail?.(),
+            window.electronAPI?.getVeSyncPassword?.(),
+            window.electronAPI?.getMusicFolder?.(),
+            window.electronAPI?.musicVlcStatus?.(),
+          ]);
+          vesyncAvailableRef.current = Boolean(email && password);
+          musicAvailableRef.current = Boolean(folder && vlc?.available);
+        } catch {
+          // keep last-known values
+        }
         const vesyncAvailable = vesyncAvailableRef.current;
-        const cacheKey = `${settings.isSignedIn}-${settings.gcalConnected}-${settings.cloudBackupEnabled}-${vesyncAvailable}`;
+        const musicAvailable = musicAvailableRef.current;
+        const cacheKey = `${settings.isSignedIn}-${settings.gcalConnected}-${settings.cloudBackupEnabled}-${vesyncAvailable}-${musicAvailable}`;
         if (toolRegistryRef.current?.key === cacheKey) {
           registry = toolRegistryRef.current.registry;
         } else {
@@ -125,6 +143,7 @@ export function useChatStreaming({
             gcalConnected: settings.gcalConnected,
             cloudBackupEnabled: settings.cloudBackupEnabled,
             vesyncAvailable,
+            musicAvailable,
           });
           toolRegistryRef.current = { key: cacheKey, registry };
         }

@@ -244,6 +244,26 @@ contextBridge.exposeInMainWorld("electronAPI", {
   vesyncToggle: (cid, desired) => ipcRenderer.invoke("vesync:toggle", cid, desired),
   vesyncLogout: () => ipcRenderer.invoke("vesync:logout"),
 
+  // Music (VLC)
+  getMusicFolder: () => ipcRenderer.invoke("get-music-folder"),
+  saveMusicFolder: (folder) => ipcRenderer.invoke("save-music-folder", folder),
+  getVlcPath: () => ipcRenderer.invoke("get-vlc-path"),
+  saveVlcPath: (p) => ipcRenderer.invoke("save-vlc-path", p),
+  musicPickFolder: () => ipcRenderer.invoke("music:pick-folder"),
+  musicVlcStatus: () => ipcRenderer.invoke("music:vlc-status"),
+  musicList: (opts) => ipcRenderer.invoke("music:list", opts || {}),
+  musicPlay: (files) => ipcRenderer.invoke("music:play", { files }),
+  musicPause: () => ipcRenderer.invoke("music:pause"),
+  musicResume: () => ipcRenderer.invoke("music:resume"),
+  musicNext: () => ipcRenderer.invoke("music:next"),
+  musicPrevious: () => ipcRenderer.invoke("music:previous"),
+  musicStop: () => ipcRenderer.invoke("music:stop"),
+  musicVolume: (v) => ipcRenderer.invoke("music:volume", v),
+  musicSetRepeat: (mode) => ipcRenderer.invoke("music:set-repeat", mode),
+  musicSetShuffle: (on) => ipcRenderer.invoke("music:set-shuffle", on),
+  musicStatus: () => ipcRenderer.invoke("music:status"),
+  musicImportPaths: (paths) => ipcRenderer.invoke("music:import-paths", paths),
+
   // Whisper server functions (faster repeated transcriptions)
   whisperServerStart: (modelName) => ipcRenderer.invoke("whisper-server-start", modelName),
   whisperServerStop: () => ipcRenderer.invoke("whisper-server-stop"),

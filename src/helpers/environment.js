@@ -123,6 +123,22 @@ class EnvironmentManager {
     return this._saveKey("VESYNC_COUNTRY_CODE", code);
   }
 
+  getMusicFolder() {
+    return this._getKey("MUSIC_FOLDER");
+  }
+
+  saveMusicFolder(folder) {
+    return this._saveKey("MUSIC_FOLDER", folder);
+  }
+
+  getVlcPath() {
+    return this._getKey("VLC_PATH");
+  }
+
+  saveVlcPath(p) {
+    return this._saveKey("VLC_PATH", p);
+  }
+
   getGroqKey() {
     return this._getKey("GROQ_API_KEY");
   }

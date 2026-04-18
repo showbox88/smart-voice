@@ -204,6 +204,7 @@ const WhisperCudaManager = require("./src/helpers/whisperCudaManager");
 const TtsManager = require("./src/helpers/ttsManager");
 const ClaudeCodeSessionManager = require("./src/helpers/claudeCodeSessionManager");
 const VeSyncManager = require("./src/helpers/vesyncManager");
+const MusicManager = require("./src/helpers/musicManager");
 const GoogleCalendarManager = require("./src/helpers/googleCalendarManager");
 const MeetingProcessDetector = require("./src/helpers/meetingProcessDetector");
 const AudioActivityDetector = require("./src/helpers/audioActivityDetector");
@@ -234,6 +235,7 @@ let whisperCudaManager = null;
 let ttsManager = null;
 let claudeCodeManager = null;
 let vesyncManager = null;
+let musicManager = null;
 let googleCalendarManager = null;
 let meetingDetectionEngine = null;
 let audioTapManager = null;
@@ -305,6 +307,7 @@ function initializeCoreManagers() {
   ttsManager = new TtsManager();
   claudeCodeManager = new ClaudeCodeSessionManager(databaseManager, {});
   vesyncManager = new VeSyncManager(environmentManager);
+  musicManager = new MusicManager();
   parakeetManager = new ParakeetManager();
   diarizationManager = new DiarizationManager();
   googleCalendarManager = new GoogleCalendarManager(databaseManager, windowManager);
@@ -343,6 +346,7 @@ function initializeCoreManagers() {
     ttsManager,
     claudeCodeManager,
     vesyncManager,
+    musicManager,
     googleCalendarManager,
     meetingDetectionEngine,
     audioTapManager,
@@ -1343,6 +1347,9 @@ if (gotSingleInstanceLock) {
     modelManager.stopServer().catch(() => {});
     if (qdrantManager) {
       qdrantManager.stop().catch(() => {});
+    }
+    if (musicManager) {
+      musicManager.shutdown().catch(() => {});
     }
   });
 }

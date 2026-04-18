@@ -120,6 +120,7 @@ class IPCHandlers {
     this.ttsManager = managers.ttsManager;
     this.claudeCodeManager = managers.claudeCodeManager;
     this.vesyncManager = managers.vesyncManager;
+    this.musicManager = managers.musicManager;
     this.googleCalendarManager = managers.googleCalendarManager;
     this.meetingDetectionEngine = managers.meetingDetectionEngine;
     this.audioTapManager = managers.audioTapManager;
@@ -1767,6 +1768,104 @@ class IPCHandlers {
       if (!this.vesyncManager) return { success: false };
       this.vesyncManager.logout();
       return { success: true };
+    });
+
+    // --- Music (VLC) ---
+    ipcMain.handle("get-music-folder", () => this.environmentManager.getMusicFolder() || "");
+    ipcMain.handle("save-music-folder", (_e, folder) =>
+      this.environmentManager.saveMusicFolder(folder)
+    );
+    ipcMain.handle("get-vlc-path", () => this.environmentManager.getVlcPath() || "");
+    ipcMain.handle("save-vlc-path", (_e, p) => this.environmentManager.saveVlcPath(p));
+
+    ipcMain.handle("music:pick-folder", async () => {
+      const { dialog } = require("electron");
+      const win = this.windowManager?.controlPanelWindow || this.windowManager?.mainWindow;
+      const result = await dialog.showOpenDialog(win, {
+        title: "选择音乐文件夹",
+        properties: ["openDirectory"],
+      });
+      if (result.canceled || !result.filePaths.length) {
+        return { success: false, canceled: true };
+      }
+      return { success: true, folder: result.filePaths[0] };
+    });
+
+    ipcMain.handle("music:vlc-status", () => {
+      if (!this.musicManager) return { available: false };
+      return {
+        available: this.musicManager.isVlcAvailable(),
+        path: this.musicManager.getVlcPath(),
+      };
+    });
+
+    ipcMain.handle("music:list", async (_e, opts = {}) => {
+      if (!this.musicManager) return { success: false, error: "not_init", files: [] };
+      const root = (opts.root || this.environmentManager.getMusicFolder() || "").trim();
+      if (!root) return { success: false, error: "no_folder_configured", files: [] };
+      return this.musicManager.listFiles(root, { refresh: Boolean(opts.refresh) });
+    });
+
+    ipcMain.handle("music:play", async (_e, opts = {}) => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      if (!this.musicManager.isVlcAvailable()) {
+        return { success: false, error: "vlc_not_found" };
+      }
+      const files = Array.isArray(opts.files) ? opts.files.filter((f) => typeof f === "string") : [];
+      return this.musicManager.play(files);
+    });
+
+    ipcMain.handle("music:pause", async () => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      return this.musicManager.pause();
+    });
+
+    ipcMain.handle("music:resume", async () => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      return this.musicManager.resume();
+    });
+
+    ipcMain.handle("music:next", async () => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      return this.musicManager.next();
+    });
+
+    ipcMain.handle("music:previous", async () => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      return this.musicManager.previous();
+    });
+
+    ipcMain.handle("music:stop", async () => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      return this.musicManager.stop();
+    });
+
+    ipcMain.handle("music:volume", async (_e, volume) => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      return this.musicManager.setVolume(Number(volume) || 0);
+    });
+
+    ipcMain.handle("music:set-repeat", async (_e, mode) => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      const m = mode === "all" || mode === "one" ? mode : "off";
+      return this.musicManager.setRepeatMode(m);
+    });
+
+    ipcMain.handle("music:set-shuffle", async (_e, on) => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      return this.musicManager.setShuffle(Boolean(on));
+    });
+
+    ipcMain.handle("music:status", async () => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      return this.musicManager.status();
+    });
+
+    ipcMain.handle("music:import-paths", async (_e, paths) => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      const root = (this.environmentManager.getMusicFolder() || "").trim();
+      if (!root) return { success: false, error: "no_folder_configured" };
+      return this.musicManager.importFiles(root, Array.isArray(paths) ? paths : []);
     });
 
     ipcMain.handle("tts-synthesize", async (_event, text, options = {}) => {

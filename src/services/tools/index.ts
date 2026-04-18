@@ -8,6 +8,17 @@ import { clipboardTool } from "./clipboardTool";
 import { webSearchTool } from "./webSearchTool";
 import { calendarTool } from "./calendarTool";
 import { listSmartDevicesTool, setDevicePowerTool } from "./vesyncTool";
+import {
+  listMusicTool,
+  playMusicTool,
+  pauseMusicTool,
+  nextMusicTool,
+  previousMusicTool,
+  stopMusicTool,
+  setMusicVolumeTool,
+  setMusicRepeatTool,
+  setMusicShuffleTool,
+} from "./musicTool";
 
 export { ToolRegistry } from "./ToolRegistry";
 export type { ToolDefinition, ToolResult } from "./ToolRegistry";
@@ -17,6 +28,7 @@ interface ToolRegistrySettings {
   gcalConnected: boolean;
   cloudBackupEnabled: boolean;
   vesyncAvailable: boolean;
+  musicAvailable: boolean;
 }
 
 export function createToolRegistry(settings: ToolRegistrySettings): ToolRegistry {
@@ -41,6 +53,18 @@ export function createToolRegistry(settings: ToolRegistrySettings): ToolRegistry
   if (settings.vesyncAvailable) {
     registry.register(listSmartDevicesTool);
     registry.register(setDevicePowerTool);
+  }
+
+  if (settings.musicAvailable) {
+    registry.register(listMusicTool);
+    registry.register(playMusicTool);
+    registry.register(pauseMusicTool);
+    registry.register(nextMusicTool);
+    registry.register(previousMusicTool);
+    registry.register(stopMusicTool);
+    registry.register(setMusicVolumeTool);
+    registry.register(setMusicRepeatTool);
+    registry.register(setMusicShuffleTool);
   }
 
   return registry;
