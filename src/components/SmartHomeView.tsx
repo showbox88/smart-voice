@@ -58,20 +58,29 @@ export default function SmartHomeView() {
   const [tavilyKey, setTavilyKey] = useState("");
   const [tavilySaved, setTavilySaved] = useState(false);
   const [tavilyBusy, setTavilyBusy] = useState(false);
+  const [tavilyEnabled, setTavilyEnabled] = useState(true);
+  const [tavilyCap, setTavilyCap] = useState(1000);
+  const [tavilyUsage, setTavilyUsage] = useState<{ month: string; count: number } | null>(null);
 
   // Load saved credentials on mount
   useEffect(() => {
     (async () => {
-      const [e, p, c, tk] = await Promise.all([
+      const [e, p, c, tk, tEnabled, tCap, tUsage] = await Promise.all([
         window.electronAPI?.getVeSyncEmail?.() ?? "",
         window.electronAPI?.getVeSyncPassword?.() ?? "",
         window.electronAPI?.getVeSyncCountryCode?.() ?? "US",
         window.electronAPI?.getTavilyKey?.() ?? "",
+        window.electronAPI?.getTavilyEnabled?.() ?? true,
+        window.electronAPI?.getTavilyCap?.() ?? 1000,
+        window.electronAPI?.getTavilyUsage?.(),
       ]);
       setEmail(e || "");
       setPassword(p || "");
       setCountryCode(c || "US");
       setTavilyKey(tk || "");
+      setTavilyEnabled(tEnabled !== false);
+      setTavilyCap(typeof tCap === "number" ? tCap : 1000);
+      if (tUsage) setTavilyUsage({ month: tUsage.month, count: tUsage.count });
 
       // If we already have credentials, try a silent login + fetch
       if (e && p) {
@@ -176,13 +185,29 @@ export default function SmartHomeView() {
   const handleSaveTavily = useCallback(async () => {
     setTavilyBusy(true);
     try {
-      await window.electronAPI?.saveTavilyKey?.(tavilyKey.trim());
+      await Promise.all([
+        window.electronAPI?.saveTavilyKey?.(tavilyKey.trim()),
+        window.electronAPI?.saveTavilyCap?.(tavilyCap),
+      ]);
       setTavilySaved(true);
       setTimeout(() => setTavilySaved(false), 1800);
     } finally {
       setTavilyBusy(false);
     }
-  }, [tavilyKey]);
+  }, [tavilyKey, tavilyCap]);
+
+  const handleToggleTavily = useCallback(
+    async (enabled: boolean) => {
+      setTavilyEnabled(enabled);
+      await window.electronAPI?.saveTavilyEnabled?.(enabled);
+    },
+    []
+  );
+
+  const refreshTavilyUsage = useCallback(async () => {
+    const u = await window.electronAPI?.getTavilyUsage?.();
+    if (u) setTavilyUsage({ month: u.month, count: u.count });
+  }, []);
 
   const importDroppedFiles = useCallback(
     async (files: FileList | File[]) => {
@@ -693,7 +718,32 @@ export default function SmartHomeView() {
         <div className="mt-8 pt-6 border-t border-border/20">
           <div className="flex items-center gap-2 mb-3">
             <Globe size={14} className="text-primary" />
-            <h3 className="text-sm font-medium">网页搜索（Tavily）</h3>
+            <h3 className="text-sm font-medium flex-1">网页搜索（Tavily）</h3>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <span className="text-xs text-muted-foreground">
+                {tavilyEnabled ? "已启用" : "已关闭"}
+              </span>
+              <input
+                type="checkbox"
+                checked={tavilyEnabled}
+                onChange={(e) => handleToggleTavily(e.target.checked)}
+                className="sr-only peer"
+              />
+              <span
+                onClick={() => handleToggleTavily(!tavilyEnabled)}
+                className={cn(
+                  "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+                  tavilyEnabled ? "bg-primary" : "bg-border"
+                )}
+              >
+                <span
+                  className={cn(
+                    "inline-block h-4 w-4 transform rounded-full bg-white transition",
+                    tavilyEnabled ? "translate-x-4" : "translate-x-0.5"
+                  )}
+                />
+              </span>
+            </label>
           </div>
           <p className="text-xs text-muted-foreground mb-4">
             填入 Tavily API key，Agent 就能上网查实时资料、新闻、事实并整理回复。免费额度 1000 次/月，在{" "}
@@ -705,7 +755,7 @@ export default function SmartHomeView() {
             >
               tavily.com
             </a>{" "}
-            注册后生成。
+            注册后生成。关闭开关后 Agent 完全不会调用网页搜索。
           </p>
 
           <div className="space-y-3 max-w-2xl">
@@ -740,9 +790,42 @@ export default function SmartHomeView() {
               </div>
             </div>
 
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground block mb-1.5">
+                  本月用量上限（次）
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100000}
+                  value={tavilyCap}
+                  onChange={(e) => {
+                    const n = parseInt(e.target.value, 10);
+                    setTavilyCap(Number.isFinite(n) && n > 0 ? n : 1);
+                    setTavilySaved(false);
+                  }}
+                  className="w-32 text-sm bg-background border border-border/50 rounded-md px-3 py-2 font-mono text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-2 pb-2">
+                <span className="text-xs text-muted-foreground">
+                  已用 {tavilyUsage?.count ?? 0} / {tavilyCap}
+                  {tavilyUsage?.month ? `（${tavilyUsage.month}）` : ""}
+                </span>
+                <button
+                  onClick={refreshTavilyUsage}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  title="刷新用量"
+                >
+                  <RefreshCw size={12} />
+                </button>
+              </div>
+            </div>
+
             <p className="text-[11px] text-muted-foreground/80 leading-snug">
               保存后 Agent 下一轮对话就会自动注册 <span className="font-mono">web_search</span> 工具。
-              清空 key 并保存即可禁用。
+              到达上限后会自动禁用，每月 1 号零点（按 UTC 月份）重置。
             </p>
           </div>
         </div>

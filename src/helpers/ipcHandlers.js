@@ -2567,6 +2567,28 @@ class IPCHandlers {
       return this.environmentManager.saveTavilyKey(key);
     });
 
+    ipcMain.handle("get-tavily-enabled", async () => {
+      return this.environmentManager.getTavilyEnabled();
+    });
+
+    ipcMain.handle("save-tavily-enabled", async (event, enabled) => {
+      return this.environmentManager.saveTavilyEnabled(enabled);
+    });
+
+    ipcMain.handle("get-tavily-cap", async () => {
+      return this.environmentManager.getTavilyMonthlyCap();
+    });
+
+    ipcMain.handle("save-tavily-cap", async (event, cap) => {
+      return this.environmentManager.saveTavilyMonthlyCap(cap);
+    });
+
+    ipcMain.handle("get-tavily-usage", async () => {
+      const usage = this.environmentManager.getTavilyUsage();
+      const cap = this.environmentManager.getTavilyMonthlyCap();
+      return { ...usage, cap };
+    });
+
     ipcMain.handle("get-groq-key", async (event) => {
       return this.environmentManager.getGroqKey();
     });
@@ -5299,6 +5321,20 @@ class IPCHandlers {
             error: "未配置 Tavily API key —— 请在设置里填入后重试",
           };
         }
+        if (!this.environmentManager.getTavilyEnabled()) {
+          return {
+            success: false,
+            error: "网页搜索已关闭 —— 请在设置里打开开关后重试",
+          };
+        }
+        const usageNow = this.environmentManager.getTavilyUsage();
+        const capNow = this.environmentManager.getTavilyMonthlyCap();
+        if (usageNow.count >= capNow) {
+          return {
+            success: false,
+            error: `本月搜索用量已达上限（${usageNow.count}/${capNow}），可在设置里调高或等下月重置`,
+          };
+        }
         const max = Math.max(1, Math.min(Number(numResults) || 5, 10));
         debugLogger.debug("Agent web search (tavily)", { query, max }, "web-search");
 
@@ -5342,7 +5378,13 @@ class IPCHandlers {
               publishedDate: r.published_date || null,
             }))
           : [];
-        return { success: true, results, answer: data?.answer || null };
+        const bumped = this.environmentManager.incrementTavilyUsage();
+        return {
+          success: true,
+          results,
+          answer: data?.answer || null,
+          usage: { month: bumped.month, count: bumped.count, cap: capNow },
+        };
       } catch (error) {
         const msg = error?.name === "AbortError" ? "Tavily 请求超时" : error.message;
         debugLogger.error("Agent web search error:", error);

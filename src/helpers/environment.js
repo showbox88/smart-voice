@@ -36,6 +36,9 @@ const PERSISTED_KEYS = [
   "MUSIC_FOLDER",
   "VLC_PATH",
   "TAVILY_API_KEY",
+  "TAVILY_ENABLED",
+  "TAVILY_MONTHLY_CAP",
+  "TAVILY_USAGE",
 ];
 
 class EnvironmentManager {
@@ -154,6 +157,48 @@ class EnvironmentManager {
     const result = this._saveKey("TAVILY_API_KEY", key);
     this.saveAllKeysToEnvFile().catch(() => {});
     return result;
+  }
+
+  getTavilyEnabled() {
+    // Default ON when unset, so just saving a key is enough to opt in.
+    const v = this._getKey("TAVILY_ENABLED");
+    return v === "" || v === "true";
+  }
+
+  saveTavilyEnabled(enabled) {
+    const result = this._saveKey("TAVILY_ENABLED", String(!!enabled));
+    this.saveAllKeysToEnvFile().catch(() => {});
+    return result;
+  }
+
+  getTavilyMonthlyCap() {
+    const n = parseInt(this._getKey("TAVILY_MONTHLY_CAP"), 10);
+    return Number.isFinite(n) && n > 0 ? n : 1000;
+  }
+
+  saveTavilyMonthlyCap(cap) {
+    const n = Math.max(1, Math.min(parseInt(cap, 10) || 1000, 100000));
+    const result = this._saveKey("TAVILY_MONTHLY_CAP", String(n));
+    this.saveAllKeysToEnvFile().catch(() => {});
+    return result;
+  }
+
+  // Usage is tracked as "YYYY-MM:count". Changing months auto-resets to 0.
+  getTavilyUsage() {
+    const month = new Date().toISOString().slice(0, 7);
+    const match = /^(\d{4}-\d{2}):(\d+)$/.exec(this._getKey("TAVILY_USAGE"));
+    if (match && match[1] === month) {
+      return { month, count: parseInt(match[2], 10) };
+    }
+    return { month, count: 0 };
+  }
+
+  incrementTavilyUsage() {
+    const { month, count } = this.getTavilyUsage();
+    const next = count + 1;
+    this._saveKey("TAVILY_USAGE", `${month}:${next}`);
+    this.saveAllKeysToEnvFile().catch(() => {});
+    return { month, count: next };
   }
 
   getGroqKey() {

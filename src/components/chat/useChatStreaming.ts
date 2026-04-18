@@ -89,7 +89,12 @@ export function useChatStreaming({
       musicAvailableRef.current = Boolean(folder && vlc?.available);
 
       const tavilyKey = await window.electronAPI?.getTavilyKey?.();
-      tavilyAvailableRef.current = Boolean(tavilyKey);
+      const tavilyEnabled = await window.electronAPI?.getTavilyEnabled?.();
+      const tavilyUsage = await window.electronAPI?.getTavilyUsage?.();
+      tavilyAvailableRef.current =
+        Boolean(tavilyKey) &&
+        tavilyEnabled !== false &&
+        (!tavilyUsage || tavilyUsage.count < tavilyUsage.cap);
     })();
   }, []);
 
@@ -131,17 +136,24 @@ export function useChatStreaming({
         let email: string | undefined;
         let password: string | undefined;
         let tavilyKey: string | null | undefined;
+        let tavilyEnabled: boolean | undefined;
+        let tavilyUsage: { month: string; count: number; cap: number } | undefined;
         try {
-          [email, password, folder, vlc, tavilyKey] = await Promise.all([
+          [email, password, folder, vlc, tavilyKey, tavilyEnabled, tavilyUsage] = await Promise.all([
             window.electronAPI?.getVeSyncEmail?.(),
             window.electronAPI?.getVeSyncPassword?.(),
             window.electronAPI?.getMusicFolder?.(),
             window.electronAPI?.musicVlcStatus?.(),
             window.electronAPI?.getTavilyKey?.(),
+            window.electronAPI?.getTavilyEnabled?.(),
+            window.electronAPI?.getTavilyUsage?.(),
           ]);
           vesyncAvailableRef.current = Boolean(email && password);
           musicAvailableRef.current = Boolean(folder && vlc?.available);
-          tavilyAvailableRef.current = Boolean(tavilyKey);
+          tavilyAvailableRef.current =
+            Boolean(tavilyKey) &&
+            tavilyEnabled !== false &&
+            (!tavilyUsage || tavilyUsage.count < tavilyUsage.cap);
         } catch {
           // keep last-known values
         }

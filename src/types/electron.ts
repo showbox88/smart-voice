@@ -819,6 +819,11 @@ declare global {
       // Tavily API key management (web search)
       getTavilyKey: () => Promise<string | null>;
       saveTavilyKey: (key: string) => Promise<{ success: boolean }>;
+      getTavilyEnabled: () => Promise<boolean>;
+      saveTavilyEnabled: (enabled: boolean) => Promise<{ success: boolean }>;
+      getTavilyCap: () => Promise<number>;
+      saveTavilyCap: (cap: number) => Promise<{ success: boolean }>;
+      getTavilyUsage: () => Promise<{ month: string; count: number; cap: number }>;
 
       // Mistral API key management
       getMistralKey: () => Promise<string | null>;
@@ -1548,6 +1553,7 @@ declare global {
           publishedDate?: string | null;
         }>;
         answer?: string | null;
+        usage?: { month: string; count: number; cap: number };
         error?: string;
       }>;
 

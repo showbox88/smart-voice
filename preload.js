@@ -410,6 +410,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Tavily API (web search)
   getTavilyKey: () => ipcRenderer.invoke("get-tavily-key"),
   saveTavilyKey: (key) => ipcRenderer.invoke("save-tavily-key", key),
+  getTavilyEnabled: () => ipcRenderer.invoke("get-tavily-enabled"),
+  saveTavilyEnabled: (enabled) => ipcRenderer.invoke("save-tavily-enabled", enabled),
+  getTavilyCap: () => ipcRenderer.invoke("get-tavily-cap"),
+  saveTavilyCap: (cap) => ipcRenderer.invoke("save-tavily-cap", cap),
+  getTavilyUsage: () => ipcRenderer.invoke("get-tavily-usage"),
 
   // Mistral API
   getMistralKey: () => ipcRenderer.invoke("get-mistral-key"),
