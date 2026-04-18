@@ -121,6 +121,7 @@ class IPCHandlers {
     this.claudeCodeManager = managers.claudeCodeManager;
     this.vesyncManager = managers.vesyncManager;
     this.musicManager = managers.musicManager;
+    this.skillsManager = managers.skillsManager;
     this.googleCalendarManager = managers.googleCalendarManager;
     this.meetingDetectionEngine = managers.meetingDetectionEngine;
     this.audioTapManager = managers.audioTapManager;
@@ -1859,6 +1860,16 @@ class IPCHandlers {
     ipcMain.handle("music:status", async () => {
       if (!this.musicManager) return { success: false, error: "not_init" };
       return this.musicManager.status();
+    });
+
+    ipcMain.handle("skills:load-all", async () => {
+      if (!this.skillsManager) return { success: false, error: "not_init", skills: [] };
+      try {
+        const skills = await this.skillsManager.loadAll();
+        return { success: true, skills };
+      } catch (err) {
+        return { success: false, error: err.message || "load_failed", skills: [] };
+      }
     });
 
     ipcMain.handle("music:import-paths", async (_e, paths) => {

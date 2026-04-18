@@ -5,6 +5,8 @@ import { getSettings } from "../../stores/settingsStore";
 import { getAgentSystemPrompt } from "../../config/prompts";
 import { createToolRegistry } from "../../services/tools";
 import type { ToolRegistry } from "../../services/tools/ToolRegistry";
+import { loadAllSkills, type LoadedSkill } from "../../services/skills/skillLoader";
+import { SkillResponseMap } from "../../services/skills/skillExecutor";
 import type { Message, AgentState, ToolCallInfo } from "./types";
 
 const RAG_NOTE_LIMIT = 5;
@@ -68,7 +70,6 @@ export function useChatStreaming({
   const messagesRef = useRef<Message[]>([]);
   const noteContextRef = useRef(externalNoteContext);
   noteContextRef.current = externalNoteContext;
-  const toolRegistryRef = useRef<{ key: string; registry: ToolRegistry } | null>(null);
   const vesyncAvailableRef = useRef(false);
   const musicAvailableRef = useRef(false);
 
@@ -119,9 +120,14 @@ export function useChatStreaming({
       const supportsTools = isCloudAgent || !isLocalProvider || localModelCanUseTool;
 
       let registry: ToolRegistry | null = null;
+      let loadedSkills: LoadedSkill[] = [];
       if (supportsTools) {
+        let folder: string | undefined;
+        let vlc: { available?: boolean } | undefined;
+        let email: string | undefined;
+        let password: string | undefined;
         try {
-          const [email, password, folder, vlc] = await Promise.all([
+          [email, password, folder, vlc] = await Promise.all([
             window.electronAPI?.getVeSyncEmail?.(),
             window.electronAPI?.getVeSyncPassword?.(),
             window.electronAPI?.getMusicFolder?.(),
@@ -134,20 +140,30 @@ export function useChatStreaming({
         }
         const vesyncAvailable = vesyncAvailableRef.current;
         const musicAvailable = musicAvailableRef.current;
-        const cacheKey = `${settings.isSignedIn}-${settings.gcalConnected}-${settings.cloudBackupEnabled}-${vesyncAvailable}-${musicAvailable}`;
-        if (toolRegistryRef.current?.key === cacheKey) {
-          registry = toolRegistryRef.current.registry;
-        } else {
-          registry = createToolRegistry({
-            isSignedIn: settings.isSignedIn,
-            gcalConnected: settings.gcalConnected,
-            cloudBackupEnabled: settings.cloudBackupEnabled,
-            vesyncAvailable,
-            musicAvailable,
+        // Rebuild registry every turn so skill file edits take effect without
+        // restarting the app. Base tools (notes/search/clipboard/...) come from
+        // createToolRegistry; skill-driven tools (music/vesync) are merged on top.
+        registry = createToolRegistry({
+          isSignedIn: settings.isSignedIn,
+          gcalConnected: settings.gcalConnected,
+          cloudBackupEnabled: settings.cloudBackupEnabled,
+          vesyncAvailable,
+          musicAvailable,
+        });
+        try {
+          loadedSkills = await loadAllSkills({
+            music_folder_configured: Boolean(folder),
+            vlc_installed: Boolean(vlc?.available),
+            vesync_logged_in: Boolean(email && password),
           });
-          toolRegistryRef.current = { key: cacheKey, registry };
+          for (const s of loadedSkills) {
+            registry.register(s.tool);
+          }
+        } catch (err) {
+          console.warn("[skills] load failed", err);
         }
       }
+      const skillResponseMap = new SkillResponseMap(loadedSkills);
 
       const ragContext = await buildRAGContext(userText);
       const combinedContext = [noteContextRef.current, ragContext].filter(Boolean).join("\n\n");
@@ -283,6 +299,28 @@ export function useChatStreaming({
             setAgentState("streaming");
             setToolStatus("");
             setActiveToolName("");
+
+            // Skill-driven short-circuit: if response_mode is passthrough or
+            // template, use the tool's displayText (or rendered template) as
+            // the final assistant message and abort the LLM before it can
+            // append commentary.
+            const decision = skillResponseMap.decide(
+              chunk.toolName,
+              chunk.displayText,
+              chunk.metadata
+            );
+            if (decision.kind === "final") {
+              fullContent = decision.text;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId
+                    ? { ...m, content: decision.text, isStreaming: false }
+                    : m
+                )
+              );
+              ReasoningService.cancelActiveStream();
+              break;
+            }
           }
         }
 

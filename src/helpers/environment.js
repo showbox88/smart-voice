@@ -33,6 +33,8 @@ const PERSISTED_KEYS = [
   "VESYNC_EMAIL",
   "VESYNC_PASSWORD",
   "VESYNC_COUNTRY_CODE",
+  "MUSIC_FOLDER",
+  "VLC_PATH",
 ];
 
 class EnvironmentManager {
@@ -128,7 +130,9 @@ class EnvironmentManager {
   }
 
   saveMusicFolder(folder) {
-    return this._saveKey("MUSIC_FOLDER", folder);
+    const result = this._saveKey("MUSIC_FOLDER", folder);
+    this.saveAllKeysToEnvFile().catch(() => {});
+    return result;
   }
 
   getVlcPath() {
@@ -136,7 +140,9 @@ class EnvironmentManager {
   }
 
   saveVlcPath(p) {
-    return this._saveKey("VLC_PATH", p);
+    const result = this._saveKey("VLC_PATH", p);
+    this.saveAllKeysToEnvFile().catch(() => {});
+    return result;
   }
 
   getGroqKey() {

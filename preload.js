@@ -264,6 +264,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   musicStatus: () => ipcRenderer.invoke("music:status"),
   musicImportPaths: (paths) => ipcRenderer.invoke("music:import-paths", paths),
 
+  // Skills library — parsed SKILL.md files from bundled + userData dirs
+  skillsLoadAll: () => ipcRenderer.invoke("skills:load-all"),
+
   // Whisper server functions (faster repeated transcriptions)
   whisperServerStart: (modelName) => ipcRenderer.invoke("whisper-server-start", modelName),
   whisperServerStop: () => ipcRenderer.invoke("whisper-server-stop"),

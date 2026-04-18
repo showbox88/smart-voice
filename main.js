@@ -205,6 +205,7 @@ const TtsManager = require("./src/helpers/ttsManager");
 const ClaudeCodeSessionManager = require("./src/helpers/claudeCodeSessionManager");
 const VeSyncManager = require("./src/helpers/vesyncManager");
 const MusicManager = require("./src/helpers/musicManager");
+const SkillsManager = require("./src/helpers/skillsManager");
 const GoogleCalendarManager = require("./src/helpers/googleCalendarManager");
 const MeetingProcessDetector = require("./src/helpers/meetingProcessDetector");
 const AudioActivityDetector = require("./src/helpers/audioActivityDetector");
@@ -236,6 +237,7 @@ let ttsManager = null;
 let claudeCodeManager = null;
 let vesyncManager = null;
 let musicManager = null;
+let skillsManager = null;
 let googleCalendarManager = null;
 let meetingDetectionEngine = null;
 let audioTapManager = null;
@@ -308,6 +310,10 @@ function initializeCoreManagers() {
   claudeCodeManager = new ClaudeCodeSessionManager(databaseManager, {});
   vesyncManager = new VeSyncManager(environmentManager);
   musicManager = new MusicManager();
+  skillsManager = new SkillsManager({
+    bundledRoot: path.join(__dirname, "skills"),
+    userRoot: path.join(app.getPath("userData"), "skills"),
+  });
   parakeetManager = new ParakeetManager();
   diarizationManager = new DiarizationManager();
   googleCalendarManager = new GoogleCalendarManager(databaseManager, windowManager);
@@ -347,6 +353,7 @@ function initializeCoreManagers() {
     claudeCodeManager,
     vesyncManager,
     musicManager,
+    skillsManager,
     googleCalendarManager,
     meetingDetectionEngine,
     audioTapManager,

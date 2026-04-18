@@ -164,24 +164,8 @@ const TOOL_INSTRUCTIONS: Record<string, string> = {
     "Use copy_to_clipboard when the user asks you to copy something to their clipboard.",
   get_calendar_events:
     "Use get_calendar_events to check the user's schedule, upcoming meetings, or calendar events.",
-  list_smart_devices:
-    "Use list_smart_devices to see the user's VeSync smart home devices (lights, plugs, switches) and their current on/off state. Call this first if you're unsure which device the user means.",
-  set_device_power:
-    "Use set_device_power to turn a smart home device on or off. The device parameter is fuzzy-matched — pass what the user said (e.g. 'Light 1', '灯一', 'the second light'). If the user's phrasing is ambiguous, call list_smart_devices first.",
-  list_music:
-    "Use list_music to see what music tracks are in the user's music folder. Useful when a play request is ambiguous or the user asks what's available.",
-  play_music:
-    "Use play_music to play local music through VLC. Pass `query` with whatever the user said (song name, artist, folder like '轻音乐' or 'Coldplay'). Skip `query` to shuffle-play the whole library. Call list_music first only if you need to verify nothing matches.",
-  pause_music: "Use pause_music to pause or resume the currently playing music.",
-  next_music: "Use next_music to skip to the next track in the playlist.",
-  previous_music: "Use previous_music to go back to the previous track.",
-  stop_music: "Use stop_music to stop music playback entirely and close VLC.",
-  set_music_volume:
-    "Use set_music_volume to adjust VLC playback volume. Pass a number 0–100 (percentage).",
-  set_music_repeat:
-    "Use set_music_repeat when the user asks for loop / repeat modes — 循环播放 / 列表循环 → mode 'all', 单曲循环 / 重复这首 → mode 'one', 取消循环 / 关闭循环 → mode 'off'.",
-  set_music_shuffle:
-    "Use set_music_shuffle when the user asks to 随机播放 / 打乱顺序 (on: true) or 取消随机 / 按顺序 (on: false).",
+  // Skill-backed tools (music, smart_device, ...) are documented via their
+  // SKILL.md description + trigger_phrases and don't need TOOL_INSTRUCTIONS.
 };
 
 export function getAgentSystemPrompt(availableTools?: string[], noteContext?: string): string {

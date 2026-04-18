@@ -149,8 +149,6 @@ class MusicManager {
         `--http-password=${VLC_HTTP_PASSWORD}`,
         "--no-qt-privacy-ask",
         "--no-one-instance",
-        // Minimal UI: hide menu bar / toolbar — just show the output area
-        "--qt-minimal-view",
         "--no-video-title-show",
         // Audio visualization — shows a spectrum when playing audio
         "--audio-visual=visual",

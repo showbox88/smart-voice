@@ -1067,6 +1067,33 @@ declare global {
         skipped?: Array<{ src: string; reason: string }>;
       }>;
 
+      // Skills library — parsed SKILL.md files
+      skillsLoadAll: () => Promise<{
+        success: boolean;
+        error?: string;
+        skills: Array<{
+          name: string;
+          category: string;
+          description: string;
+          triggerPhrases: Record<string, string[]> | null;
+          parameters: Array<{
+            name: string;
+            type: string;
+            required?: boolean;
+            description?: string;
+            default?: unknown;
+            values?: string[];
+            examples?: unknown[];
+          }>;
+          handler: string;
+          responseMode: "passthrough" | "commentary" | { template: string };
+          availability: { requires?: string[] } | null;
+          body: string;
+          source: "bundled" | "user";
+          filePath: string;
+        }>;
+      }>;
+
       // TTS (Edge Read Aloud / ElevenLabs)
       ttsListVoices: () => Promise<Array<{ id: string; label: string }>>;
       ttsSynthesize: (

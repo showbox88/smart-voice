@@ -39,7 +39,15 @@ export class ToolRegistry {
         execute: async (args: unknown) => {
           try {
             const toolResult = await def.execute(args as Record<string, unknown>);
-            return toolResult.success ? toolResult.data : { error: toolResult.displayText };
+            if (!toolResult.success) return { error: toolResult.displayText };
+            const data = toolResult.data;
+            // Keep displayText on the payload so skill passthrough / template
+            // modes can recover the user-facing text from the AI SDK tool-result
+            // chunk (which only exposes `output`).
+            if (data && typeof data === "object" && !Array.isArray(data)) {
+              return { ...(data as Record<string, unknown>), displayText: toolResult.displayText };
+            }
+            return { data, displayText: toolResult.displayText };
           } catch (error) {
             return { error: (error as Error).message || "Tool execution failed" };
           }

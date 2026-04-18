@@ -1518,14 +1518,28 @@ class ReasoningService extends BaseReasoningService {
           ],
         };
       } else if (chunk.type === "tool-result") {
-        const output = chunk.output;
+        const output = chunk.output as
+          | string
+          | { displayText?: string; error?: string; [k: string]: unknown }
+          | undefined;
         const displayText =
-          typeof output === "string" ? output : output?.error ? String(output.error) : "Done";
+          typeof output === "string"
+            ? output
+            : output && typeof output === "object" && typeof output.displayText === "string"
+              ? output.displayText
+              : output && typeof output === "object" && output.error
+                ? String(output.error)
+                : "Done";
+        const metadata =
+          output && typeof output === "object" && !Array.isArray(output)
+            ? (output as Record<string, unknown>)
+            : undefined;
         yield {
           type: "tool_result",
           callId: chunk.toolCallId,
           toolName: chunk.toolName,
           displayText,
+          ...(metadata ? { metadata } : {}),
         };
       } else if (chunk.type === "finish") {
         yield { type: "done", finishReason: chunk.finishReason };
