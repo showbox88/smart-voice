@@ -21,6 +21,7 @@ interface ToolRegistrySettings {
   cloudBackupEnabled: boolean;
   vesyncAvailable: boolean;
   musicAvailable: boolean;
+  tavilyAvailable: boolean;
 }
 
 export function createToolRegistry(settings: ToolRegistrySettings): ToolRegistry {
@@ -34,7 +35,8 @@ export function createToolRegistry(settings: ToolRegistrySettings): ToolRegistry
   registry.register(listFoldersTool);
   registry.register(clipboardTool);
 
-  if (settings.isSignedIn) {
+  // Web search now uses the user's own Tavily key (no cloud sign-in required).
+  if (settings.tavilyAvailable) {
     registry.register(webSearchTool);
   }
 

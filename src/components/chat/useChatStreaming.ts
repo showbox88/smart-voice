@@ -72,6 +72,7 @@ export function useChatStreaming({
   noteContextRef.current = externalNoteContext;
   const vesyncAvailableRef = useRef(false);
   const musicAvailableRef = useRef(false);
+  const tavilyAvailableRef = useRef(false);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -86,6 +87,9 @@ export function useChatStreaming({
       const folder = await window.electronAPI?.getMusicFolder?.();
       const vlc = await window.electronAPI?.musicVlcStatus?.();
       musicAvailableRef.current = Boolean(folder && vlc?.available);
+
+      const tavilyKey = await window.electronAPI?.getTavilyKey?.();
+      tavilyAvailableRef.current = Boolean(tavilyKey);
     })();
   }, []);
 
@@ -126,20 +130,24 @@ export function useChatStreaming({
         let vlc: { available?: boolean } | undefined;
         let email: string | undefined;
         let password: string | undefined;
+        let tavilyKey: string | null | undefined;
         try {
-          [email, password, folder, vlc] = await Promise.all([
+          [email, password, folder, vlc, tavilyKey] = await Promise.all([
             window.electronAPI?.getVeSyncEmail?.(),
             window.electronAPI?.getVeSyncPassword?.(),
             window.electronAPI?.getMusicFolder?.(),
             window.electronAPI?.musicVlcStatus?.(),
+            window.electronAPI?.getTavilyKey?.(),
           ]);
           vesyncAvailableRef.current = Boolean(email && password);
           musicAvailableRef.current = Boolean(folder && vlc?.available);
+          tavilyAvailableRef.current = Boolean(tavilyKey);
         } catch {
           // keep last-known values
         }
         const vesyncAvailable = vesyncAvailableRef.current;
         const musicAvailable = musicAvailableRef.current;
+        const tavilyAvailable = tavilyAvailableRef.current;
         // Rebuild registry every turn so skill file edits take effect without
         // restarting the app. Base tools (notes/search/clipboard/...) come from
         // createToolRegistry; skill-driven tools (music/vesync) are merged on top.
@@ -149,6 +157,7 @@ export function useChatStreaming({
           cloudBackupEnabled: settings.cloudBackupEnabled,
           vesyncAvailable,
           musicAvailable,
+          tavilyAvailable,
         });
         try {
           loadedSkills = await loadAllSkills({

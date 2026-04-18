@@ -407,6 +407,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getGroqKey: () => ipcRenderer.invoke("get-groq-key"),
   saveGroqKey: (key) => ipcRenderer.invoke("save-groq-key", key),
 
+  // Tavily API (web search)
+  getTavilyKey: () => ipcRenderer.invoke("get-tavily-key"),
+  saveTavilyKey: (key) => ipcRenderer.invoke("save-tavily-key", key),
+
   // Mistral API
   getMistralKey: () => ipcRenderer.invoke("get-mistral-key"),
   saveMistralKey: (key) => ipcRenderer.invoke("save-mistral-key", key),

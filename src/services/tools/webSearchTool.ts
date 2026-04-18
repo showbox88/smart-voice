@@ -28,7 +28,15 @@ export const webSearchTool: ToolDefinition = {
     try {
       const raw = await window.electronAPI.agentWebSearch!(query, numResults);
 
-      const results = Array.isArray(raw?.results)
+      if (!raw || raw.success === false) {
+        return {
+          success: false,
+          data: null,
+          displayText: raw?.error || "Web search failed",
+        };
+      }
+
+      const results = Array.isArray(raw.results)
         ? raw.results.map(
             (r: { title?: string; url?: string; text?: string; publishedDate?: string }) => ({
               title: r.title || "",
@@ -37,12 +45,12 @@ export const webSearchTool: ToolDefinition = {
               publishedDate: r.publishedDate || null,
             })
           )
-        : raw;
+        : [];
 
       return {
         success: true,
-        data: results,
-        displayText: `Found web results for "${query}"`,
+        data: { answer: raw.answer || null, results },
+        displayText: `Found ${results.length} web result${results.length === 1 ? "" : "s"} for "${query}"`,
       };
     } catch (error) {
       return {

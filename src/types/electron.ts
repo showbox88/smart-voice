@@ -816,6 +816,10 @@ declare global {
       getGroqKey: () => Promise<string | null>;
       saveGroqKey: (key: string) => Promise<void>;
 
+      // Tavily API key management (web search)
+      getTavilyKey: () => Promise<string | null>;
+      saveTavilyKey: (key: string) => Promise<{ success: boolean }>;
+
       // Mistral API key management
       getMistralKey: () => Promise<string | null>;
       saveMistralKey: (key: string) => Promise<void>;
@@ -1541,8 +1545,9 @@ declare global {
           title: string;
           url: string;
           text: string;
-          publishedDate?: string;
+          publishedDate?: string | null;
         }>;
+        answer?: string | null;
         error?: string;
       }>;
 

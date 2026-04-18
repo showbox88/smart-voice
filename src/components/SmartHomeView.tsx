@@ -13,6 +13,8 @@ import {
   Square,
   UploadCloud,
   CheckCircle2,
+  Globe,
+  Save,
 } from "lucide-react";
 import { cn } from "./lib/utils";
 
@@ -52,17 +54,24 @@ export default function SmartHomeView() {
     skipped: number;
   } | null>(null);
 
+  // Tavily (web search) state
+  const [tavilyKey, setTavilyKey] = useState("");
+  const [tavilySaved, setTavilySaved] = useState(false);
+  const [tavilyBusy, setTavilyBusy] = useState(false);
+
   // Load saved credentials on mount
   useEffect(() => {
     (async () => {
-      const [e, p, c] = await Promise.all([
+      const [e, p, c, tk] = await Promise.all([
         window.electronAPI?.getVeSyncEmail?.() ?? "",
         window.electronAPI?.getVeSyncPassword?.() ?? "",
         window.electronAPI?.getVeSyncCountryCode?.() ?? "US",
+        window.electronAPI?.getTavilyKey?.() ?? "",
       ]);
       setEmail(e || "");
       setPassword(p || "");
       setCountryCode(c || "US");
+      setTavilyKey(tk || "");
 
       // If we already have credentials, try a silent login + fetch
       if (e && p) {
@@ -163,6 +172,17 @@ export default function SmartHomeView() {
   const handleStopMusic = useCallback(async () => {
     await window.electronAPI?.musicStop?.();
   }, []);
+
+  const handleSaveTavily = useCallback(async () => {
+    setTavilyBusy(true);
+    try {
+      await window.electronAPI?.saveTavilyKey?.(tavilyKey.trim());
+      setTavilySaved(true);
+      setTimeout(() => setTavilySaved(false), 1800);
+    } finally {
+      setTavilyBusy(false);
+    }
+  }, [tavilyKey]);
 
   const importDroppedFiles = useCallback(
     async (files: FileList | File[]) => {
@@ -666,6 +686,64 @@ export default function SmartHomeView() {
                 装好后重启应用即可；也可以把路径写入 .env 的 <span className="font-mono">VLC_PATH</span>。
               </p>
             )}
+          </div>
+        </div>
+
+        {/* Web search (Tavily) section */}
+        <div className="mt-8 pt-6 border-t border-border/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Globe size={14} className="text-primary" />
+            <h3 className="text-sm font-medium">网页搜索（Tavily）</h3>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            填入 Tavily API key，Agent 就能上网查实时资料、新闻、事实并整理回复。免费额度 1000 次/月，在{" "}
+            <a
+              href="https://tavily.com"
+              target="_blank"
+              rel="noreferrer"
+              className="underline hover:text-primary"
+            >
+              tavily.com
+            </a>{" "}
+            注册后生成。
+          </p>
+
+          <div className="space-y-3 max-w-2xl">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1.5">API Key</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="password"
+                  value={tavilyKey}
+                  onChange={(e) => {
+                    setTavilyKey(e.target.value);
+                    setTavilySaved(false);
+                  }}
+                  placeholder="tvly-..."
+                  className="flex-1 text-sm bg-background border border-border/50 rounded-md px-3 py-2 font-mono text-xs"
+                  autoComplete="off"
+                />
+                <button
+                  onClick={handleSaveTavily}
+                  disabled={tavilyBusy}
+                  className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md border border-border/50 hover:bg-foreground/5 disabled:opacity-40"
+                >
+                  {tavilyBusy ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : tavilySaved ? (
+                    <CheckCircle2 size={12} className="text-green-500" />
+                  ) : (
+                    <Save size={12} />
+                  )}
+                  {tavilySaved ? "已保存" : "保存"}
+                </button>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground/80 leading-snug">
+              保存后 Agent 下一轮对话就会自动注册 <span className="font-mono">web_search</span> 工具。
+              清空 key 并保存即可禁用。
+            </p>
           </div>
         </div>
       </div>

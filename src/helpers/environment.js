@@ -35,6 +35,7 @@ const PERSISTED_KEYS = [
   "VESYNC_COUNTRY_CODE",
   "MUSIC_FOLDER",
   "VLC_PATH",
+  "TAVILY_API_KEY",
 ];
 
 class EnvironmentManager {
@@ -141,6 +142,16 @@ class EnvironmentManager {
 
   saveVlcPath(p) {
     const result = this._saveKey("VLC_PATH", p);
+    this.saveAllKeysToEnvFile().catch(() => {});
+    return result;
+  }
+
+  getTavilyKey() {
+    return this._getKey("TAVILY_API_KEY");
+  }
+
+  saveTavilyKey(key) {
+    const result = this._saveKey("TAVILY_API_KEY", key);
     this.saveAllKeysToEnvFile().catch(() => {});
     return result;
   }

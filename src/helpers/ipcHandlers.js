@@ -2559,6 +2559,14 @@ class IPCHandlers {
       return this.environmentManager.saveGeminiKey(key);
     });
 
+    ipcMain.handle("get-tavily-key", async () => {
+      return this.environmentManager.getTavilyKey();
+    });
+
+    ipcMain.handle("save-tavily-key", async (event, key) => {
+      return this.environmentManager.saveTavilyKey(key);
+    });
+
     ipcMain.handle("get-groq-key", async (event) => {
       return this.environmentManager.getGroqKey();
     });
@@ -5284,42 +5292,61 @@ class IPCHandlers {
 
     ipcMain.handle("agent-web-search", async (event, query, numResults = 5) => {
       try {
-        const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
-
-        const cookieHeader = await getSessionCookies(event);
-        if (!cookieHeader) throw new Error("No session cookies available");
-
-        debugLogger.debug("Agent web search request", { query, numResults }, "cloud-api");
-
-        const response = await fetch(`${apiUrl}/api/agent/web-search`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Cookie: cookieHeader,
-          },
-          body: JSON.stringify({ query, numResults }),
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            return { success: false, error: "Session expired", code: "AUTH_EXPIRED" };
-          }
-          if (response.status === 503) {
-            return { success: false, error: "Request timed out", code: "SERVER_ERROR" };
-          }
-          const errorData = await response.json().catch(() => ({}));
+        const apiKey = this.environmentManager.getTavilyKey();
+        if (!apiKey) {
           return {
             success: false,
-            error: errorData.error || `API error: ${response.status}`,
+            error: "未配置 Tavily API key —— 请在设置里填入后重试",
           };
+        }
+        const max = Math.max(1, Math.min(Number(numResults) || 5, 10));
+        debugLogger.debug("Agent web search (tavily)", { query, max }, "web-search");
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        let response;
+        try {
+          response = await fetch("https://api.tavily.com/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              api_key: apiKey,
+              query,
+              max_results: max,
+              search_depth: "basic",
+              include_answer: true,
+            }),
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeout);
+        }
+
+        if (!response.ok) {
+          const body = await response.text().catch(() => "");
+          const msg =
+            response.status === 401 || response.status === 403
+              ? "Tavily API key 无效"
+              : response.status === 429
+                ? "Tavily 速率/额度超限"
+                : `Tavily error ${response.status}: ${body.slice(0, 200)}`;
+          return { success: false, error: msg };
         }
 
         const data = await response.json();
-        return { success: true, ...data };
+        const results = Array.isArray(data?.results)
+          ? data.results.map((r) => ({
+              title: r.title || "",
+              url: r.url || "",
+              text: r.content || "",
+              publishedDate: r.published_date || null,
+            }))
+          : [];
+        return { success: true, results, answer: data?.answer || null };
       } catch (error) {
+        const msg = error?.name === "AbortError" ? "Tavily 请求超时" : error.message;
         debugLogger.error("Agent web search error:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: msg };
       }
     });
 
