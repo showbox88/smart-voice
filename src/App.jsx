@@ -8,6 +8,7 @@ import { useHotkey } from "./hooks/useHotkey";
 import { formatHotkeyLabel } from "./utils/hotkeys";
 import { useWindowDrag } from "./hooks/useWindowDrag";
 import { useAudioRecording } from "./hooks/useAudioRecording";
+import { useWakeWord } from "./hooks/useWakeWord";
 import { useSettingsStore } from "./stores/settingsStore";
 
 // Sound Wave Icon Component (for idle/hover states)
@@ -196,6 +197,9 @@ export default function App() {
     useAudioRecording(toast, {
       onToggle: handleDictationToggle,
     });
+
+  // Mount wake-word mic capture (no-op unless the feature is running in main).
+  useWakeWord({ isUserRecording: isRecording || isProcessing });
 
   // Sync auto-hide from main process — setState directly to avoid IPC echo
   useEffect(() => {

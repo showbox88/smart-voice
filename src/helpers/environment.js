@@ -39,6 +39,9 @@ const PERSISTED_KEYS = [
   "TAVILY_ENABLED",
   "TAVILY_MONTHLY_CAP",
   "TAVILY_USAGE",
+  "WAKE_WORD_ENABLED",
+  "WAKE_WORD_PRESET",
+  "WAKE_WORD_THRESHOLD",
 ];
 
 class EnvironmentManager {
@@ -199,6 +202,33 @@ class EnvironmentManager {
     this._saveKey("TAVILY_USAGE", `${month}:${next}`);
     this.saveAllKeysToEnvFile().catch(() => {});
     return { month, count: next };
+  }
+
+  getWakeWordEnabled() {
+    return this._getKey("WAKE_WORD_ENABLED") === "true";
+  }
+  saveWakeWordEnabled(enabled) {
+    const result = this._saveKey("WAKE_WORD_ENABLED", String(!!enabled));
+    this.saveAllKeysToEnvFile().catch(() => {});
+    return result;
+  }
+  getWakeWordPreset() {
+    return this._getKey("WAKE_WORD_PRESET") || "xiaozhi";
+  }
+  saveWakeWordPreset(presetId) {
+    const result = this._saveKey("WAKE_WORD_PRESET", String(presetId || "xiaozhi"));
+    this.saveAllKeysToEnvFile().catch(() => {});
+    return result;
+  }
+  getWakeWordThreshold() {
+    const n = parseFloat(this._getKey("WAKE_WORD_THRESHOLD"));
+    return Number.isFinite(n) && n > 0 ? n : 1.5;
+  }
+  saveWakeWordThreshold(threshold) {
+    const n = Math.max(0.1, Math.min(parseFloat(threshold) || 1.5, 5));
+    const result = this._saveKey("WAKE_WORD_THRESHOLD", String(n));
+    this.saveAllKeysToEnvFile().catch(() => {});
+    return result;
   }
 
   getGroqKey() {

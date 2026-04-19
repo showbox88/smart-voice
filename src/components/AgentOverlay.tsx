@@ -291,12 +291,111 @@ export default function AgentOverlay() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Hands-free (wake-word) auto-stop: monitor mic RMS on a parallel stream and
+  // stop recording after ~1.2s of trailing silence once we've heard speech.
+  // Hard cap at 15s so we never leave the mic open indefinitely.
+  const vadCleanupRef = useRef<null | (() => void)>(null);
+  const stopVadMonitor = useCallback(() => {
+    vadCleanupRef.current?.();
+    vadCleanupRef.current = null;
+  }, []);
+  const startVadMonitor = useCallback(async () => {
+    stopVadMonitor();
+    let stream: MediaStream | null = null;
+    let ctx: AudioContext | null = null;
+    let analyser: AnalyserNode | null = null;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    let maxTimer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      });
+      ctx = new AudioContext();
+      const source = ctx.createMediaStreamSource(stream);
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+      const data = new Uint8Array(analyser.fftSize);
+      const SPEECH_RMS = 0.04;       // must cross this to count as speech
+      const TRAILING_MS = 1200;      // silence after speech → stop
+      const MAX_MS = 15000;          // absolute cap
+      let heardSpeech = false;
+      let lastSpeechAt = Date.now();
+
+      const cleanup = () => {
+        if (timer) clearInterval(timer);
+        if (maxTimer) clearTimeout(maxTimer);
+        try {
+          stream?.getTracks().forEach((t) => t.stop());
+        } catch {
+          /* ignore */
+        }
+        try {
+          ctx?.close();
+        } catch {
+          /* ignore */
+        }
+      };
+
+      const triggerStop = () => {
+        if (isRecordingRef.current) {
+          audioManagerRef.current?.stopRecording();
+        }
+        cleanup();
+        if (vadCleanupRef.current === cleanup) vadCleanupRef.current = null;
+      };
+
+      timer = setInterval(() => {
+        if (!analyser) return;
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) {
+          const v = (data[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / data.length);
+        const now = Date.now();
+        if (rms > SPEECH_RMS) {
+          heardSpeech = true;
+          lastSpeechAt = now;
+        } else if (heardSpeech && now - lastSpeechAt > TRAILING_MS) {
+          triggerStop();
+        }
+      }, 80);
+
+      maxTimer = setTimeout(triggerStop, MAX_MS);
+      vadCleanupRef.current = cleanup;
+    } catch (err) {
+      console.warn("[wake-word vad] monitor setup failed", err);
+      try {
+        stream?.getTracks().forEach((t) => t.stop());
+      } catch {
+        /* ignore */
+      }
+      try {
+        ctx?.close();
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [stopVadMonitor]);
+
   useEffect(() => {
     const unsubStart = window.electronAPI?.onAgentStartRecording?.(() => {
       audioManagerRef.current?.startRecording();
     });
 
+    const unsubStartHandsFree = window.electronAPI?.onAgentStartRecordingHandsFree?.(() => {
+      audioManagerRef.current?.startRecording();
+      void startVadMonitor();
+    });
+
     const unsubStop = window.electronAPI?.onAgentStopRecording?.(() => {
+      stopVadMonitor();
       audioManagerRef.current?.stopRecording();
     });
 
@@ -304,18 +403,33 @@ export default function AgentOverlay() {
       // Use real mic state, not agentState (which only tracks AI pipeline phases
       // like thinking/streaming — "listening" is never set anywhere).
       if (isRecordingRef.current) {
+        stopVadMonitor();
         audioManagerRef.current?.stopRecording();
       } else if (agentStateRef.current === "idle") {
         audioManagerRef.current?.startRecording();
       }
     });
 
+    const unsubToggleHandsFree = window.electronAPI?.onAgentToggleRecordingHandsFree?.(() => {
+      if (isRecordingRef.current) {
+        // Already recording (e.g. wake-word re-fired mid-capture) — stop.
+        stopVadMonitor();
+        audioManagerRef.current?.stopRecording();
+      } else if (agentStateRef.current === "idle") {
+        audioManagerRef.current?.startRecording();
+        void startVadMonitor();
+      }
+    });
+
     return () => {
       unsubStart?.();
+      unsubStartHandsFree?.();
       unsubStop?.();
       unsubToggle?.();
+      unsubToggleHandsFree?.();
+      stopVadMonitor();
     };
-  }, []);
+  }, [startVadMonitor, stopVadMonitor]);
 
   const handleNewChat = useCallback(() => {
     persistenceNewChat();

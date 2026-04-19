@@ -15,6 +15,8 @@ import {
   CheckCircle2,
   Globe,
   Save,
+  Mic,
+  Download,
 } from "lucide-react";
 import { cn } from "./lib/utils";
 
@@ -62,6 +64,17 @@ export default function SmartHomeView() {
   const [tavilyCap, setTavilyCap] = useState(1000);
   const [tavilyUsage, setTavilyUsage] = useState<{ month: string; count: number } | null>(null);
 
+  // Wake-word state
+  const [wwEnabled, setWwEnabled] = useState(false);
+  const [wwPresetId, setWwPresetId] = useState("xiaozhi");
+  const [wwThreshold, setWwThreshold] = useState(1.5);
+  const [wwPresets, setWwPresets] = useState<Array<{ id: string; display: string }>>([]);
+  const [wwModelDownloaded, setWwModelDownloaded] = useState(false);
+  const [wwDownloading, setWwDownloading] = useState(false);
+  const [wwDownloadPct, setWwDownloadPct] = useState(0);
+  const [wwRunning, setWwRunning] = useState(false);
+  const [wwError, setWwError] = useState<string | null>(null);
+
   // Load saved credentials on mount
   useEffect(() => {
     (async () => {
@@ -81,6 +94,30 @@ export default function SmartHomeView() {
       setTavilyEnabled(tEnabled !== false);
       setTavilyCap(typeof tCap === "number" ? tCap : 1000);
       if (tUsage) setTavilyUsage({ month: tUsage.month, count: tUsage.count });
+
+      try {
+        const [wwSettings, wwStatus, presets] = await Promise.all([
+          window.electronAPI?.wakeWord?.getSettings?.(),
+          window.electronAPI?.wakeWord?.getStatus?.(),
+          window.electronAPI?.wakeWord?.getPresets?.(),
+        ]);
+        if (wwSettings) {
+          setWwEnabled(Boolean(wwSettings.enabled));
+          setWwPresetId(wwSettings.presetId || "xiaozhi");
+          setWwThreshold(
+            Number.isFinite(wwSettings.threshold) ? Number(wwSettings.threshold) : 1.5
+          );
+        }
+        if (wwStatus) {
+          setWwModelDownloaded(Boolean(wwStatus.modelDownloaded));
+          setWwRunning(Boolean(wwStatus.running));
+          setWwDownloading(Boolean(wwStatus.downloading));
+          setWwError(wwStatus.error || null);
+        }
+        if (Array.isArray(presets)) setWwPresets(presets);
+      } catch {
+        // ignore
+      }
 
       // If we already have credentials, try a silent login + fetch
       if (e && p) {
@@ -208,6 +245,109 @@ export default function SmartHomeView() {
     const u = await window.electronAPI?.getTavilyUsage?.();
     if (u) setTavilyUsage({ month: u.month, count: u.count });
   }, []);
+
+  // Wake-word — live status & download progress subscriptions
+  useEffect(() => {
+    const offStatus = window.electronAPI?.wakeWord?.onStatusChange?.((status: any) => {
+      if (!status) return;
+      setWwModelDownloaded(Boolean(status.modelDownloaded));
+      setWwRunning(Boolean(status.running));
+      setWwDownloading(Boolean(status.downloading));
+      setWwError(status.error || null);
+    });
+    const offProgress = window.electronAPI?.wakeWord?.onDownloadProgress?.((p: any) => {
+      if (!p) return;
+      if (p.phase === "downloading") {
+        setWwDownloading(true);
+        setWwDownloadPct(Math.round((p.progress || 0) * 100));
+      } else if (p.phase === "extracting") {
+        setWwDownloading(true);
+        setWwDownloadPct(100);
+      } else if (p.phase === "done") {
+        setWwDownloading(false);
+        setWwDownloadPct(0);
+      }
+    });
+    return () => {
+      try {
+        offStatus?.();
+      } catch {
+        // ignore
+      }
+      try {
+        offProgress?.();
+      } catch {
+        // ignore
+      }
+    };
+  }, []);
+
+  const applyWakeWordConfig = useCallback(
+    async (enabled: boolean, presetId: string, threshold: number) => {
+      await window.electronAPI?.wakeWord?.saveSettings?.({ enabled, presetId, threshold });
+      if (enabled) {
+        if (!wwModelDownloaded) return;
+        await window.electronAPI?.wakeWord?.restart?.({ presetId, threshold });
+      } else {
+        await window.electronAPI?.wakeWord?.stop?.();
+      }
+    },
+    [wwModelDownloaded]
+  );
+
+  const handleToggleWakeWord = useCallback(
+    async (enabled: boolean) => {
+      setWwError(null);
+      setWwEnabled(enabled);
+      if (enabled && !wwModelDownloaded) {
+        // Need to download first; enable persists but actual start waits for download.
+        await window.electronAPI?.wakeWord?.saveSettings?.({ enabled: true });
+        setWwDownloading(true);
+        const r = await window.electronAPI?.wakeWord?.downloadModel?.();
+        if (!r?.success) {
+          setWwError(r?.error || "下载失败");
+          setWwDownloading(false);
+          setWwEnabled(false);
+          await window.electronAPI?.wakeWord?.saveSettings?.({ enabled: false });
+          return;
+        }
+        setWwModelDownloaded(true);
+        setWwDownloading(false);
+        const startRes = await window.electronAPI?.wakeWord?.start?.({
+          presetId: wwPresetId,
+          threshold: wwThreshold,
+        });
+        if (!startRes?.success) setWwError(startRes?.error || "启动失败");
+        return;
+      }
+      await applyWakeWordConfig(enabled, wwPresetId, wwThreshold);
+    },
+    [wwModelDownloaded, wwPresetId, wwThreshold, applyWakeWordConfig]
+  );
+
+  const handleChangeWakeWordPreset = useCallback(
+    async (presetId: string) => {
+      setWwPresetId(presetId);
+      if (wwEnabled) {
+        await applyWakeWordConfig(true, presetId, wwThreshold);
+      } else {
+        await window.electronAPI?.wakeWord?.saveSettings?.({ presetId });
+      }
+    },
+    [wwEnabled, wwThreshold, applyWakeWordConfig]
+  );
+
+  const handleChangeWakeWordThreshold = useCallback(
+    async (threshold: number) => {
+      setWwThreshold(threshold);
+      if (wwEnabled) {
+        await applyWakeWordConfig(true, wwPresetId, threshold);
+      } else {
+        await window.electronAPI?.wakeWord?.saveSettings?.({ threshold });
+      }
+    },
+    [wwEnabled, wwPresetId, applyWakeWordConfig]
+  );
 
   const importDroppedFiles = useCallback(
     async (files: FileList | File[]) => {
@@ -826,6 +966,143 @@ export default function SmartHomeView() {
             <p className="text-[11px] text-muted-foreground/80 leading-snug">
               保存后 Agent 下一轮对话就会自动注册 <span className="font-mono">web_search</span> 工具。
               到达上限后会自动禁用，每月 1 号零点（按 UTC 月份）重置。
+            </p>
+          </div>
+        </div>
+
+        {/* Voice wake-word section */}
+        <div className="mt-8 pt-6 border-t border-border/20">
+          <div className="flex items-center gap-2 mb-3">
+            <Mic size={14} className="text-primary" />
+            <h3 className="text-sm font-medium flex-1">语音唤醒词</h3>
+            <span className="text-xs text-muted-foreground mr-1">
+              {wwDownloading
+                ? `下载中 ${wwDownloadPct}%`
+                : wwEnabled
+                  ? wwRunning
+                    ? "已启用"
+                    : "已启用（未运行）"
+                  : "已关闭"}
+            </span>
+            <button
+              type="button"
+              disabled={wwDownloading}
+              onClick={() => handleToggleWakeWord(!wwEnabled)}
+              className={cn(
+                "relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+                wwEnabled ? "bg-primary" : "bg-border"
+              )}
+              aria-pressed={wwEnabled}
+              aria-label="wake-word-toggle"
+            >
+              <span
+                className={cn(
+                  "inline-block h-4 w-4 transform rounded-full bg-white transition",
+                  wwEnabled ? "translate-x-4" : "translate-x-0.5"
+                )}
+              />
+            </button>
+            {(wwEnabled || wwRunning) && (
+              <button
+                type="button"
+                onClick={async () => {
+                  await window.electronAPI?.wakeWord?.stop?.();
+                  await window.electronAPI?.wakeWord?.saveSettings?.({ enabled: false });
+                  setWwEnabled(false);
+                  setWwRunning(false);
+                  setWwError(null);
+                }}
+                title="强制关闭并释放麦克风"
+                className="ml-1 text-[10px] px-2 py-1 rounded-md border border-destructive/40 text-destructive hover:bg-destructive/10"
+              >
+                强制关闭
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            开启后，后台持续监听麦克风。说出唤醒词（如「小智」）即可像按数字键盘 <span className="font-mono">.</span> 一样
+            直接打开 Agent 对话窗口，无需按键。本地 sherpa-onnx 关键词识别，不上传云端；初次开启会下载约 3.3MB 模型。
+          </p>
+
+          <div className="space-y-3 max-w-2xl">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1.5">唤醒词</label>
+              <select
+                value={wwPresetId}
+                onChange={(e) => handleChangeWakeWordPreset(e.target.value)}
+                disabled={wwDownloading}
+                style={{ colorScheme: "dark light" }}
+                className="w-full text-sm text-foreground bg-background border border-border/50 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring/40 disabled:opacity-40"
+              >
+                {wwPresets.length === 0 ? (
+                  <option value="xiaozhi">小智</option>
+                ) : (
+                  wwPresets.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.display}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1.5">
+                灵敏度阈值：<span className="font-mono">{wwThreshold.toFixed(1)}</span>
+                <span className="text-[10px] opacity-60 ml-2">
+                  （低=更敏感但更易误触；高=更严格需清晰发音。推荐 1.5）
+                </span>
+              </label>
+              <input
+                type="range"
+                min={0.5}
+                max={3}
+                step={0.1}
+                value={wwThreshold}
+                onChange={(e) =>
+                  handleChangeWakeWordThreshold(parseFloat(e.target.value))
+                }
+                disabled={wwDownloading}
+                className="w-full accent-primary disabled:opacity-40"
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground/70 font-mono">
+                <span>0.5 敏感</span>
+                <span>1.5 推荐</span>
+                <span>3.0 严格</span>
+              </div>
+            </div>
+
+            {wwDownloading && (
+              <div className="text-xs text-muted-foreground border border-border/40 rounded-md p-2 flex items-center gap-2">
+                <Download size={12} className="animate-pulse" />
+                <span className="flex-1">
+                  正在下载 KWS 模型… {wwDownloadPct > 0 && `${wwDownloadPct}%`}
+                </span>
+              </div>
+            )}
+
+            {!wwDownloading && wwEnabled && wwRunning && (
+              <div className="text-xs text-green-700 dark:text-green-400 border border-green-500/30 bg-green-500/5 rounded-md p-2 flex items-start gap-2">
+                <CheckCircle2 size={12} className="mt-0.5 shrink-0" />
+                <span>
+                  正在后台监听「
+                  {wwPresets.find((p) => p.id === wwPresetId)?.display || wwPresetId}
+                  」—— 录音期间自动暂停以避免自触发。
+                </span>
+              </div>
+            )}
+
+            {wwError && (
+              <div className="text-xs text-destructive border border-destructive/30 bg-destructive/5 rounded-md p-2 flex items-start gap-2">
+                <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                <span>{wwError}</span>
+              </div>
+            )}
+
+            <p className="text-[11px] text-muted-foreground/80 leading-snug">
+              触发后的行为和数字键盘 <span className="font-mono">.</span> 一致：直接打开 Agent 录音窗口、
+              跳过 AI 推理阶段、走快速路径。模型存放在{" "}
+              <span className="font-mono text-[10px]">~/.cache/openwhispr/kws-models/</span>。
             </p>
           </div>
         </div>

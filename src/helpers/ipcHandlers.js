@@ -2589,6 +2589,23 @@ class IPCHandlers {
       return { ...usage, cap };
     });
 
+    ipcMain.handle("wake-word:get-settings", async () => {
+      return {
+        enabled: this.environmentManager.getWakeWordEnabled(),
+        presetId: this.environmentManager.getWakeWordPreset(),
+        threshold: this.environmentManager.getWakeWordThreshold(),
+      };
+    });
+
+    ipcMain.handle("wake-word:save-settings", async (_event, payload) => {
+      const { enabled, presetId, threshold } = payload || {};
+      if (typeof enabled === "boolean") this.environmentManager.saveWakeWordEnabled(enabled);
+      if (typeof presetId === "string" && presetId)
+        this.environmentManager.saveWakeWordPreset(presetId);
+      if (Number.isFinite(threshold)) this.environmentManager.saveWakeWordThreshold(threshold);
+      return { success: true };
+    });
+
     ipcMain.handle("get-groq-key", async (event) => {
       return this.environmentManager.getGroqKey();
     });

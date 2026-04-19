@@ -416,6 +416,28 @@ contextBridge.exposeInMainWorld("electronAPI", {
   saveTavilyCap: (cap) => ipcRenderer.invoke("save-tavily-cap", cap),
   getTavilyUsage: () => ipcRenderer.invoke("get-tavily-usage"),
 
+  // Wake-word (voice activation) — see src/helpers/wakeWordManager.js
+  wakeWord: {
+    getStatus: () => ipcRenderer.invoke("wake-word:get-status"),
+    getPresets: () => ipcRenderer.invoke("wake-word:get-presets"),
+    getSettings: () => ipcRenderer.invoke("wake-word:get-settings"),
+    saveSettings: (payload) => ipcRenderer.invoke("wake-word:save-settings", payload),
+    start: (config) => ipcRenderer.invoke("wake-word:start", config),
+    stop: () => ipcRenderer.invoke("wake-word:stop"),
+    restart: (config) => ipcRenderer.invoke("wake-word:restart", config),
+    downloadModel: () => ipcRenderer.invoke("wake-word:download-model"),
+    feedAudio: (arrayBuffer) => ipcRenderer.send("wake-word:feed-audio", arrayBuffer),
+    setSuppressed: (flag) => ipcRenderer.send("wake-word:set-suppressed", !!flag),
+    onStatusChange: registerListener(
+      "wake-word:status",
+      (callback) => (_event, status) => callback(status)
+    ),
+    onDownloadProgress: registerListener(
+      "wake-word:download-progress",
+      (callback) => (_event, progress) => callback(progress)
+    ),
+  },
+
   // Mistral API
   getMistralKey: () => ipcRenderer.invoke("get-mistral-key"),
   saveMistralKey: (key) => ipcRenderer.invoke("save-mistral-key", key),
@@ -707,9 +729,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getAgentKey: () => ipcRenderer.invoke("get-agent-key"),
   saveAgentKey: (key) => ipcRenderer.invoke("save-agent-key", key),
   onAgentStartRecording: registerListener("agent-start-recording", (callback) => () => callback()),
+  onAgentStartRecordingHandsFree: registerListener(
+    "agent-start-recording-hands-free",
+    (callback) => () => callback()
+  ),
   onAgentStopRecording: registerListener("agent-stop-recording", (callback) => () => callback()),
   onAgentToggleRecording: registerListener(
     "agent-toggle-recording",
+    (callback) => () => callback()
+  ),
+  onAgentToggleRecordingHandsFree: registerListener(
+    "agent-toggle-recording-hands-free",
     (callback) => () => callback()
   ),
   toggleAgentOverlay: () => ipcRenderer.invoke("toggle-agent-overlay"),

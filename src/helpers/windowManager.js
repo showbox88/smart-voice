@@ -706,12 +706,19 @@ class WindowManager {
   // overlay AND start recording immediately, so the user can speak without
   // pressing the hotkey a second time. Pressing again while visible toggles
   // recording (stop → agent processes) like the normal agent hotkey.
-  showAgentOverlayAndRecord() {
+  showAgentOverlayAndRecord({ handsFree = false } = {}) {
     if (!this.agentWindow || this.agentWindow.isDestroyed()) return;
+
+    const startEvent = handsFree
+      ? "agent-start-recording-hands-free"
+      : "agent-start-recording";
+    const toggleEvent = handsFree
+      ? "agent-toggle-recording-hands-free"
+      : "agent-toggle-recording";
 
     // Already visible: toggle — start if idle, stop if currently recording.
     if (this.agentWindow.isVisible()) {
-      this.agentWindow.webContents.send("agent-toggle-recording");
+      this.agentWindow.webContents.send(toggleEvent);
       return;
     }
     // Not visible: show window, then start recording once the renderer is ready.
@@ -722,7 +729,7 @@ class WindowManager {
         !this.agentWindow.isDestroyed() &&
         this.agentWindow.isVisible()
       ) {
-        this.agentWindow.webContents.send("agent-start-recording");
+        this.agentWindow.webContents.send(startEvent);
       }
     }, 250);
   }

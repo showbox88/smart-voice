@@ -213,6 +213,7 @@ const AudioTapManager = require("./src/helpers/audioTapManager");
 const LinuxPortalAudioManager = require("./src/helpers/linuxPortalAudioManager");
 const MeetingAecManager = require("./src/helpers/meetingAecManager");
 const MeetingDetectionEngine = require("./src/helpers/meetingDetectionEngine");
+const WakeWordManager = require("./src/helpers/wakeWordManager");
 const { i18nMain, changeLanguage } = require("./src/helpers/i18nMain");
 const { ensureYdotool } = require("./src/helpers/ensureYdotool");
 
@@ -244,6 +245,7 @@ let audioTapManager = null;
 let linuxPortalAudioManager = null;
 let meetingAecManager = null;
 let qdrantManager = null;
+let wakeWordManager = null;
 let ipcHandlers = null;
 let globeKeyAlertShown = false;
 let authBridgeServer = null;
@@ -618,6 +620,113 @@ async function startApp() {
   // In development, wait for Vite dev server to be ready
   if (process.env.NODE_ENV === "development") {
     await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  // Wake-word manager + IPC handlers — register BEFORE window creation so the
+  // renderer finds them on first load.
+  wakeWordManager = new WakeWordManager();
+  wakeWordManager.on("wake-word-detected", (info) => {
+    debugLogger.info("Wake word triggered agent overlay", info, "wake-word");
+    if (hotkeyManager?.isInListeningMode?.()) return;
+    windowManager.showAgentOverlayAndRecord({ handsFree: true });
+  });
+
+  const emitWakeWordStatus = () => {
+    try {
+      const status = wakeWordManager.getStatus();
+      BrowserWindow.getAllWindows().forEach((w) => {
+        try {
+          w.webContents.send("wake-word:status", status);
+        } catch {
+          // ignore
+        }
+      });
+    } catch {
+      // ignore
+    }
+  };
+  wakeWordManager.on("started", emitWakeWordStatus);
+  wakeWordManager.on("stopped", emitWakeWordStatus);
+  wakeWordManager.on("download-progress", (progress) => {
+    BrowserWindow.getAllWindows().forEach((w) => {
+      try {
+        w.webContents.send("wake-word:download-progress", progress);
+      } catch {
+        // ignore
+      }
+    });
+  });
+
+  ipcMain.handle("wake-word:get-status", () => {
+    return wakeWordManager ? wakeWordManager.getStatus() : { enabled: false };
+  });
+  ipcMain.handle("wake-word:get-presets", () => {
+    return wakeWordManager ? wakeWordManager.getPresets() : [];
+  });
+  ipcMain.handle("wake-word:download-model", async () => {
+    if (!wakeWordManager) return { success: false, error: "not initialized" };
+    try {
+      await wakeWordManager.ensureModelDownloaded();
+      emitWakeWordStatus();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err?.message || String(err) };
+    }
+  });
+  ipcMain.handle("wake-word:start", async (_event, config) => {
+    if (!wakeWordManager) return { success: false, error: "not initialized" };
+    try {
+      await wakeWordManager.start(config || {});
+      emitWakeWordStatus();
+      return { success: true };
+    } catch (err) {
+      emitWakeWordStatus();
+      return { success: false, error: err?.message || String(err) };
+    }
+  });
+  ipcMain.handle("wake-word:stop", () => {
+    if (!wakeWordManager) return { success: false };
+    wakeWordManager.stop();
+    emitWakeWordStatus();
+    return { success: true };
+  });
+  ipcMain.handle("wake-word:restart", async (_event, config) => {
+    if (!wakeWordManager) return { success: false };
+    try {
+      await wakeWordManager.restart(config || {});
+      emitWakeWordStatus();
+      return { success: true };
+    } catch (err) {
+      emitWakeWordStatus();
+      return { success: false, error: err?.message || String(err) };
+    }
+  });
+  ipcMain.on("wake-word:feed-audio", (_event, arrayBuffer) => {
+    if (!wakeWordManager || !wakeWordManager.enabled) return;
+    if (!arrayBuffer || !arrayBuffer.byteLength) return;
+    try {
+      const samples = new Float32Array(arrayBuffer);
+      wakeWordManager.acceptAudio(samples, 16000);
+    } catch (err) {
+      debugLogger.warn("Wake-word feed-audio error", { error: err?.message }, "wake-word");
+    }
+  });
+  ipcMain.on("wake-word:set-suppressed", (_event, flag) => {
+    if (!wakeWordManager) return;
+    wakeWordManager.suppress(!!flag);
+  });
+
+  // Auto-start wake-word if the user had it enabled previously.
+  try {
+    if (environmentManager.getWakeWordEnabled() && wakeWordManager.isModelDownloaded()) {
+      const presetId = environmentManager.getWakeWordPreset();
+      const threshold = environmentManager.getWakeWordThreshold();
+      wakeWordManager.start({ presetId, threshold }).catch((err) => {
+        debugLogger.warn("Wake-word auto-start failed", { error: err?.message }, "wake-word");
+      });
+    }
+  } catch (err) {
+    debugLogger.warn("Wake-word startup check failed", { error: err?.message }, "wake-word");
   }
 
   // Create windows FIRST so the user sees UI as soon as possible

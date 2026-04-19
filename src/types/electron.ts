@@ -1513,8 +1513,10 @@ declare global {
       setAgentWindowBounds?: (x: number, y: number, width: number, height: number) => Promise<void>;
       hideAgentOverlay?: () => Promise<void>;
       onAgentStartRecording?: (callback: () => void) => () => void;
+      onAgentStartRecordingHandsFree?: (callback: () => void) => () => void;
       onAgentStopRecording?: (callback: () => void) => () => void;
       onAgentToggleRecording?: (callback: () => void) => () => void;
+      onAgentToggleRecordingHandsFree?: (callback: () => void) => () => void;
 
       // Agent cloud streaming (event-based)
       startAgentStream?: (
