@@ -740,6 +740,24 @@ async function startApp() {
   // Create agent window (hidden) and set up agent hotkey
   await windowManager.createAgentWindow();
 
+  // Floating desktop orb — the "living" agent avatar. Transparent always-on-top
+  // window with click-through behavior; stays visible even when the agent chat
+  // overlay is hidden, so the user always sees the agent's presence.
+  try {
+    await windowManager.createAvatarWindow();
+  } catch (err) {
+    debugLogger.warn("Failed to create avatar overlay window", { error: err?.message }, "window");
+  }
+
+  // Voice bubble — transparent conversational surface for the wake-word flow.
+  // Hidden by default; shown by WindowManager.updateVoiceBubble when the agent
+  // streams a hands-free turn.
+  try {
+    await windowManager.createVoiceBubbleWindow();
+  } catch (err) {
+    debugLogger.warn("Failed to create voice bubble window", { error: err?.message }, "window");
+  }
+
   const agentHotkeyCallback = () => {
     if (hotkeyManager.isInListeningMode()) return;
     windowManager.toggleAgentOverlay();

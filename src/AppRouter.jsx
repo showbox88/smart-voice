@@ -13,6 +13,8 @@ import { useTheme } from "./hooks/useTheme";
 const ControlPanel = React.lazy(() => import("./components/ControlPanel.tsx"));
 const OnboardingFlow = React.lazy(() => import("./components/OnboardingFlow.tsx"));
 const AgentOverlay = React.lazy(() => import("./components/AgentOverlay.tsx"));
+const AvatarOverlayApp = React.lazy(() => import("./components/AvatarOverlayApp.tsx"));
+const VoiceBubbleOverlay = React.lazy(() => import("./components/VoiceBubbleOverlay.tsx"));
 
 export default function AppRouter() {
   useTheme();
@@ -28,6 +30,22 @@ export default function AppRouter() {
 
   if (params.includes("transcription-preview=true")) {
     return <TranscriptionPreviewOverlay />;
+  }
+
+  if (params.includes("avatar=true")) {
+    return (
+      <Suspense fallback={null}>
+        <AvatarOverlayApp />
+      </Suspense>
+    );
+  }
+
+  if (params.includes("bubble=true")) {
+    return (
+      <Suspense fallback={null}>
+        <VoiceBubbleOverlay />
+      </Suspense>
+    );
   }
 
   return <MainApp />;

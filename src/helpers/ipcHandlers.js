@@ -6638,6 +6638,34 @@ class IPCHandlers {
       return { success: true };
     });
 
+    // Floating orb state relay (agent window → avatar window).
+    // Uses ipcMain.on (not handle) because the agent fires this up to
+    // ~12Hz while recording and doesn't await a reply.
+    ipcMain.on("avatar-state-from-agent", (_event, state) => {
+      this.windowManager.sendAvatarState(state);
+    });
+
+    ipcMain.handle("show-avatar-overlay", async () => {
+      this.windowManager.showAvatarOverlay();
+      return { success: true };
+    });
+
+    ipcMain.handle("hide-avatar-overlay", async () => {
+      this.windowManager.hideAvatarOverlay();
+      return { success: true };
+    });
+
+    // Voice bubble (wake-word conversational surface). Fire-and-forget: the
+    // agent renderer streams partial assistant text here and we just forward
+    // it to the bubble window. No reply needed.
+    ipcMain.on("voice-bubble-update-from-agent", (_event, state) => {
+      this.windowManager.updateVoiceBubble(state);
+    });
+
+    ipcMain.on("voice-bubble-hide-from-agent", () => {
+      this.windowManager.hideVoiceBubble();
+    });
+
     ipcMain.handle("resize-agent-window", async (_event, width, height) => {
       this.windowManager.resizeAgentWindow(width, height);
       return { success: true };

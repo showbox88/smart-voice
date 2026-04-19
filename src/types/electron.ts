@@ -1518,6 +1518,44 @@ declare global {
       onAgentToggleRecording?: (callback: () => void) => () => void;
       onAgentToggleRecordingHandsFree?: (callback: () => void) => () => void;
 
+      // Floating desktop orb ("living agent" avatar)
+      updateAvatarState?: (state: {
+        isRecording?: boolean;
+        isThinking?: boolean;
+        isSpeaking?: boolean;
+        level?: number;
+      }) => void;
+      onAvatarStateUpdate?: (
+        callback: (state: {
+          isRecording?: boolean;
+          isThinking?: boolean;
+          isSpeaking?: boolean;
+          level?: number;
+        }) => void
+      ) => () => void;
+      showAvatarOverlay?: () => Promise<void>;
+      hideAvatarOverlay?: () => Promise<void>;
+
+      // Voice bubble overlay (wake-word conversational surface)
+      updateVoiceBubble?: (state: {
+        userText?: string;
+        assistantText?: string;
+        isRecording?: boolean;
+        isThinking?: boolean;
+        done?: boolean;
+      }) => void;
+      hideVoiceBubble?: () => void;
+      onVoiceBubbleUpdate?: (
+        callback: (state: {
+          userText?: string;
+          assistantText?: string;
+          isRecording?: boolean;
+          isThinking?: boolean;
+          done?: boolean;
+        }) => void
+      ) => () => void;
+      onVoiceBubbleHide?: (callback: () => void) => () => void;
+
       // Agent cloud streaming (event-based)
       startAgentStream?: (
         messages: Array<{ role: string; content: string | Array<unknown> }>,

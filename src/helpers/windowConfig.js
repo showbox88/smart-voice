@@ -173,6 +173,16 @@ class WindowPositionUtil {
     return { x, y, width, height };
   }
 
+  static getAvatarPosition(display) {
+    const { width, height } = AVATAR_OVERLAY_CONFIG;
+    const MARGIN_X = 24;
+    const MARGIN_Y = 110; // clear of the main dictation panel at bottom-right
+    const workArea = display.workArea || display.bounds;
+    const x = Math.max(0, workArea.x + workArea.width - width - MARGIN_X);
+    const y = Math.max(0, workArea.y + workArea.height - height - MARGIN_Y);
+    return { x, y, width, height };
+  }
+
   static getNotificationPosition(display) {
     const { width, height } = NOTIFICATION_WINDOW_CONFIG;
     const MARGIN = 16;
@@ -228,6 +238,61 @@ class WindowPositionUtil {
   }
 }
 
+const VOICE_BUBBLE_CONFIG = {
+  width: 440,
+  height: 180,
+  frame: false,
+  alwaysOnTop: true,
+  transparent: true,
+  show: false,
+  skipTaskbar: true,
+  hasShadow: false,
+  resizable: false,
+  movable: false,
+  focusable: false,
+  fullScreenable: false,
+  acceptsFirstMouse: true,
+  roundedCorners: false,
+  type: FLOATING_OVERLAY_TYPE,
+  visibleOnAllWorkspaces: process.platform !== "win32",
+  webPreferences: {
+    preload: path.join(__dirname, "..", "..", "preload.js"),
+    nodeIntegration: false,
+    contextIsolation: true,
+    sandbox: true,
+    backgroundThrottling: false,
+  },
+};
+
+const AVATAR_OVERLAY_CONFIG = {
+  width: 90,
+  height: 90,
+  frame: false,
+  alwaysOnTop: true,
+  transparent: true,
+  show: false,
+  skipTaskbar: true,
+  hasShadow: false,
+  resizable: false,
+  movable: true,
+  // focusable:true on Windows 11 — transparent frameless windows sometimes
+  // don't receive paint/composite events when focusable:false. We never call
+  // focus() explicitly and use showInactive(), so nothing actually steals focus.
+  focusable: true,
+  fullScreenable: false,
+  acceptsFirstMouse: true,
+  roundedCorners: false,
+  type: FLOATING_OVERLAY_TYPE,
+  visibleOnAllWorkspaces: process.platform !== "win32",
+  webPreferences: {
+    preload: path.join(__dirname, "..", "..", "preload.js"),
+    nodeIntegration: false,
+    contextIsolation: true,
+    sandbox: true,
+    backgroundThrottling: false,
+  },
+};
+
 const AGENT_OVERLAY_CONFIG = {
   width: 420,
   height: 300,
@@ -262,6 +327,8 @@ module.exports = {
   MAIN_WINDOW_CONFIG,
   CONTROL_PANEL_CONFIG,
   AGENT_OVERLAY_CONFIG,
+  AVATAR_OVERLAY_CONFIG,
+  VOICE_BUBBLE_CONFIG,
   NOTIFICATION_WINDOW_CONFIG,
   TRANSCRIPTION_PREVIEW_CONFIG,
   TRANSCRIPTION_PREVIEW_SIZE_LIMITS,

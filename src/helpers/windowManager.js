@@ -11,6 +11,8 @@ const {
   MAIN_WINDOW_CONFIG,
   CONTROL_PANEL_CONFIG,
   AGENT_OVERLAY_CONFIG,
+  AVATAR_OVERLAY_CONFIG,
+  VOICE_BUBBLE_CONFIG,
   NOTIFICATION_WINDOW_CONFIG,
   TRANSCRIPTION_PREVIEW_CONFIG,
   TRANSCRIPTION_PREVIEW_SIZE_LIMITS,
@@ -23,6 +25,9 @@ class WindowManager {
     this.mainWindow = null;
     this.controlPanelWindow = null;
     this.agentWindow = null;
+    this.avatarWindow = null;
+    this.voiceBubbleWindow = null;
+    this._voiceBubbleHideTimeout = null;
     this.notificationWindow = null;
     this._notificationTimeout = null;
     this.transcriptionPreviewWindow = null;
@@ -176,11 +181,21 @@ class WindowManager {
     return { success: true, bounds: { x: newX, y: newY, ...newSize } };
   }
 
-  async loadWindowContent(window, isControlPanel = false, isAgent = false) {
+  async loadWindowContent(
+    window,
+    isControlPanel = false,
+    isAgent = false,
+    isAvatar = false,
+    isVoiceBubble = false
+  ) {
     if (process.env.NODE_ENV === "development") {
       let appUrl = DevServerManager.getAppUrl(isControlPanel);
       if (isAgent) {
         appUrl = `${DevServerManager.getAppUrl(false)}?agent=true`;
+      } else if (isAvatar) {
+        appUrl = `${DevServerManager.getAppUrl(false)}?avatar=true`;
+      } else if (isVoiceBubble) {
+        appUrl = `${DevServerManager.getAppUrl(false)}?bubble=true`;
       }
       await DevServerManager.waitForDevServer();
       await window.loadURL(appUrl);
@@ -192,6 +207,10 @@ class WindowManager {
 
       if (isAgent) {
         fileInfo.query = { agent: "true" };
+      } else if (isAvatar) {
+        fileInfo.query = { avatar: "true" };
+      } else if (isVoiceBubble) {
+        fileInfo.query = { bubble: "true" };
       }
 
       const fs = require("fs");
@@ -692,6 +711,253 @@ class WindowManager {
     await this.loadWindowContent(this.agentWindow, false, true);
   }
 
+  // Standalone floating desktop orb ("living agent" avatar). Transparent
+  // click-through window that sits above the desktop and reacts to wake-word
+  // state. Independent of the agent chat window — it remains visible even when
+  // the agent overlay is hidden, so the user always sees the agent's presence.
+  async createAvatarWindow() {
+    if (this.avatarWindow && !this.avatarWindow.isDestroyed()) {
+      return;
+    }
+
+    // Anchor to the main dictation panel's display so the orb lands on the
+    // same screen the user is actually looking at. Falls back to the primary
+    // display if the main window isn't up yet.
+    let display;
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      const mainBounds = this.mainWindow.getBounds();
+      display = screen.getDisplayNearestPoint({
+        x: mainBounds.x + mainBounds.width / 2,
+        y: mainBounds.y + mainBounds.height / 2,
+      });
+    } else {
+      display = screen.getPrimaryDisplay();
+    }
+    const position = WindowPositionUtil.getAvatarPosition(display);
+    debugLogger.info(
+      "Creating avatar overlay window",
+      { display: display.bounds, position },
+      "window"
+    );
+
+    this.avatarWindow = new BrowserWindow({
+      ...AVATAR_OVERLAY_CONFIG,
+      ...position,
+    });
+
+    // Mouse events are captured so the orb can be dragged. The wrapper
+    // element in AvatarOverlayApp uses -webkit-app-region: drag.
+
+    this.avatarWindow.once("ready-to-show", () => {
+      // Strongest z-level on every platform so the orb stays above ALL
+      // windows, including fullscreen apps and other always-on-top windows.
+      if (process.platform === "win32") {
+        this.avatarWindow.setAlwaysOnTop(true, "screen-saver");
+      } else if (process.platform === "darwin") {
+        this.avatarWindow.setAlwaysOnTop(true, "screen-saver", 1);
+        this.avatarWindow.setVisibleOnAllWorkspaces(true, {
+          visibleOnFullScreen: true,
+          skipTransformProcessType: true,
+        });
+      } else {
+        this.avatarWindow.setAlwaysOnTop(true, "screen-saver");
+      }
+      if (typeof this.avatarWindow.showInactive === "function") {
+        this.avatarWindow.showInactive();
+      } else {
+        this.avatarWindow.show();
+      }
+      debugLogger.info(
+        "Avatar overlay window shown",
+        { bounds: this.avatarWindow.getBounds() },
+        "window"
+      );
+    });
+
+    this.avatarWindow.webContents.on("did-finish-load", () => {
+      debugLogger.info("Avatar overlay window loaded", {}, "window");
+    });
+
+    this.avatarWindow.webContents.on(
+      "did-fail-load",
+      (_event, errorCode, errorDescription, validatedURL) => {
+        debugLogger.error(
+          "Avatar overlay window failed to load",
+          { errorCode, errorDescription, validatedURL },
+          "window"
+        );
+      }
+    );
+
+    this.avatarWindow.on("closed", () => {
+      this.avatarWindow = null;
+    });
+
+    await this.loadWindowContent(this.avatarWindow, false, false, true);
+  }
+
+  showAvatarOverlay() {
+    if (!this.avatarWindow || this.avatarWindow.isDestroyed()) return;
+    WindowPositionUtil.setupAlwaysOnTop(this.avatarWindow);
+    if (typeof this.avatarWindow.showInactive === "function") {
+      this.avatarWindow.showInactive();
+    } else {
+      this.avatarWindow.show();
+    }
+  }
+
+  hideAvatarOverlay() {
+    if (!this.avatarWindow || this.avatarWindow.isDestroyed()) return;
+    this.avatarWindow.hide();
+  }
+
+  // Forward state/level updates from the agent window to the floating orb.
+  // Called via IPC handler registered in ipcHandlers.js.
+  sendAvatarState(state) {
+    if (!this.avatarWindow || this.avatarWindow.isDestroyed()) return;
+    try {
+      this.avatarWindow.webContents.send("avatar-state-update", state);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // Transparent floating speech bubble for hands-free (wake-word) interactions.
+  // The agent window is kept hidden in that mode — this bubble is the only
+  // surface the user sees for their command and the assistant's reply.
+  async createVoiceBubbleWindow() {
+    if (this.voiceBubbleWindow && !this.voiceBubbleWindow.isDestroyed()) {
+      return;
+    }
+
+    let display;
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      const mainBounds = this.mainWindow.getBounds();
+      display = screen.getDisplayNearestPoint({
+        x: mainBounds.x + mainBounds.width / 2,
+        y: mainBounds.y + mainBounds.height / 2,
+      });
+    } else {
+      display = screen.getPrimaryDisplay();
+    }
+    const workArea = display.workArea || display.bounds;
+    const { width, height } = VOICE_BUBBLE_CONFIG;
+    // Anchor the bubble right above the floating avatar so the exchange feels
+    // attached to the orb. Avatar sits at (workArea right - 114, workArea
+    // bottom - 200) — see WindowPositionUtil.getAvatarPosition.
+    const AVATAR_MARGIN_X = 24;
+    const AVATAR_MARGIN_Y = 110;
+    const AVATAR_HEIGHT = 90;
+    const GAP = 8;
+    const avatarRight = workArea.x + workArea.width - AVATAR_MARGIN_X;
+    const avatarTop = workArea.y + workArea.height - AVATAR_HEIGHT - AVATAR_MARGIN_Y;
+    let x = avatarRight - width;
+    let y = avatarTop - height - GAP;
+    // Clamp to work area so a narrow monitor can't push the bubble off-screen.
+    x = Math.max(workArea.x, Math.min(x, workArea.x + workArea.width - width));
+    y = Math.max(workArea.y, y);
+
+    this.voiceBubbleWindow = new BrowserWindow({
+      ...VOICE_BUBBLE_CONFIG,
+      x,
+      y,
+    });
+
+    // Click-through: user should never have to dismiss it manually.
+    this.voiceBubbleWindow.setIgnoreMouseEvents(true, { forward: true });
+
+    this.voiceBubbleWindow.once("ready-to-show", () => {
+      if (process.platform === "darwin") {
+        this.voiceBubbleWindow.setAlwaysOnTop(true, "screen-saver", 1);
+        this.voiceBubbleWindow.setVisibleOnAllWorkspaces(true, {
+          visibleOnFullScreen: true,
+          skipTransformProcessType: true,
+        });
+      } else {
+        this.voiceBubbleWindow.setAlwaysOnTop(true, "screen-saver");
+      }
+    });
+
+    this.voiceBubbleWindow.webContents.on("did-finish-load", () => {
+      debugLogger.info("Voice bubble window loaded", {}, "window");
+    });
+
+    this.voiceBubbleWindow.webContents.on(
+      "did-fail-load",
+      (_event, errorCode, errorDescription, validatedURL) => {
+        debugLogger.error(
+          "Voice bubble window failed to load",
+          { errorCode, errorDescription, validatedURL },
+          "window"
+        );
+      }
+    );
+
+    this.voiceBubbleWindow.on("closed", () => {
+      this.voiceBubbleWindow = null;
+    });
+
+    await this.loadWindowContent(this.voiceBubbleWindow, false, false, false, true);
+  }
+
+  // Show or update the bubble. `state` is a plain object the renderer merges:
+  //   { userText, assistantText, isThinking, isRecording, done }
+  // The renderer handles its own fade-in; we just show/position here.
+  updateVoiceBubble(state) {
+    if (!this.voiceBubbleWindow || this.voiceBubbleWindow.isDestroyed()) return;
+
+    if (this._voiceBubbleHideTimeout) {
+      clearTimeout(this._voiceBubbleHideTimeout);
+      this._voiceBubbleHideTimeout = null;
+    }
+
+    if (!this.voiceBubbleWindow.isVisible()) {
+      if (typeof this.voiceBubbleWindow.showInactive === "function") {
+        this.voiceBubbleWindow.showInactive();
+      } else {
+        this.voiceBubbleWindow.show();
+      }
+      if (process.platform === "darwin") {
+        this.voiceBubbleWindow.setAlwaysOnTop(true, "screen-saver", 1);
+      } else {
+        this.voiceBubbleWindow.setAlwaysOnTop(true, "screen-saver");
+      }
+    }
+
+    try {
+      this.voiceBubbleWindow.webContents.send("voice-bubble-update", state);
+    } catch {
+      /* ignore */
+    }
+
+    // When a turn finishes, auto-dismiss after a short read delay. The
+    // renderer also runs its own fade, so this just hides the window.
+    if (state && state.done) {
+      this._voiceBubbleHideTimeout = setTimeout(() => {
+        this.hideVoiceBubble();
+      }, 5000);
+    }
+  }
+
+  hideVoiceBubble() {
+    if (this._voiceBubbleHideTimeout) {
+      clearTimeout(this._voiceBubbleHideTimeout);
+      this._voiceBubbleHideTimeout = null;
+    }
+    if (!this.voiceBubbleWindow || this.voiceBubbleWindow.isDestroyed()) return;
+    try {
+      this.voiceBubbleWindow.webContents.send("voice-bubble-hide");
+    } catch {
+      /* ignore */
+    }
+    // Give the renderer a moment for its fade-out.
+    setTimeout(() => {
+      if (this.voiceBubbleWindow && !this.voiceBubbleWindow.isDestroyed()) {
+        this.voiceBubbleWindow.hide();
+      }
+    }, 250);
+  }
+
   toggleAgentOverlay() {
     if (!this.agentWindow || this.agentWindow.isDestroyed()) return;
 
@@ -716,12 +982,23 @@ class WindowManager {
       ? "agent-toggle-recording-hands-free"
       : "agent-toggle-recording";
 
-    // Already visible: toggle — start if idle, stop if currently recording.
+    // Hands-free (wake word): keep the chat window hidden — the exchange is
+    // surfaced in the voice bubble overlay instead. Send start/toggle
+    // directly to the hidden renderer (it's been loaded since app start).
+    if (handsFree) {
+      if (this.agentWindow.isVisible()) {
+        this.agentWindow.webContents.send(toggleEvent);
+      } else {
+        this.agentWindow.webContents.send(startEvent);
+      }
+      return;
+    }
+
+    // Manual flow (numpad-decimal, etc.): show the full chat overlay.
     if (this.agentWindow.isVisible()) {
       this.agentWindow.webContents.send(toggleEvent);
       return;
     }
-    // Not visible: show window, then start recording once the renderer is ready.
     this.showAgentOverlay();
     setTimeout(() => {
       if (

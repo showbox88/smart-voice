@@ -42,6 +42,45 @@ function sanitizeForTts(raw: string): string {
     .trim();
 }
 
+// Two-tone wake chime — pleasant ascending Ding-Ding via Web Audio oscillator.
+// Runs without bundled assets; ~200ms total.
+let _chimeCtx: AudioContext | null = null;
+function playWakeChime() {
+  try {
+    const Ctx =
+      (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext })
+        .AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    if (!_chimeCtx || _chimeCtx.state === "closed") {
+      _chimeCtx = new Ctx();
+    }
+    const ctx = _chimeCtx;
+    if (ctx.state === "suspended") void ctx.resume();
+    const now = ctx.currentTime;
+    const tones: Array<{ freq: number; start: number; dur: number }> = [
+      { freq: 784, start: 0, dur: 0.1 },   // G5
+      { freq: 1047, start: 0.08, dur: 0.18 }, // C6
+    ];
+    for (const tone of tones) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = tone.freq;
+      const t0 = now + tone.start;
+      const t1 = t0 + tone.dur;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(0.18, t0 + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, t1);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t1 + 0.02);
+    }
+  } catch {
+    // never block on sound failure
+  }
+}
+
 export default function AgentOverlay() {
   const { t } = useTranslation();
   const [partialTranscript, setPartialTranscript] = useState("");
@@ -53,6 +92,15 @@ export default function AgentOverlay() {
   const agentStateRef = useRef<string>("idle");
   // Mic recording state sourced from AudioManager (agentState doesn't expose it).
   const isRecordingRef = useRef<boolean>(false);
+  // Mirrored state so AgentAvatar re-renders when recording flips.
+  const [isRecording, setIsRecording] = useState(false);
+  // Hands-free (wake-word) mode: agent window stays hidden and the turn is
+  // surfaced only in the transparent voice bubble overlay. Flag flips true on
+  // a wake-word start and stays true until the next manual interaction.
+  const isHandsFreeRef = useRef<boolean>(false);
+  // Track the current hands-free turn's user text so streaming assistant
+  // chunks can be pushed alongside it.
+  const bubbleUserTextRef = useRef<string>("");
 
   const persistence = useChatPersistence();
   const { messages, setMessages, handleNewChat: persistenceNewChat } = persistence;
@@ -60,6 +108,11 @@ export default function AgentOverlay() {
   // TTS playback — cancel any previous speech when a new one starts.
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const ttsUrlRef = useRef<string | null>(null);
+  const ttsAnalyserCleanupRef = useRef<null | (() => void)>(null);
+  // "Speaking" = TTS audio currently playing. Drives orb animation and keeps
+  // the bubble alive until playback ends.
+  const isSpeakingRef = useRef(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const stopTts = useCallback(() => {
     if (ttsAudioRef.current) {
       ttsAudioRef.current.pause();
@@ -70,16 +123,21 @@ export default function AgentOverlay() {
       URL.revokeObjectURL(ttsUrlRef.current);
       ttsUrlRef.current = null;
     }
+    ttsAnalyserCleanupRef.current?.();
+    ttsAnalyserCleanupRef.current = null;
+    isSpeakingRef.current = false;
+    setIsSpeaking(false);
+    window.electronAPI?.updateAvatarState?.({ level: 0 });
   }, []);
 
   const speakAssistant = useCallback(
-    async (text: string) => {
+    async (text: string): Promise<boolean> => {
       try {
         const enabled = localStorage.getItem(TTS_ENABLED_KEY);
-        if (enabled === "false") return;
+        if (enabled === "false") return false;
 
         const cleaned = sanitizeForTts(text || "");
-        if (!cleaned) return;
+        if (!cleaned) return false;
 
         const provider = (localStorage.getItem(TTS_PROVIDER_KEY) as "edge" | "elevenlabs" | null) || "edge";
         const opts: Record<string, unknown> = { provider };
@@ -88,7 +146,7 @@ export default function AgentOverlay() {
           const key = localStorage.getItem(TTS_ELEVEN_KEY_KEY);
           if (!vId || !key) {
             console.warn("[xiaozhi-tts] elevenlabs not configured — skip");
-            return;
+            return false;
           }
           opts.voice = vId;
           opts.elevenLabsApiKey = key;
@@ -100,7 +158,7 @@ export default function AgentOverlay() {
         const res = await window.electronAPI?.ttsSynthesize?.(cleaned, opts);
         if (!res || !res.success) {
           console.warn("[xiaozhi-tts] synth failed", res);
-          return;
+          return false;
         }
 
         // Cancel any in-flight playback first.
@@ -113,26 +171,99 @@ export default function AgentOverlay() {
         const audio = new Audio(url);
         ttsAudioRef.current = audio;
         ttsUrlRef.current = url;
-        audio.addEventListener("ended", () => {
+
+        // Hook the audio element into Web Audio so we can read RMS while it
+        // plays and drive the orb with the assistant's voice. We still connect
+        // the source to ctx.destination so playback is audible.
+        const Ctx =
+          (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext })
+            .AudioContext ||
+          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        let analyserCtx: AudioContext | null = null;
+        let levelTimer: ReturnType<typeof setInterval> | null = null;
+        let analyserCleanup: (() => void) | null = null;
+        if (Ctx) {
+          try {
+            analyserCtx = new Ctx();
+            const source = analyserCtx.createMediaElementSource(audio);
+            const analyser = analyserCtx.createAnalyser();
+            analyser.fftSize = 1024;
+            source.connect(analyser);
+            source.connect(analyserCtx.destination);
+            const data = new Uint8Array(analyser.fftSize);
+            levelTimer = setInterval(() => {
+              analyser.getByteTimeDomainData(data);
+              let sum = 0;
+              for (let i = 0; i < data.length; i++) {
+                const v = (data[i] - 128) / 128;
+                sum += v * v;
+              }
+              const rms = Math.sqrt(sum / data.length);
+              window.electronAPI?.updateAvatarState?.({ level: rms });
+            }, 80);
+            analyserCleanup = () => {
+              if (levelTimer) clearInterval(levelTimer);
+              try {
+                analyserCtx?.close();
+              } catch {
+                /* ignore */
+              }
+              window.electronAPI?.updateAvatarState?.({ level: 0 });
+            };
+            ttsAnalyserCleanupRef.current = analyserCleanup;
+          } catch (err) {
+            console.warn("[xiaozhi-tts] analyser setup failed", err);
+          }
+        }
+
+        const finalize = () => {
+          // If stopTts already replaced the audio element, bail so we don't
+          // double-cleanup a newer playback.
+          if (ttsAudioRef.current !== audio) return;
           if (ttsUrlRef.current === url) {
             URL.revokeObjectURL(url);
             ttsUrlRef.current = null;
-            ttsAudioRef.current = null;
           }
-        });
+          ttsAudioRef.current = null;
+          if (ttsAnalyserCleanupRef.current === analyserCleanup) {
+            analyserCleanup?.();
+            ttsAnalyserCleanupRef.current = null;
+          }
+          isSpeakingRef.current = false;
+          setIsSpeaking(false);
+          // Hands-free: close the bubble now that the assistant has finished
+          // speaking. The renderer applies its own fade-out timer.
+          if (isHandsFreeRef.current) {
+            window.electronAPI?.updateVoiceBubble?.({
+              userText: bubbleUserTextRef.current,
+              assistantText: text,
+              isRecording: false,
+              isThinking: false,
+              done: true,
+            });
+            isHandsFreeRef.current = false;
+          }
+        };
+
+        audio.addEventListener("ended", finalize);
         audio.addEventListener("error", () => {
           console.warn("[xiaozhi-tts] audio element error");
-          if (ttsUrlRef.current === url) {
-            URL.revokeObjectURL(url);
-            ttsUrlRef.current = null;
-            ttsAudioRef.current = null;
-          }
+          finalize();
         });
-        await audio.play().catch((err) => {
+
+        try {
+          await audio.play();
+        } catch (err) {
           console.warn("[xiaozhi-tts] play() rejected", err);
-        });
+          finalize();
+          return false;
+        }
+        isSpeakingRef.current = true;
+        setIsSpeaking(true);
+        return true;
       } catch (err) {
         console.warn("[xiaozhi-tts] unexpected error", err);
+        return false;
       }
     },
     [stopTts]
@@ -145,8 +276,33 @@ export default function AgentOverlay() {
     setMessages,
     onStreamComplete: (_assistantId, content, toolCalls) => {
       persistence.saveAssistantMessage(content, toolCalls);
-      // Fire-and-forget; no need to block message persistence.
-      void speakAssistant(content);
+      const handsFree = isHandsFreeRef.current;
+      // Hands-free: pin the final assistant text into the bubble but keep it
+      // open (done: false). TTS holds the bubble visible while it plays; the
+      // TTS `ended` handler flips `done: true` when playback finishes.
+      if (handsFree) {
+        window.electronAPI?.updateVoiceBubble?.({
+          userText: bubbleUserTextRef.current,
+          assistantText: content,
+          isRecording: false,
+          isThinking: false,
+          done: false,
+        });
+      }
+      // Kick off playback. If TTS doesn't start (disabled or error), close the
+      // bubble now so it can fade out — otherwise the `ended` handler does it.
+      void speakAssistant(content).then((played) => {
+        if (!played && handsFree && isHandsFreeRef.current) {
+          window.electronAPI?.updateVoiceBubble?.({
+            userText: bubbleUserTextRef.current,
+            assistantText: content,
+            isRecording: false,
+            isThinking: false,
+            done: true,
+          });
+          isHandsFreeRef.current = false;
+        }
+      });
     },
   });
 
@@ -155,6 +311,33 @@ export default function AgentOverlay() {
   useEffect(() => {
     agentStateRef.current = agentState;
   }, [agentState]);
+
+  // Broadcast isRecording / isThinking / isSpeaking state to the floating orb
+  // window. Level is pushed separately from the mic monitor tick (recording)
+  // or the TTS analyser tick (speaking) at ~12Hz.
+  useEffect(() => {
+    const isThinking = agentState === "thinking" || agentState === "streaming";
+    window.electronAPI?.updateAvatarState?.({ isRecording, isThinking, isSpeaking });
+  }, [isRecording, agentState, isSpeaking]);
+
+  // Stream assistant partials into the voice bubble while in hands-free mode.
+  // onStreamComplete handles the `done` signal; here we only relay in-flight
+  // chunks so the user sees the reply building up in real time.
+  useEffect(() => {
+    if (!isHandsFreeRef.current) return;
+    if (!messages.length) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant") return;
+    if (!last.isStreaming) return;
+    const content = typeof last.content === "string" ? last.content : "";
+    window.electronAPI?.updateVoiceBubble?.({
+      userText: bubbleUserTextRef.current,
+      assistantText: content,
+      isRecording: false,
+      isThinking: true,
+      done: false,
+    });
+  }, [messages]);
 
   const addSystemMessage = useCallback(
     (content: string) => {
@@ -181,6 +364,19 @@ export default function AgentOverlay() {
         isStreaming: false,
       };
       setMessages((prev) => [...prev, userMsg]);
+
+      // Hands-free: surface the user's command in the bubble while the model
+      // thinks. Streaming partials will overwrite assistantText below.
+      if (isHandsFreeRef.current) {
+        bubbleUserTextRef.current = text;
+        window.electronAPI?.updateVoiceBubble?.({
+          userText: text,
+          assistantText: "",
+          isRecording: false,
+          isThinking: true,
+          done: false,
+        });
+      }
 
       await persistence.saveUserMessage(text);
 
@@ -212,7 +408,9 @@ export default function AgentOverlay() {
     am.setContext("agent");
     am.setCallbacks({
       onStateChange: (s: { isRecording?: boolean }) => {
-        isRecordingRef.current = !!s?.isRecording;
+        const next = !!s?.isRecording;
+        isRecordingRef.current = next;
+        setIsRecording(next);
       },
       onError: (error: { message?: string }) => {
         const msg = error?.message || (typeof error === "string" ? error : "Transcription failed");
@@ -291,44 +489,99 @@ export default function AgentOverlay() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Hands-free (wake-word) auto-stop: monitor mic RMS on a parallel stream and
-  // stop recording after ~1.2s of trailing silence once we've heard speech.
+  // Mic level + optional VAD auto-stop. Opens a parallel stream, tracks RMS in
+  // levelRef (the avatar reads this every frame), and — when autoStop=true —
+  // stops recording after ~1.2s trailing silence once speech has been heard.
   // Hard cap at 15s so we never leave the mic open indefinitely.
-  const vadCleanupRef = useRef<null | (() => void)>(null);
-  const stopVadMonitor = useCallback(() => {
-    vadCleanupRef.current?.();
-    vadCleanupRef.current = null;
+  const levelRef = useRef(0);
+  const micMonitorCleanupRef = useRef<null | (() => void)>(null);
+  const stopMicMonitor = useCallback(() => {
+    micMonitorCleanupRef.current?.();
+    micMonitorCleanupRef.current = null;
+    levelRef.current = 0;
   }, []);
-  const startVadMonitor = useCallback(async () => {
-    stopVadMonitor();
-    let stream: MediaStream | null = null;
-    let ctx: AudioContext | null = null;
-    let analyser: AnalyserNode | null = null;
-    let timer: ReturnType<typeof setInterval> | null = null;
-    let maxTimer: ReturnType<typeof setTimeout> | null = null;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-      });
-      ctx = new AudioContext();
-      const source = ctx.createMediaStreamSource(stream);
-      analyser = ctx.createAnalyser();
-      analyser.fftSize = 2048;
-      source.connect(analyser);
-      const data = new Uint8Array(analyser.fftSize);
-      const SPEECH_RMS = 0.04;       // must cross this to count as speech
-      const TRAILING_MS = 1200;      // silence after speech → stop
-      const MAX_MS = 15000;          // absolute cap
-      let heardSpeech = false;
-      let lastSpeechAt = Date.now();
+  const startMicMonitor = useCallback(
+    async ({ autoStop }: { autoStop: boolean }) => {
+      stopMicMonitor();
+      let stream: MediaStream | null = null;
+      let ctx: AudioContext | null = null;
+      let analyser: AnalyserNode | null = null;
+      let timer: ReturnType<typeof setInterval> | null = null;
+      let maxTimer: ReturnType<typeof setTimeout> | null = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
+        });
+        ctx = new AudioContext();
+        const source = ctx.createMediaStreamSource(stream);
+        analyser = ctx.createAnalyser();
+        analyser.fftSize = 2048;
+        source.connect(analyser);
+        const data = new Uint8Array(analyser.fftSize);
+        const SPEECH_RMS = 0.04;
+        const TRAILING_MS = 1200;
+        const MAX_MS = 15000;
+        let heardSpeech = false;
+        let lastSpeechAt = Date.now();
 
-      const cleanup = () => {
-        if (timer) clearInterval(timer);
-        if (maxTimer) clearTimeout(maxTimer);
+        const cleanup = () => {
+          if (timer) clearInterval(timer);
+          if (maxTimer) clearTimeout(maxTimer);
+          try {
+            stream?.getTracks().forEach((t) => t.stop());
+          } catch {
+            /* ignore */
+          }
+          try {
+            ctx?.close();
+          } catch {
+            /* ignore */
+          }
+          levelRef.current = 0;
+          window.electronAPI?.updateAvatarState?.({ level: 0 });
+        };
+
+        const triggerStop = () => {
+          if (isRecordingRef.current) {
+            audioManagerRef.current?.stopRecording();
+          }
+          cleanup();
+          if (micMonitorCleanupRef.current === cleanup) micMonitorCleanupRef.current = null;
+        };
+
+        timer = setInterval(() => {
+          if (!analyser) return;
+          analyser.getByteTimeDomainData(data);
+          let sum = 0;
+          for (let i = 0; i < data.length; i++) {
+            const v = (data[i] - 128) / 128;
+            sum += v * v;
+          }
+          const rms = Math.sqrt(sum / data.length);
+          levelRef.current = rms;
+          // Push level to the floating orb window.
+          window.electronAPI?.updateAvatarState?.({ level: rms });
+          if (autoStop) {
+            const now = Date.now();
+            if (rms > SPEECH_RMS) {
+              heardSpeech = true;
+              lastSpeechAt = now;
+            } else if (heardSpeech && now - lastSpeechAt > TRAILING_MS) {
+              triggerStop();
+            }
+          }
+        }, 80);
+
+        if (autoStop) {
+          maxTimer = setTimeout(triggerStop, MAX_MS);
+        }
+        micMonitorCleanupRef.current = cleanup;
+      } catch (err) {
+        console.warn("[mic-monitor] setup failed", err);
         try {
           stream?.getTracks().forEach((t) => t.stop());
         } catch {
@@ -339,63 +592,39 @@ export default function AgentOverlay() {
         } catch {
           /* ignore */
         }
-      };
-
-      const triggerStop = () => {
-        if (isRecordingRef.current) {
-          audioManagerRef.current?.stopRecording();
-        }
-        cleanup();
-        if (vadCleanupRef.current === cleanup) vadCleanupRef.current = null;
-      };
-
-      timer = setInterval(() => {
-        if (!analyser) return;
-        analyser.getByteTimeDomainData(data);
-        let sum = 0;
-        for (let i = 0; i < data.length; i++) {
-          const v = (data[i] - 128) / 128;
-          sum += v * v;
-        }
-        const rms = Math.sqrt(sum / data.length);
-        const now = Date.now();
-        if (rms > SPEECH_RMS) {
-          heardSpeech = true;
-          lastSpeechAt = now;
-        } else if (heardSpeech && now - lastSpeechAt > TRAILING_MS) {
-          triggerStop();
-        }
-      }, 80);
-
-      maxTimer = setTimeout(triggerStop, MAX_MS);
-      vadCleanupRef.current = cleanup;
-    } catch (err) {
-      console.warn("[wake-word vad] monitor setup failed", err);
-      try {
-        stream?.getTracks().forEach((t) => t.stop());
-      } catch {
-        /* ignore */
       }
-      try {
-        ctx?.close();
-      } catch {
-        /* ignore */
-      }
-    }
-  }, [stopVadMonitor]);
+    },
+    [stopMicMonitor]
+  );
+
+  const showListeningBubble = () => {
+    bubbleUserTextRef.current = "";
+    window.electronAPI?.updateVoiceBubble?.({
+      userText: "",
+      assistantText: "",
+      isRecording: true,
+      isThinking: false,
+      done: false,
+    });
+  };
 
   useEffect(() => {
     const unsubStart = window.electronAPI?.onAgentStartRecording?.(() => {
+      isHandsFreeRef.current = false;
       audioManagerRef.current?.startRecording();
+      void startMicMonitor({ autoStop: false });
     });
 
     const unsubStartHandsFree = window.electronAPI?.onAgentStartRecordingHandsFree?.(() => {
+      playWakeChime();
+      isHandsFreeRef.current = true;
+      showListeningBubble();
       audioManagerRef.current?.startRecording();
-      void startVadMonitor();
+      void startMicMonitor({ autoStop: true });
     });
 
     const unsubStop = window.electronAPI?.onAgentStopRecording?.(() => {
-      stopVadMonitor();
+      stopMicMonitor();
       audioManagerRef.current?.stopRecording();
     });
 
@@ -403,21 +632,26 @@ export default function AgentOverlay() {
       // Use real mic state, not agentState (which only tracks AI pipeline phases
       // like thinking/streaming — "listening" is never set anywhere).
       if (isRecordingRef.current) {
-        stopVadMonitor();
+        stopMicMonitor();
         audioManagerRef.current?.stopRecording();
       } else if (agentStateRef.current === "idle") {
+        isHandsFreeRef.current = false;
         audioManagerRef.current?.startRecording();
+        void startMicMonitor({ autoStop: false });
       }
     });
 
     const unsubToggleHandsFree = window.electronAPI?.onAgentToggleRecordingHandsFree?.(() => {
       if (isRecordingRef.current) {
         // Already recording (e.g. wake-word re-fired mid-capture) — stop.
-        stopVadMonitor();
+        stopMicMonitor();
         audioManagerRef.current?.stopRecording();
       } else if (agentStateRef.current === "idle") {
+        playWakeChime();
+        isHandsFreeRef.current = true;
+        showListeningBubble();
         audioManagerRef.current?.startRecording();
-        void startVadMonitor();
+        void startMicMonitor({ autoStop: true });
       }
     });
 
@@ -427,9 +661,9 @@ export default function AgentOverlay() {
       unsubStop?.();
       unsubToggle?.();
       unsubToggleHandsFree?.();
-      stopVadMonitor();
+      stopMicMonitor();
     };
-  }, [startVadMonitor, stopVadMonitor]);
+  }, [startMicMonitor, stopMicMonitor]);
 
   const handleNewChat = useCallback(() => {
     persistenceNewChat();

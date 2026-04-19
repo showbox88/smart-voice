@@ -744,6 +744,28 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ),
   toggleAgentOverlay: () => ipcRenderer.invoke("toggle-agent-overlay"),
   hideAgentOverlay: () => ipcRenderer.invoke("hide-agent-overlay"),
+
+  // Floating desktop orb ("living agent" avatar) state bridge.
+  // Agent window → main → avatar window. Fire-and-forget (hot path: level
+  // updates fire every ~80ms while recording).
+  updateAvatarState: (state) => ipcRenderer.send("avatar-state-from-agent", state),
+  onAvatarStateUpdate: registerListener(
+    "avatar-state-update",
+    (callback) => (_event, state) => callback(state)
+  ),
+  showAvatarOverlay: () => ipcRenderer.invoke("show-avatar-overlay"),
+  hideAvatarOverlay: () => ipcRenderer.invoke("hide-avatar-overlay"),
+
+  // Voice bubble overlay (wake-word conversational surface).
+  // Agent renderer → main → bubble renderer. Fire-and-forget for streaming
+  // partials; the hide message is also fire-and-forget.
+  updateVoiceBubble: (state) => ipcRenderer.send("voice-bubble-update-from-agent", state),
+  hideVoiceBubble: () => ipcRenderer.send("voice-bubble-hide-from-agent"),
+  onVoiceBubbleUpdate: registerListener(
+    "voice-bubble-update",
+    (callback) => (_event, state) => callback(state)
+  ),
+  onVoiceBubbleHide: registerListener("voice-bubble-hide", (callback) => () => callback()),
   resizeAgentWindow: (width, height) => ipcRenderer.invoke("resize-agent-window", width, height),
   getAgentWindowBounds: () => ipcRenderer.invoke("get-agent-window-bounds"),
   setAgentWindowBounds: (x, y, width, height) =>
