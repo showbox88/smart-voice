@@ -550,6 +550,25 @@ class DatabaseManager {
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_transcriptions_client_id ON transcriptions(client_transcription_id)"
       );
 
+      // Reminders (XiaoZhi skill: system.createReminder). SQLite-backed so
+      // reminders survive app restart. Stage 2 will dual-write to Google
+      // Calendar via googleCalendarManager — google_event_id reserved for
+      // the resulting calendar event id.
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS reminders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          message TEXT NOT NULL,
+          fire_at INTEGER NOT NULL,
+          created_at INTEGER NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          fired_at INTEGER,
+          google_event_id TEXT
+        )
+      `);
+      this.db.exec(
+        "CREATE INDEX IF NOT EXISTS idx_reminders_status_fire_at ON reminders(status, fire_at)"
+      );
+
       return true;
     } catch (error) {
       debugLogger.error("Database initialization failed", { error: error.message }, "database");
@@ -2449,6 +2468,84 @@ class DatabaseManager {
     this.db
       .prepare(`UPDATE claude_messages SET ${fields.join(", ")} WHERE id = ?`)
       .run(...values);
+  }
+
+  // ----- Reminders (XiaoZhi skill) -----
+  createReminder({ message, fireAt, googleEventId = null } = {}) {
+    if (!this.db) throw new Error("Database not initialized");
+    if (!message || typeof message !== "string") {
+      throw new Error("invalid_message");
+    }
+    if (!Number.isFinite(fireAt)) {
+      throw new Error("invalid_time");
+    }
+    const info = this.db
+      .prepare(
+        `INSERT INTO reminders (message, fire_at, created_at, status, google_event_id)
+         VALUES (?, ?, ?, 'pending', ?)`
+      )
+      .run(message, Math.floor(fireAt), Date.now(), googleEventId);
+    return info.lastInsertRowid;
+  }
+
+  getReminder(id) {
+    if (!this.db) throw new Error("Database not initialized");
+    return this.db.prepare(`SELECT * FROM reminders WHERE id = ?`).get(id) || null;
+  }
+
+  listReminders({ status = "pending", limit = 200 } = {}) {
+    if (!this.db) throw new Error("Database not initialized");
+    if (status === "all") {
+      return this.db
+        .prepare(`SELECT * FROM reminders ORDER BY fire_at ASC LIMIT ?`)
+        .all(limit);
+    }
+    return this.db
+      .prepare(`SELECT * FROM reminders WHERE status = ? ORDER BY fire_at ASC LIMIT ?`)
+      .all(status, limit);
+  }
+
+  listPendingRemindersAfter(nowMs) {
+    if (!this.db) throw new Error("Database not initialized");
+    return this.db
+      .prepare(
+        `SELECT * FROM reminders WHERE status = 'pending' AND fire_at > ? ORDER BY fire_at ASC`
+      )
+      .all(nowMs);
+  }
+
+  markReminderFired(id, firedAt = Date.now()) {
+    if (!this.db) throw new Error("Database not initialized");
+    this.db
+      .prepare(`UPDATE reminders SET status = 'fired', fired_at = ? WHERE id = ?`)
+      .run(firedAt, id);
+  }
+
+  cancelReminder(id) {
+    if (!this.db) throw new Error("Database not initialized");
+    const info = this.db
+      .prepare(`UPDATE reminders SET status = 'cancelled' WHERE id = ? AND status = 'pending'`)
+      .run(id);
+    return info.changes > 0;
+  }
+
+  setReminderGoogleEventId(id, googleEventId) {
+    if (!this.db) throw new Error("Database not initialized");
+    this.db
+      .prepare(`UPDATE reminders SET google_event_id = ? WHERE id = ?`)
+      .run(googleEventId, id);
+  }
+
+  // Cleanup: drop fired/cancelled rows older than N days to keep table small.
+  purgeOldReminders(olderThanMs = 7 * 24 * 3600 * 1000) {
+    if (!this.db) throw new Error("Database not initialized");
+    const cutoff = Date.now() - olderThanMs;
+    const info = this.db
+      .prepare(
+        `DELETE FROM reminders WHERE status IN ('fired','cancelled') AND COALESCE(fired_at, created_at) < ?`
+      )
+      .run(cutoff);
+    return info.changes;
   }
 }
 

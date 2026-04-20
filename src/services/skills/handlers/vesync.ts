@@ -214,3 +214,77 @@ export async function control(args: Record<string, unknown>): Promise<ToolResult
     displayText,
   };
 }
+
+// Brightness / dim control. VeSync plug/outlet/basic-switch devices have no
+// brightness concept — only smart bulbs do. Until we plumb a real vesyncDim
+// IPC (which would call `/v1/deviceManaged/bypassV2` with a setBrightness
+// payload), this handler looks at the matched device's type and returns a
+// friendly "不支持调光" message. When the IPC lands, the branch below flips
+// on automatically.
+export async function dim(args: Record<string, unknown>): Promise<ToolResult> {
+  const device = String(args.device || "").trim();
+  const rawLevel = args.level;
+  const level = typeof rawLevel === "number" ? Math.round(rawLevel) : Number(rawLevel);
+
+  if (!device) {
+    return { success: false, data: null, displayText: "缺少设备名称" };
+  }
+  if (!Number.isFinite(level) || level < 0 || level > 100) {
+    return {
+      success: false,
+      data: null,
+      displayText: `亮度 level 必须在 0-100 之间，当前：${rawLevel}`,
+    };
+  }
+
+  const r = await fetchDevices();
+  if (!r.ok) return { success: false, data: null, displayText: r.error };
+
+  const { matches } = matchDevice(device, r.devices);
+  if (matches.length === 0) {
+    return {
+      success: false,
+      data: null,
+      displayText: `找不到设备「${device}」`,
+    };
+  }
+
+  const api = window.electronAPI as unknown as {
+    vesyncSetBrightness?: (
+      cid: string,
+      level: number
+    ) => Promise<{ success: boolean; error?: string }>;
+  };
+  if (!api?.vesyncSetBrightness) {
+    const names = matches.map((m) => m.name).join("、");
+    return {
+      success: false,
+      data: { device, level, configured: false },
+      displayText: `${names} 调光尚未支持（当前 VeSync 设备多为插座/开关，无亮度通道）`,
+    };
+  }
+
+  const results = await Promise.all(
+    matches
+      .filter((m) => m.online)
+      .map((t) =>
+        api
+          .vesyncSetBrightness!(t.cid, level)
+          .then((result) => ({ target: t, result }))
+          .catch((err) => ({
+            target: t,
+            result: { success: false, error: (err as Error).message || "失败" },
+          }))
+      )
+  );
+  const succeeded = results.filter((x) => x.result?.success).map((x) => x.target.name);
+  const failed = results.filter((x) => !x.result?.success).map((x) => x.target.name);
+  const parts: string[] = [];
+  if (succeeded.length > 0) parts.push(`已将${succeeded.map((n) => `「${n}」`).join("、")}亮度设为 ${level}`);
+  if (failed.length > 0) parts.push(`失败：${failed.join("、")}`);
+  return {
+    success: succeeded.length > 0 && failed.length === 0,
+    data: { succeeded, failed, level },
+    displayText: parts.join("；") || "无设备可调光",
+  };
+}

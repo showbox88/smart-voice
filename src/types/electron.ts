@@ -1103,6 +1103,18 @@ declare global {
         }>;
       }>;
 
+      // Phase B skills
+      appLaunch: (name: string) => Promise<{ success: boolean; error?: string }>;
+      reminderCreate: (payload: {
+        message: string;
+        fireAt: number;
+      }) => Promise<{ success: boolean; error?: string; id?: number }>;
+      reminderList: () => Promise<{
+        success: boolean;
+        reminders: Array<{ id: number; message: string; fireAt: number }>;
+      }>;
+      reminderCancel: (id: number) => Promise<{ success: boolean; error?: string }>;
+
       // TTS (Edge Read Aloud / ElevenLabs)
       ttsListVoices: () => Promise<Array<{ id: string; label: string }>>;
       ttsSynthesize: (

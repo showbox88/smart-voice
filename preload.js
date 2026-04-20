@@ -267,6 +267,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Skills library — parsed SKILL.md files from bundled + userData dirs
   skillsLoadAll: () => ipcRenderer.invoke("skills:load-all"),
 
+  // Phase B skills: app launcher + local reminders
+  appLaunch: (name) => ipcRenderer.invoke("app:launch", name),
+  reminderCreate: (payload) => ipcRenderer.invoke("reminder:create", payload),
+  reminderList: (filter) => ipcRenderer.invoke("reminder:list", filter),
+  reminderCancel: (id) => ipcRenderer.invoke("reminder:cancel", id),
+
   // Whisper server functions (faster repeated transcriptions)
   whisperServerStart: (modelName) => ipcRenderer.invoke("whisper-server-start", modelName),
   whisperServerStop: () => ipcRenderer.invoke("whisper-server-stop"),

@@ -363,6 +363,19 @@ function initializeCoreManagers() {
     meetingAecManager,
     getTrayManager: () => trayManager,
   });
+
+  // Rebuild setTimeout timers for pending XiaoZhi reminders that survived
+  // an app restart. Missed reminders (fire_at in the past) fire a "missed"
+  // notification so the user isn't silently robbed of them.
+  try {
+    ipcHandlers.restorePendingReminders();
+  } catch (err) {
+    require("./src/helpers/debugLogger").warn(
+      "reminder restore failed",
+      { error: err?.message },
+      "main"
+    );
+  }
 }
 
 // Phase 2: Non-critical setup after windows are visible

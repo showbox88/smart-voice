@@ -12,9 +12,23 @@ skills/                     ← 内置默认，跟代码走
     list-music.md           Skill name: list_music
   vesync/
     smart-device.md         Skill name: smart_device
+    light-dim.md            Skill name: light_dim          (Phase B)
+  climate/
+    aircon.md               Skill name: aircon             (Phase B, stubbed)
+  system/
+    app-launcher.md         Skill name: app_launcher       (Phase B)
+    reminder.md             Skill name: reminder           (Phase B)
+  info/
+    query.md                Skill name: info_query         (Phase B)
+  messaging/
+    messaging.md            Skill name: messaging          (Phase B, stubbed)
 
 <userData>/skills/          ← 用户覆盖，同名 skill 胜出
 ```
+
+**Phase B stubs**：`aircon` 和 `messaging` 目前 handler 返回「未配置」提示，但 router
+照常把相关语句路由过来 —— 这样用户 UX 一致，以后接上 IR 发射器 / 邮件 SMTP 只要改
+handler 就能激活。
 
 `<userData>` 在 Windows 是 `%APPDATA%\OpenWhispr\skills\`，macOS 是
 `~/Library/Application Support/OpenWhispr/skills/`，Linux 是
@@ -79,9 +93,17 @@ availability:                       # 前置条件不满足就不注册
 - `music.play` —— 播放（参数: query, shuffle）
 - `music.control` —— 控制（参数: action, value）
 - `music.list` —— 列曲目
-- `vesync.control` —— 智能设备（参数: action, device）
+- `vesync.control` —— 智能设备开关（参数: action, device）
+- `vesync.dim` —— 灯光亮度调节（参数: device, level 0-100；VeSync 无亮度通道时 stub）
+- `climate.aircon` —— 空调（参数: action, value；stub，待接 IR 发射器/厂商 API）
+- `system.launchApp` —— 启动桌面 app（参数: app_name）
+- `system.createReminder` —— 本地提醒（参数: message, when；SQLite 持久化 + setTimeout + Notification，重启后自动恢复）
+- `info.query` —— 查询 time/date/weekday（weather/stock/news 返回「未接数据源」）
+- `messaging.send` —— 发消息（参数: platform, recipient, content；stub，待接 SMTP/Twilio）
 
 要加新 skill：写 handler 函数 → 注册到 `handlers/index.ts` → 写 `.md` 文件。
+新增 IPC 通道的 skill 还要改 `preload.js`、`src/helpers/ipcHandlers.js`、
+`src/types/electron.ts` 三处（例：`reminder:create` / `app:launch`）。
 
 ## 修改示例
 

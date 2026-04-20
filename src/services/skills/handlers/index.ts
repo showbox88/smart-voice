@@ -1,6 +1,10 @@
 import type { ToolResult } from "../../tools/ToolRegistry";
 import * as musicHandlers from "./music";
 import * as vesyncHandlers from "./vesync";
+import * as systemHandlers from "./system";
+import * as infoHandlers from "./info";
+import * as climateHandlers from "./climate";
+import * as messagingHandlers from "./messaging";
 
 export type SkillHandler = (args: Record<string, unknown>) => Promise<ToolResult>;
 
@@ -11,6 +15,12 @@ const REGISTRY: Record<string, SkillHandler> = {
   "music.control": musicHandlers.control,
   "music.list": musicHandlers.list,
   "vesync.control": vesyncHandlers.control,
+  "vesync.dim": vesyncHandlers.dim,
+  "system.launchApp": systemHandlers.launchApp,
+  "system.createReminder": systemHandlers.createReminder,
+  "info.query": infoHandlers.query,
+  "climate.aircon": climateHandlers.aircon,
+  "messaging.send": messagingHandlers.send,
 };
 
 export function getHandler(name: string): SkillHandler | undefined {

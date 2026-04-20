@@ -198,6 +198,59 @@ class IPCHandlers {
     return map;
   }
 
+  // Call on app startup. Re-schedules a setTimeout for each pending reminder
+  // whose fire_at is still in the future. Rows whose fire_at has already
+  // passed (app was closed when they should have fired) are marked fired
+  // with a "missed" notification so the user at least sees them.
+  restorePendingReminders() {
+    try {
+      if (!this.databaseManager) return { restored: 0, missed: 0 };
+      if (!this._scheduleReminderTimer) {
+        // setupHandlers hasn't run yet; nothing to schedule against.
+        if (debugLogger) debugLogger.warn("[reminder] restore skipped: handlers not ready");
+        return { restored: 0, missed: 0 };
+      }
+      const now = Date.now();
+      const rows = this.databaseManager.listReminders({ status: "pending" });
+      let restored = 0;
+      let missed = 0;
+      const { Notification } = require("electron");
+      for (const row of rows) {
+        if (row.fire_at <= now) {
+          // Fire immediately (missed while app was closed) so the user
+          // isn't silently robbed of the reminder.
+          try {
+            new Notification({
+              title: "小智提醒（错过）",
+              body: String(row.message).slice(0, 256),
+            }).show();
+          } catch (err) {
+            if (debugLogger)
+              debugLogger.warn("[reminder] missed notify failed", { err: err.message });
+          }
+          this.databaseManager.markReminderFired(row.id);
+          missed += 1;
+        } else {
+          this._scheduleReminderTimer(row.id, row.message, row.fire_at);
+          restored += 1;
+        }
+      }
+      // Clean up old fired/cancelled rows opportunistically.
+      try {
+        this.databaseManager.purgeOldReminders();
+      } catch (_e) {
+        /* ignore */
+      }
+      if (debugLogger) {
+        debugLogger.info("[reminder] restored pending reminders", { restored, missed });
+      }
+      return { restored, missed };
+    } catch (err) {
+      if (debugLogger) debugLogger.error("[reminder] restore failed", { err: err.message });
+      return { restored: 0, missed: 0, error: err.message };
+    }
+  }
+
   _rebuildMirror(basePath) {
     const markdownMirror = require("./markdownMirror");
     if (basePath) markdownMirror.init(basePath);
@@ -1869,6 +1922,152 @@ class IPCHandlers {
         return { success: true, skills };
       } catch (err) {
         return { success: false, error: err.message || "load_failed", skills: [] };
+      }
+    });
+
+    // Phase B skills: app launcher + local reminders.
+    // app_launcher uses shell.openPath for resolvable paths, falls back to
+    // `start ""` on Windows / `open -a` on macOS. Fuzzy resolution is
+    // deliberately lazy — we trust the user's app name and let the OS match.
+    ipcMain.handle("app:launch", async (_e, appName) => {
+      const name = String(appName || "").trim();
+      if (!name) return { success: false, error: "empty_name" };
+      const { spawn } = require("child_process");
+      try {
+        if (process.platform === "win32") {
+          // `start "" "appName"` lets Windows resolve through its app paths +
+          // start-menu shortcuts. The empty "" is the window title argument.
+          // detached + unref so we don't hold the app hostage.
+          const child = spawn("cmd.exe", ["/c", "start", "", name], {
+            detached: true,
+            stdio: "ignore",
+            windowsVerbatimArguments: false,
+          });
+          child.unref();
+          return { success: true };
+        }
+        if (process.platform === "darwin") {
+          const child = spawn("open", ["-a", name], {
+            detached: true,
+            stdio: "ignore",
+          });
+          child.unref();
+          return { success: true };
+        }
+        // Linux: try xdg-open first (for .desktop), fall back to spawning
+        // the binary name directly.
+        const child = spawn("xdg-open", [name], {
+          detached: true,
+          stdio: "ignore",
+        });
+        child.unref();
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err.message || "spawn_failed" };
+      }
+    });
+
+    // Local reminders. SQLite-backed (table: reminders) + live setTimeout
+    // handles tracked in-memory so cancel() can clear pending timers. On
+    // app startup, restorePendingReminders() rebuilds the timer map from
+    // rows where status='pending' AND fire_at > now (see main.js).
+    // Stage 2 will dual-write to Google Calendar via googleCalendarManager.
+    if (!this._reminderTimers) this._reminderTimers = new Map();
+
+    const fireReminder = (id, message) => {
+      try {
+        const { Notification } = require("electron");
+        new Notification({
+          title: "小智提醒",
+          body: String(message).slice(0, 256),
+        }).show();
+      } catch (err) {
+        if (debugLogger) debugLogger.warn("[reminder] notify failed", { err: err.message });
+      }
+      try {
+        this.databaseManager.markReminderFired(id);
+      } catch (err) {
+        if (debugLogger) debugLogger.warn("[reminder] markFired failed", { err: err.message });
+      }
+      this._reminderTimers.delete(id);
+    };
+
+    // setTimeout's delay is clamped to a 32-bit signed int (~24.8 days).
+    // For longer horizons, chunk: sleep for MAX_DELAY, then reschedule.
+    const MAX_TIMEOUT_MS = 2 ** 31 - 1;
+    const scheduleReminderTimer = (id, message, fireAt) => {
+      const existing = this._reminderTimers.get(id);
+      if (existing) clearTimeout(existing);
+      const delay = Math.max(0, fireAt - Date.now());
+      if (delay <= MAX_TIMEOUT_MS) {
+        const timer = setTimeout(() => fireReminder(id, message), delay);
+        this._reminderTimers.set(id, timer);
+      } else {
+        // Wake up near the max horizon and re-check the row; if still
+        // pending, schedule again.
+        const timer = setTimeout(() => {
+          const row = this.databaseManager.getReminder(id);
+          if (row && row.status === "pending") {
+            scheduleReminderTimer(id, row.message, row.fire_at);
+          } else {
+            this._reminderTimers.delete(id);
+          }
+        }, MAX_TIMEOUT_MS);
+        this._reminderTimers.set(id, timer);
+      }
+    };
+    // Expose for main.js startup recovery.
+    this._scheduleReminderTimer = scheduleReminderTimer;
+
+    ipcMain.handle("reminder:create", async (_e, payload) => {
+      try {
+        const { message, fireAt } = payload || {};
+        if (!message || typeof message !== "string") {
+          return { success: false, error: "invalid_message" };
+        }
+        if (!Number.isFinite(fireAt) || fireAt <= Date.now()) {
+          return { success: false, error: "invalid_time" };
+        }
+        const id = this.databaseManager.createReminder({ message, fireAt });
+        scheduleReminderTimer(id, message, fireAt);
+        return { success: true, id };
+      } catch (err) {
+        return { success: false, error: err.message || "reminder_failed" };
+      }
+    });
+
+    ipcMain.handle("reminder:list", async (_e, filter) => {
+      try {
+        const status = (filter && filter.status) || "pending"; // "pending" | "fired" | "cancelled" | "all"
+        const limit = (filter && filter.limit) || 200;
+        const rows = this.databaseManager.listReminders({ status, limit });
+        const reminders = rows.map((r) => ({
+          id: r.id,
+          message: r.message,
+          fireAt: r.fire_at,
+          createdAt: r.created_at,
+          status: r.status,
+          firedAt: r.fired_at,
+          googleEventId: r.google_event_id,
+        }));
+        return { success: true, reminders };
+      } catch (err) {
+        return { success: false, error: err.message || "list_failed" };
+      }
+    });
+
+    ipcMain.handle("reminder:cancel", async (_e, id) => {
+      try {
+        const ok = this.databaseManager.cancelReminder(id);
+        if (!ok) return { success: false, error: "not_found" };
+        const timer = this._reminderTimers.get(id);
+        if (timer) {
+          clearTimeout(timer);
+          this._reminderTimers.delete(id);
+        }
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err.message || "cancel_failed" };
       }
     });
 

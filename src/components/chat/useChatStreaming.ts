@@ -7,6 +7,18 @@ import { createToolRegistry } from "../../services/tools";
 import type { ToolRegistry } from "../../services/tools/ToolRegistry";
 import { loadAllSkills, type LoadedSkill } from "../../services/skills/skillLoader";
 import { SkillResponseMap } from "../../services/skills/skillExecutor";
+import {
+  isDryRunEnabled as isRouterDryRunEnabled,
+  renderDryRunMessage as renderRouterDryRun,
+  runRouterDryRun,
+} from "../../services/skills/routerDryRun";
+import {
+  isDispatchEnabled as isRouterDispatchEnabled,
+  classify as classifyWithRouter,
+  dispatchAction as dispatchRouterAction,
+  renderDispatchMessage as renderRouterDispatch,
+  renderUnclearMessage as renderRouterUnclear,
+} from "../../services/skills/router";
 import type { Message, AgentState, ToolCallInfo } from "./types";
 
 const RAG_NOTE_LIMIT = 5;
@@ -185,6 +197,63 @@ export function useChatStreaming({
         }
       }
       const skillResponseMap = new SkillResponseMap(loadedSkills);
+
+      // Phase A: skill-router dry-run. Classifies intent only, no handler
+      // dispatch. See docs/skill-router/test-sentences.md.
+      if (isRouterDryRunEnabled()) {
+        const result = await runRouterDryRun(userText, loadedSkills);
+        const content = renderRouterDryRun(result);
+        const assistantId = crypto.randomUUID();
+        setMessages((prev) => [
+          ...prev,
+          { id: assistantId, role: "assistant", content, isStreaming: false },
+        ]);
+        onStreamComplete?.(assistantId, content);
+        setAgentState("idle");
+        setToolStatus("");
+        setActiveToolName("");
+        return;
+      }
+
+      // Phase B half-open dispatch:
+      //   action  -> call skill handler directly, render per responseMode
+      //   unclear -> render the clarifying question, stop
+      //   chat    -> fall through to the normal LLM streaming path below
+      // Gated on `localStorage.skillRouterDispatch === "1"` so this path only
+      // lights up when the operator opts in. Everything else keeps the legacy
+      // tool-calling flow.
+      if (isRouterDispatchEnabled() && loadedSkills.length > 0) {
+        const decision = await classifyWithRouter(userText, loadedSkills);
+
+        if (decision.intent === "action") {
+          const outcome = await dispatchRouterAction(decision, loadedSkills);
+          const content = renderRouterDispatch(decision, outcome);
+          const assistantId = crypto.randomUUID();
+          setMessages((prev) => [
+            ...prev,
+            { id: assistantId, role: "assistant", content, isStreaming: false },
+          ]);
+          onStreamComplete?.(assistantId, content);
+          setAgentState("idle");
+          setToolStatus("");
+          setActiveToolName("");
+          return;
+        }
+        if (decision.intent === "unclear") {
+          const content = renderRouterUnclear(decision);
+          const assistantId = crypto.randomUUID();
+          setMessages((prev) => [
+            ...prev,
+            { id: assistantId, role: "assistant", content, isStreaming: false },
+          ]);
+          onStreamComplete?.(assistantId, content);
+          setAgentState("idle");
+          setToolStatus("");
+          setActiveToolName("");
+          return;
+        }
+        // intent=chat: fall through to full LLM streaming below
+      }
 
       const ragContext = await buildRAGContext(userText);
       const combinedContext = [noteContextRef.current, ragContext].filter(Boolean).join("\n\n");
