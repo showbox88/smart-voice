@@ -311,3 +311,6 @@ Thumbs.db
 .macos-fast-paste.*.hash
 .linux-fast-paste.hash
 .qdrant-initialized
+
+# Local user music library — not part of the repo
+Mp3/

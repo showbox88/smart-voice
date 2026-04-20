@@ -10,13 +10,14 @@ interface AgentAvatarProps {
 
 /**
  * Living-orb avatar for the voice agent.
- *  - Dormant (idle): ONE static violet frame, no rAF.
- *  - Listening (recording): cyan core, expanding rings, audio-reactive halo.
- *  - Thinking (LLM generating): slow orbiting spark, warm amber tint.
- *  - Speaking (TTS playing): emerald/mint green, three petal lobes that
- *    pulse outward with the voice RMS — deliberately different from the
- *    recording ring pattern so the user can tell at a glance "this is the
- *    agent talking to me" vs "the agent is listening to me".
+ *
+ *  - Idle: ONE static violet frame, no rAF.
+ *  - Listening (recording): BLUE core with sound waves contracting inward
+ *    toward the center — "drawing the voice in".
+ *  - Thinking: YELLOW core with satellite orbs orbiting the center at
+ *    different radii — "working on it".
+ *  - Speaking: GREEN core with sound waves expanding outward — "radiating
+ *    the reply".
  *
  * Priority (first match wins): recording → speaking → thinking → idle.
  * The rAF loop only runs while active, so idle CPU/GPU usage is ~zero.
@@ -47,9 +48,9 @@ export function AgentAvatar({
     const startTime = performance.now();
     const active = isRecording || isThinking || isSpeaking;
 
-    // Pick hue by priority. Listening > speaking > thinking > idle.
-    const hue = isRecording ? 185 : isSpeaking ? 150 : isThinking ? 40 : 265;
-    const sat = isRecording ? 95 : isSpeaking ? 85 : isThinking ? 90 : 75;
+    // Hue/sat per state. Priority: recording > speaking > thinking > idle.
+    const hue = isRecording ? 210 : isSpeaking ? 140 : isThinking ? 50 : 265;
+    const sat = isRecording ? 95 : isSpeaking ? 85 : isThinking ? 95 : 75;
 
     const draw = (t: number) => {
       const raw = Math.max(0, Math.min(1, levelRef.current * 6));
@@ -80,90 +81,83 @@ export function AgentAvatar({
       ctx.fillRect(0, 0, size, size);
 
       if (isRecording) {
-        // Listening: three expanding concentric ripples, audio-reactive.
+        // Listening: three rings that appear at the outer edge and CONTRACT
+        // inward, fading out as they reach the core. Audio-reactive — louder
+        // voice tightens the rings toward the center faster.
         const ringCount = 3;
+        const rOuter = 0.49;
+        const rInner = 0.15;
         for (let i = 0; i < ringCount; i++) {
           const speed = 0.9;
           const phase = ((t * speed + i / ringCount) % 1 + 1) % 1;
-          const r = size * (0.17 + phase * 0.32 + level * 0.12);
-          const alpha = (1 - phase) * 0.7;
+          // phase 0 = outer edge, phase 1 = center — contracting.
+          const r = size * (rOuter - phase * (rOuter - rInner) - level * 0.05);
+          // Alpha peaks mid-travel so rings fade in at the edge and out at the core.
+          const alpha = Math.sin(phase * Math.PI) * (0.55 + level * 0.3);
           ctx.beginPath();
           ctx.arc(cx, cy, r, 0, Math.PI * 2);
           ctx.strokeStyle = `hsla(${hue}, ${sat}%, 80%, ${alpha})`;
-          ctx.lineWidth = 1.5 + level * 2.5;
+          ctx.lineWidth = 1.5 + level * 2;
           ctx.stroke();
         }
       } else if (isSpeaking) {
-        // Speaking: three rotating petal lobes that bloom outward with the
-        // voice RMS. Distinctly "emitting" rather than "listening" — the
-        // lobes radiate from the core instead of expanding concentric waves.
-        //
-        // Geometry budget: baseR + reach + lobeRadius must stay ≤ 0.47 × size
-        // (just inside the aura envelope) or the canvas square edge shows up
-        // as straight clip lines when the voice gets loud.
-        const lobeCount = 3;
-        const rotation = t * 0.9;
-        const clampedLevel = Math.min(1, level);
-        const baseR = size * 0.14;
-        const reach = size * (0.06 + clampedLevel * 0.1);
-        const lobeRadius = size * (0.09 + clampedLevel * 0.06);
-        for (let i = 0; i < lobeCount; i++) {
-          const angle = rotation + (i * Math.PI * 2) / lobeCount;
-          const lx = cx + Math.cos(angle) * baseR;
-          const ly = cy + Math.sin(angle) * baseR;
-          const rx = cx + Math.cos(angle) * (baseR + reach);
-          const ry = cy + Math.sin(angle) * (baseR + reach);
-          const lobeGrad = ctx.createRadialGradient(rx, ry, 0, rx, ry, lobeRadius);
-          lobeGrad.addColorStop(0, `hsla(${hue}, ${sat}%, 82%, ${0.55 + clampedLevel * 0.4})`);
-          lobeGrad.addColorStop(1, `hsla(${hue}, ${sat}%, 55%, 0)`);
-          ctx.fillStyle = lobeGrad;
-          ctx.beginPath();
-          ctx.arc(rx, ry, lobeRadius, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Thin connector from core toward the lobe for a "beam" feel.
-          ctx.beginPath();
-          ctx.moveTo(lx, ly);
-          ctx.lineTo(rx, ry);
-          ctx.strokeStyle = `hsla(${hue}, ${sat}%, 85%, ${0.25 + clampedLevel * 0.5})`;
-          ctx.lineWidth = 1 + clampedLevel * 2;
-          ctx.stroke();
-        }
-
-        // A single soft ripple at low alpha to add a heartbeat underneath.
-        // Keep the max radius under the aura envelope too.
-        const heartbeat = 0.5 + 0.5 * Math.sin(t * 3.2);
-        ctx.beginPath();
-        ctx.arc(cx, cy, size * (0.28 + heartbeat * 0.03 + clampedLevel * 0.04), 0, Math.PI * 2);
-        ctx.strokeStyle = `hsla(${hue}, ${sat}%, 80%, ${0.2 + heartbeat * 0.15})`;
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-      } else if (isThinking) {
-        // Thinking: gentle concentric rings, slower and softer than listening.
+        // Speaking: three rings that emerge from the core and EXPAND outward
+        // — classic "radiating sound" pattern. Audio-reactive for TTS RMS.
         const ringCount = 3;
+        const rInner = 0.15;
+        const rOuter = 0.49;
         for (let i = 0; i < ringCount; i++) {
-          const speed = 0.5;
+          const speed = 0.9;
           const phase = ((t * speed + i / ringCount) % 1 + 1) % 1;
-          const r = size * (0.17 + phase * 0.32);
-          const alpha = (1 - phase) * 0.45;
+          const r = size * (rInner + phase * (rOuter - rInner) + level * 0.05);
+          const alpha = Math.sin(phase * Math.PI) * (0.55 + level * 0.3);
           ctx.beginPath();
           ctx.arc(cx, cy, r, 0, Math.PI * 2);
           ctx.strokeStyle = `hsla(${hue}, ${sat}%, 80%, ${alpha})`;
-          ctx.lineWidth = 1.5;
+          ctx.lineWidth = 1.5 + level * 2;
+          ctx.stroke();
+        }
+      } else if (isThinking) {
+        // Thinking: classic Bohr-atom look. Three tilted elliptical orbitals
+        // cross at the nucleus; one electron traces each orbit at a different
+        // speed. The thin ellipses give the side-view "atom diagram" feel.
+        const orbitA = size * 0.38; // semi-major axis
+        const orbitB = size * 0.13; // semi-minor axis (the "tilt" illusion)
+        const orbitals = [
+          { rotation: 0, speed: 5.5, phase: 0 },
+          { rotation: Math.PI / 3, speed: -4.2, phase: Math.PI * 0.7 },
+          { rotation: (2 * Math.PI) / 3, speed: 3.3, phase: Math.PI * 1.4 },
+        ];
+
+        // Draw each orbital path first (so electrons render on top).
+        for (const o of orbitals) {
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, orbitA, orbitB, o.rotation, 0, Math.PI * 2);
+          ctx.strokeStyle = `hsla(${hue}, ${sat}%, 75%, 0.22)`;
+          ctx.lineWidth = 1;
           ctx.stroke();
         }
 
-        // Orbiting spark keeps the "working on it" personality.
-        const orbitR = size * 0.26;
-        const ox = cx + Math.cos(t * 2.4) * orbitR;
-        const oy = cy + Math.sin(t * 2.4) * orbitR;
-        const sparkGrad = ctx.createRadialGradient(ox, oy, 0, ox, oy, size * 0.08);
-        sparkGrad.addColorStop(0, `hsla(45, 100%, 85%, 1)`);
-        sparkGrad.addColorStop(1, `hsla(40, 100%, 60%, 0)`);
-        ctx.fillStyle = sparkGrad;
-        ctx.beginPath();
-        ctx.arc(ox, oy, size * 0.08, 0, Math.PI * 2);
-        ctx.fill();
+        // Then the electrons.
+        for (const o of orbitals) {
+          const angle = t * o.speed + o.phase;
+          const px = orbitA * Math.cos(angle);
+          const py = orbitB * Math.sin(angle);
+          const cos = Math.cos(o.rotation);
+          const sin = Math.sin(o.rotation);
+          const ex = cx + px * cos - py * sin;
+          const ey = cy + px * sin + py * cos;
+
+          const electronGlow = size * 0.07;
+          const electronGrad = ctx.createRadialGradient(ex, ey, 0, ex, ey, electronGlow);
+          electronGrad.addColorStop(0, `hsla(${hue}, 100%, 88%, 1)`);
+          electronGrad.addColorStop(0.45, `hsla(${hue}, ${sat}%, 65%, 0.7)`);
+          electronGrad.addColorStop(1, `hsla(${hue}, ${sat}%, 50%, 0)`);
+          ctx.fillStyle = electronGrad;
+          ctx.beginPath();
+          ctx.arc(ex, ey, electronGlow, 0, Math.PI * 2);
+          ctx.fill();
+        }
       } else {
         // Idle: a single steady halo ring. No animation.
         ctx.beginPath();
@@ -185,11 +179,11 @@ export function AgentAvatar({
       const coreR = size * (baseCore + corePulse);
       const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
       const centerColor = isRecording
-        ? `hsla(180, 100%, 97%, 1)`
+        ? `hsla(210, 100%, 95%, 1)`
         : isSpeaking
-          ? `hsla(155, 100%, 94%, 1)`
+          ? `hsla(140, 95%, 93%, 1)`
           : isThinking
-            ? `hsla(50, 100%, 90%, 1)`
+            ? `hsla(50, 100%, 92%, 1)`
             : `hsla(265, 70%, 85%, 0.9)`;
       coreGrad.addColorStop(0, centerColor);
       coreGrad.addColorStop(0.55, `hsla(${hue}, ${sat}%, 62%, 0.65)`);
@@ -207,7 +201,6 @@ export function AgentAvatar({
       };
       rafId = requestAnimationFrame(tick);
     } else {
-      // Idle: draw exactly one frame and let the canvas sit.
       smoothedLevelRef.current = 0;
       draw(0);
     }

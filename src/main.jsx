@@ -7,6 +7,7 @@ import { ToastProvider } from "./components/ui/Toast.tsx";
 import { SettingsProvider } from "./hooks/useSettings";
 
 import i18n from "./i18n";
+import { bootstrapLocation } from "./utils/locationDetect.ts";
 import "./index.css";
 
 let root = null;
@@ -273,6 +274,7 @@ window.addEventListener(
 
 if (!isOAuthBrowserRedirect()) {
   mountApp();
+  bootstrapLocation();
 }
 
 function mountApp() {

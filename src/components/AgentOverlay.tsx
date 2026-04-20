@@ -616,7 +616,8 @@ export default function AgentOverlay() {
     });
 
     const unsubStartHandsFree = window.electronAPI?.onAgentStartRecordingHandsFree?.(() => {
-      playWakeChime();
+      // Chime is played by AvatarOverlayApp on isRecording transition —
+      // single source of truth for both wake-word and Ctrl+Win start cues.
       isHandsFreeRef.current = true;
       showListeningBubble();
       audioManagerRef.current?.startRecording();
@@ -647,7 +648,7 @@ export default function AgentOverlay() {
         stopMicMonitor();
         audioManagerRef.current?.stopRecording();
       } else if (agentStateRef.current === "idle") {
-        playWakeChime();
+        // Chime is played by AvatarOverlayApp on isRecording transition.
         isHandsFreeRef.current = true;
         showListeningBubble();
         audioManagerRef.current?.startRecording();

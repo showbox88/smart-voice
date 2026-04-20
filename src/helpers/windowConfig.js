@@ -45,6 +45,10 @@ const MAIN_WINDOW_CONFIG = {
     nodeIntegration: false,
     contextIsolation: true,
     sandbox: true,
+    // Keep MediaRecorder + timers running when the window is hidden — the
+    // dictation panel is now headless and drives recording in the background
+    // while the purple avatar orb shows the UI state.
+    backgroundThrottling: false,
   },
   frame: false,
   alwaysOnTop: true,

@@ -457,10 +457,11 @@ class WindowManager {
       return;
     }
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.showDictationPanel();
       this.mainWindow.webContents.send("toggle-dictation");
       this._isDictatingToggle = !this._isDictatingToggle;
       this.meetingDetectionEngine?.setUserRecording(this._isDictatingToggle);
+      // Route visual feedback to the avatar orb — the dictation panel is headless now.
+      this.sendAvatarState({ isRecording: this._isDictatingToggle });
     }
   }
 
@@ -469,9 +470,9 @@ class WindowManager {
       return;
     }
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.showDictationPanel();
       this.mainWindow.webContents.send("start-dictation");
       this.meetingDetectionEngine?.setUserRecording(true);
+      this.sendAvatarState({ isRecording: true });
     }
   }
 
@@ -483,6 +484,7 @@ class WindowManager {
       this.mainWindow.webContents.send("stop-dictation");
       this._isDictatingToggle = false;
       this.meetingDetectionEngine?.setUserRecording(false);
+      this.sendAvatarState({ isRecording: false });
     }
   }
 
@@ -1308,29 +1310,11 @@ class WindowManager {
     this.mainWindow.setBounds(newPos);
   }
 
-  showDictationPanel(options = {}) {
-    const { focus = false } = options;
-    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      const wasHidden = !this.mainWindow.isVisible() || this.mainWindow.isMinimized();
-
-      if (wasHidden) {
-        this._repositionToCursorDisplay();
-      }
-
-      if (this.mainWindow.isMinimized()) {
-        this.mainWindow.restore();
-      }
-      if (!this.mainWindow.isVisible()) {
-        if (typeof this.mainWindow.showInactive === "function") {
-          this.mainWindow.showInactive();
-        } else {
-          this.mainWindow.show();
-        }
-      }
-      if (focus) {
-        this.mainWindow.focus();
-      }
-    }
+  showDictationPanel(_options = {}) {
+    // Headless dictation: the mainWindow is kept hidden at all times; the
+    // purple avatar orb is the user-visible recording indicator. We still
+    // need the hidden window alive for MediaRecorder + IPC, but we never
+    // show the white waveform circle anymore.
   }
 
   hideControlPanelToTray() {
@@ -1368,28 +1352,10 @@ class WindowManager {
       return;
     }
 
-    // Safety timeout: force show the window if ready-to-show doesn't fire within 10 seconds
-    const showTimeout = setTimeout(() => {
-      if (
-        this.mainWindow &&
-        !this.mainWindow.isDestroyed() &&
-        !this.mainWindow.isVisible() &&
-        !this._floatingIconAutoHide
-      ) {
-        this.showDictationPanel();
-      }
-    }, 10000);
-
+    // Headless dictation: the mainWindow stays hidden. We still configure
+    // alwaysOnTop for completeness in case a future feature wants to reveal it.
     this.mainWindow.once("ready-to-show", () => {
-      clearTimeout(showTimeout);
       this.enforceMainWindowOnTop();
-      if (!this.mainWindow.isVisible() && !this._floatingIconAutoHide) {
-        if (typeof this.mainWindow.showInactive === "function") {
-          this.mainWindow.showInactive();
-        } else {
-          this.mainWindow.show();
-        }
-      }
     });
 
     this.mainWindow.on("show", () => {

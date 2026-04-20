@@ -168,10 +168,35 @@ const TOOL_INSTRUCTIONS: Record<string, string> = {
   // SKILL.md description + trigger_phrases and don't need TOOL_INSTRUCTIONS.
 };
 
+function getLocationContext(): string {
+  if (typeof window === "undefined") return "";
+  const parts: string[] = [];
+  try {
+    const manualLocation = window.localStorage?.getItem("userLocation");
+    const autoLocation = window.localStorage?.getItem("userLocationAuto");
+    const location = (manualLocation && manualLocation.trim()) || (autoLocation && autoLocation.trim());
+    if (location) {
+      parts.push(`User location: ${location}.`);
+    }
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz) parts.push(`Timezone: ${tz}.`);
+    const now = new Date();
+    parts.push(`Current local time: ${now.toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })}.`);
+  } catch {
+    // ignore
+  }
+  if (parts.length === 0) return "";
+  return (
+    "\n\n" +
+    parts.join(" ") +
+    " When the user asks about weather, news, restaurants, traffic, or anything location-dependent without naming a city, ALWAYS include the user's city in your web_search query."
+  );
+}
+
 export function getAgentSystemPrompt(availableTools?: string[], noteContext?: string): string {
   if (typeof window !== "undefined" && window.localStorage) {
     const custom = window.localStorage.getItem("agentSystemPrompt");
-    if (custom) return custom;
+    if (custom) return custom + getLocationContext();
   }
 
   let prompt = DEFAULT_AGENT_SYSTEM_PROMPT;
@@ -182,6 +207,8 @@ export function getAgentSystemPrompt(availableTools?: string[], noteContext?: st
       prompt += "\n\nYou have access to tools. " + toolLines.join(" ");
     }
   }
+
+  prompt += getLocationContext();
 
   if (noteContext) {
     prompt +=

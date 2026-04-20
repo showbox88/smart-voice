@@ -1,6 +1,44 @@
 import { useEffect, useRef, useState } from "react";
 import { AgentAvatar } from "./agent/AgentAvatar";
 
+// Two-tone start chime via Web Audio oscillator — plays when recording begins
+// so the user gets audible confirmation without needing to see the orb.
+let _chimeCtx: AudioContext | null = null;
+function playStartChime() {
+  try {
+    const Ctx =
+      (window as unknown as { AudioContext?: typeof AudioContext }).AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    if (!_chimeCtx || _chimeCtx.state === "closed") {
+      _chimeCtx = new Ctx();
+    }
+    const ctx = _chimeCtx;
+    if (ctx.state === "suspended") void ctx.resume();
+    const now = ctx.currentTime;
+    const tones = [
+      { freq: 784, start: 0, dur: 0.1 },
+      { freq: 1047, start: 0.08, dur: 0.18 },
+    ];
+    for (const tone of tones) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = tone.freq;
+      const t0 = now + tone.start;
+      const t1 = t0 + tone.dur;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(0.18, t0 + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, t1);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t1 + 0.02);
+    }
+  } catch {
+    // never block on sound failure
+  }
+}
+
 /**
  * Floating desktop orb — the "living agent" avatar.
  *
@@ -33,10 +71,19 @@ export default function AvatarOverlayApp() {
     };
   }, []);
 
+  const wasRecordingRef = useRef(false);
   useEffect(() => {
     const off = window.electronAPI?.onAvatarStateUpdate?.((state) => {
       if (!state) return;
-      if (typeof state.isRecording === "boolean") setIsRecording(state.isRecording);
+      if (typeof state.isRecording === "boolean") {
+        // Chime on false → true transition so hotkey dictation and wake-word
+        // both get an audible "I'm listening" cue.
+        if (state.isRecording && !wasRecordingRef.current) {
+          playStartChime();
+        }
+        wasRecordingRef.current = state.isRecording;
+        setIsRecording(state.isRecording);
+      }
       if (typeof state.isThinking === "boolean") setIsThinking(state.isThinking);
       if (typeof state.isSpeaking === "boolean") setIsSpeaking(state.isSpeaking);
       if (typeof state.level === "number") levelRef.current = state.level;
