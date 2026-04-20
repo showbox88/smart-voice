@@ -1,4 +1,4 @@
-const { ipcMain, app, shell, BrowserWindow, systemPreferences } = require("electron");
+const { ipcMain, app, shell, BrowserWindow, Menu, systemPreferences } = require("electron");
 const path = require("path");
 const http = require("http");
 const https = require("https");
@@ -247,6 +247,57 @@ class IPCHandlers {
       return { restored, missed };
     } catch (err) {
       if (debugLogger) debugLogger.error("[reminder] restore failed", { err: err.message });
+      return { restored: 0, missed: 0, error: err.message };
+    }
+  }
+
+  // Call on app startup (after setupHandlers). Re-schedules timers for
+  // pending scheduled_actions whose fire_at is still in the future. Rows
+  // whose fire_at has already passed are marked fired with no dispatch
+  // (we can't replay stale audio/light/music commands reliably) — but we
+  // still notify so the user knows they were missed.
+  restorePendingScheduledActions() {
+    try {
+      if (!this.databaseManager) return { restored: 0, missed: 0 };
+      if (!this._scheduleScheduledActionTimer) {
+        if (debugLogger)
+          debugLogger.warn("[scheduled-action] restore skipped: handlers not ready");
+        return { restored: 0, missed: 0 };
+      }
+      const now = Date.now();
+      const rows = this.databaseManager.listScheduledActions({ status: "pending" });
+      let restored = 0;
+      let missed = 0;
+      const { Notification } = require("electron");
+      for (const row of rows) {
+        if (row.fire_at <= now) {
+          try {
+            new Notification({
+              title: "小智（错过计划）",
+              body: `${row.when_expr || ""} ${row.skill}`.trim().slice(0, 256),
+            }).show();
+          } catch (_e) {
+            /* ignore */
+          }
+          this.databaseManager.markScheduledActionFired(row.id);
+          missed += 1;
+        } else {
+          this._scheduleScheduledActionTimer(row);
+          restored += 1;
+        }
+      }
+      try {
+        this.databaseManager.purgeOldScheduledActions();
+      } catch (_e) {
+        /* ignore */
+      }
+      if (debugLogger) {
+        debugLogger.info("[scheduled-action] restored pending", { restored, missed });
+      }
+      return { restored, missed };
+    } catch (err) {
+      if (debugLogger)
+        debugLogger.error("[scheduled-action] restore failed", { err: err.message });
       return { restored: 0, missed: 0, error: err.message };
     }
   }
@@ -2068,6 +2119,164 @@ class IPCHandlers {
         return { success: true };
       } catch (err) {
         return { success: false, error: err.message || "cancel_failed" };
+      }
+    });
+
+    // Scheduled actions — unified (时间, 动作, 内容) queue. Fires a skill
+    // dispatch to the renderer at fire_at so the skill loader can execute it
+    // (play_music, turn_on_light, reminder, etc.). Renderer subscribes to
+    // "scheduled-action:fire" via preload.
+    if (!this._scheduledActionTimers) this._scheduledActionTimers = new Map();
+
+    const fireScheduledAction = (row) => {
+      try {
+        const payload = {
+          id: row.id,
+          skill: row.skill,
+          slots: row.slots ? JSON.parse(row.slots) : {},
+          whenType: row.when_type,
+          whenExpr: row.when_expr,
+          fireAt: row.fire_at,
+          groupId: row.group_id || null,
+        };
+        // Broadcast to every renderer — whichever window hosts the chat
+        // listener will pick it up and dispatch via the skill loader.
+        const { BrowserWindow } = require("electron");
+        for (const w of BrowserWindow.getAllWindows()) {
+          try {
+            w?.webContents?.send("scheduled-action:fire", payload);
+          } catch (_e) {
+            /* ignore */
+          }
+        }
+      } catch (err) {
+        if (debugLogger)
+          debugLogger.warn("[scheduled-action] fire dispatch failed", { err: err.message });
+      }
+      try {
+        this.databaseManager.markScheduledActionFired(row.id);
+      } catch (err) {
+        if (debugLogger)
+          debugLogger.warn("[scheduled-action] markFired failed", { err: err.message });
+      }
+      this._scheduledActionTimers.delete(row.id);
+    };
+
+    const scheduleScheduledActionTimer = (row) => {
+      const existing = this._scheduledActionTimers.get(row.id);
+      if (existing) clearTimeout(existing);
+      const delay = Math.max(0, row.fire_at - Date.now());
+      if (delay <= MAX_TIMEOUT_MS) {
+        const timer = setTimeout(() => fireScheduledAction(row), delay);
+        this._scheduledActionTimers.set(row.id, timer);
+      } else {
+        const timer = setTimeout(() => {
+          const fresh = this.databaseManager.getScheduledAction(row.id);
+          if (fresh && fresh.status === "pending") {
+            scheduleScheduledActionTimer(fresh);
+          } else {
+            this._scheduledActionTimers.delete(row.id);
+          }
+        }, MAX_TIMEOUT_MS);
+        this._scheduledActionTimers.set(row.id, timer);
+      }
+    };
+    this._scheduleScheduledActionTimer = scheduleScheduledActionTimer;
+
+    ipcMain.handle("scheduled-action:create", async (_e, payload) => {
+      try {
+        const { skill, slots, whenType, whenExpr, fireAt, cronExpr, groupId } =
+          payload || {};
+        if (!skill || typeof skill !== "string") {
+          return { success: false, error: "invalid_skill" };
+        }
+        if (!whenType || typeof whenType !== "string") {
+          return { success: false, error: "invalid_when_type" };
+        }
+        if (!Number.isFinite(fireAt)) {
+          return { success: false, error: "invalid_fire_at" };
+        }
+        // immediate actions should be dispatched by the caller directly;
+        // still accept them for logging/audit, but don't schedule a timer in
+        // the past.
+        const id = this.databaseManager.createScheduledAction({
+          skill,
+          slots: slots || null,
+          whenType,
+          whenExpr: whenExpr || null,
+          fireAt,
+          cronExpr: cronExpr || null,
+          groupId: groupId || null,
+        });
+        if (whenType !== "immediate" && fireAt > Date.now()) {
+          const row = this.databaseManager.getScheduledAction(id);
+          if (row) scheduleScheduledActionTimer(row);
+        }
+        return { success: true, id };
+      } catch (err) {
+        return { success: false, error: err.message || "create_failed" };
+      }
+    });
+
+    ipcMain.handle("scheduled-action:list", async (_e, filter) => {
+      try {
+        const status = (filter && filter.status) || "pending";
+        const limit = (filter && filter.limit) || 200;
+        const groupId = (filter && filter.groupId) || null;
+        const rows = this.databaseManager.listScheduledActions({ status, limit, groupId });
+        const actions = rows.map((r) => ({
+          id: r.id,
+          skill: r.skill,
+          slots: r.slots ? JSON.parse(r.slots) : {},
+          whenType: r.when_type,
+          whenExpr: r.when_expr,
+          fireAt: r.fire_at,
+          cronExpr: r.cron_expr,
+          status: r.status,
+          firedAt: r.fired_at,
+          createdAt: r.created_at,
+          groupId: r.group_id,
+        }));
+        return { success: true, actions };
+      } catch (err) {
+        return { success: false, error: err.message || "list_failed" };
+      }
+    });
+
+    ipcMain.handle("scheduled-action:cancel", async (_e, id) => {
+      try {
+        const ok = this.databaseManager.cancelScheduledAction(id);
+        if (!ok) return { success: false, error: "not_found" };
+        const timer = this._scheduledActionTimers.get(id);
+        if (timer) {
+          clearTimeout(timer);
+          this._scheduledActionTimers.delete(id);
+        }
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err.message || "cancel_failed" };
+      }
+    });
+
+    ipcMain.handle("scheduled-action:cancel-group", async (_e, groupId) => {
+      try {
+        if (!groupId) return { success: false, error: "invalid_group_id" };
+        const count = this.databaseManager.cancelScheduledActionGroup(groupId);
+        // Clear in-memory timers for any rows we just cancelled.
+        const rows = this.databaseManager.listScheduledActions({
+          status: "all",
+          groupId,
+        });
+        for (const r of rows) {
+          const t = this._scheduledActionTimers.get(r.id);
+          if (t) {
+            clearTimeout(t);
+            this._scheduledActionTimers.delete(r.id);
+          }
+        }
+        return { success: true, count };
+      } catch (err) {
+        return { success: false, error: err.message || "cancel_group_failed" };
       }
     });
 
@@ -6877,6 +7086,62 @@ class IPCHandlers {
     ipcMain.handle("set-agent-window-bounds", async (_event, x, y, width, height) => {
       this.windowManager.setAgentWindowBounds(x, y, width, height);
       return { success: true };
+    });
+
+    ipcMain.handle("get-avatar-window-bounds", async () => {
+      return this.windowManager.getAvatarWindowBounds();
+    });
+
+    ipcMain.handle("set-avatar-window-position", async (_event, x, y) => {
+      this.windowManager.setAvatarWindowPosition(x, y);
+      return { success: true };
+    });
+
+    // Fire-and-forget nudge for dragging; send-only to avoid round-trip latency.
+    ipcMain.on("move-avatar-window-by", (_event, dx, dy) => {
+      this.windowManager.moveAvatarWindowBy(dx, dy);
+    });
+
+    // Right-click context menu on the floating orb: show/hide Control Panel.
+    // Single toggle item whose label flips based on current visibility — uses
+    // the existing tray helper (creates the panel if it hasn't been built yet)
+    // and hideControlPanelToTray to tear it down.
+    ipcMain.on("show-orb-context-menu", (event) => {
+      const cp = this.windowManager?.controlPanelWindow;
+      const isVisible = !!(cp && !cp.isDestroyed() && cp.isVisible());
+      const template = [
+        {
+          label: isVisible
+            ? i18nMain.t("tray.hideControlPanel", { defaultValue: "隐藏控制面板" })
+            : i18nMain.t("tray.openControlPanel"),
+          click: async () => {
+            if (isVisible) {
+              this.windowManager.hideControlPanelToTray();
+              return;
+            }
+            const tray = this.getTrayManager?.();
+            if (tray) {
+              await tray.showControlPanelFromTray();
+              return;
+            }
+            if (this.windowManager) {
+              await this.windowManager.createControlPanelWindow();
+              const created = this.windowManager.controlPanelWindow;
+              if (created && !created.isDestroyed()) {
+                created.show();
+                created.focus();
+              }
+            }
+          },
+        },
+      ];
+      const menu = Menu.buildFromTemplate(template);
+      const sender = BrowserWindow.fromWebContents(event.sender);
+      if (sender) {
+        menu.popup({ window: sender });
+      } else {
+        menu.popup();
+      }
     });
 
     ipcMain.handle("acquire-recording-lock", async (_event, pipeline) => {

@@ -1,3 +1,7 @@
+# Local private setup notes (contains API keys, never commit)
+我的配置.md
+*.private.md
+
 # Dependencies
 node_modules/
 npm-debug.log*

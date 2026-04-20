@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Cloud, Key, Cpu, Network, Volume2, Play } from "lucide-react";
+import { Cloud, Key, Cpu, Network, Volume2, Play, Zap } from "lucide-react";
 import { cn } from "../lib/utils";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { HotkeyInput } from "../ui/HotkeyInput";
@@ -194,9 +194,103 @@ export default function AgentModeSettings() {
             </SettingsPanel>
           </div>
 
+          <SkillRouterSettings />
+
           <TtsVoiceSettings />
         </>
       )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Skill Router mode — three-state toggle for dry-run / dispatch / off.
+// Keys live in localStorage so useChatStreaming + routerDryRun can read
+// them synchronously on each turn.
+// ──────────────────────────────────────────────────────────────────────
+const ROUTER_DRY_RUN_KEY = "skillRouterDryRun";
+const ROUTER_DISPATCH_KEY = "skillRouterDispatch";
+
+type RouterMode = "off" | "preview" | "dispatch";
+
+function readRouterMode(): RouterMode {
+  if (typeof window === "undefined") return "preview";
+  const dryRun = window.localStorage.getItem(ROUTER_DRY_RUN_KEY);
+  const dispatch = window.localStorage.getItem(ROUTER_DISPATCH_KEY);
+  const dryRunOn = dryRun !== "0" && dryRun !== "false";
+  const dispatchOn = dispatch === "1" || dispatch === "true";
+  if (dryRunOn) return "preview";
+  if (dispatchOn) return "dispatch";
+  return "off";
+}
+
+function writeRouterMode(mode: RouterMode) {
+  if (typeof window === "undefined") return;
+  if (mode === "preview") {
+    window.localStorage.setItem(ROUTER_DRY_RUN_KEY, "1");
+    window.localStorage.setItem(ROUTER_DISPATCH_KEY, "0");
+  } else if (mode === "dispatch") {
+    window.localStorage.setItem(ROUTER_DRY_RUN_KEY, "0");
+    window.localStorage.setItem(ROUTER_DISPATCH_KEY, "1");
+  } else {
+    window.localStorage.setItem(ROUTER_DRY_RUN_KEY, "0");
+    window.localStorage.setItem(ROUTER_DISPATCH_KEY, "0");
+  }
+}
+
+const ROUTER_MODES: Array<{
+  id: RouterMode;
+  label: string;
+  description: string;
+}> = [
+  { id: "off", label: "关闭", description: "走老的 LLM + tool-calling" },
+  { id: "preview", label: "预览 (🧪)", description: "只显示路由分类 JSON，不执行" },
+  { id: "dispatch", label: "派发 (⚡)", description: "半开派发，直接调用 skill" },
+];
+
+function SkillRouterSettings() {
+  const [mode, setMode] = useState<RouterMode>(() => readRouterMode());
+
+  const handleSelect = (next: RouterMode) => {
+    writeRouterMode(next);
+    setMode(next);
+  };
+
+  return (
+    <div>
+      <SectionHeader
+        title="技能路由 (Skill Router)"
+        description="让本地 Qwen 先做意图分类，命中 skill 直接派发 · 切换立即生效"
+      />
+      <SettingsPanel>
+        <SettingsPanelRow>
+          <div className="flex gap-2 w-full">
+            {ROUTER_MODES.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => handleSelect(m.id)}
+                className={cn(
+                  "flex-1 text-xs px-3 py-2 rounded-md border transition-colors",
+                  mode === m.id
+                    ? "border-primary/60 bg-primary/10 text-foreground"
+                    : "border-border/50 hover:bg-foreground/5 text-muted-foreground"
+                )}
+              >
+                <div className="flex items-center justify-center gap-1.5">
+                  {m.id === "dispatch" && <Zap size={12} />}
+                  <span>{m.label}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </SettingsPanelRow>
+        <SettingsPanelRow>
+          <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+            {ROUTER_MODES.find((m) => m.id === mode)?.description}
+          </p>
+        </SettingsPanelRow>
+      </SettingsPanel>
     </div>
   );
 }

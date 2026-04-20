@@ -1288,6 +1288,25 @@ class WindowManager {
     this.agentWindow.setBounds(bounds);
   }
 
+  getAvatarWindowBounds() {
+    if (!this.avatarWindow || this.avatarWindow.isDestroyed()) return null;
+    return this.avatarWindow.getBounds();
+  }
+
+  setAvatarWindowPosition(x, y) {
+    if (!this.avatarWindow || this.avatarWindow.isDestroyed()) return;
+    this.avatarWindow.setPosition(Math.round(x), Math.round(y));
+  }
+
+  // Nudge the avatar window by (dx, dy) screen pixels. Used by the renderer's
+  // pointer-capture drag — sending relative deltas avoids the async race of
+  // fetching current bounds before every pointermove.
+  moveAvatarWindowBy(dx, dy) {
+    if (!this.avatarWindow || this.avatarWindow.isDestroyed()) return;
+    const [x, y] = this.avatarWindow.getPosition();
+    this.avatarWindow.setPosition(Math.round(x + dx), Math.round(y + dy));
+  }
+
   _repositionToCursorDisplay() {
     if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
 

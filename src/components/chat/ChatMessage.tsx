@@ -24,6 +24,23 @@ interface ChatMessageProps {
 
 const NOTE_TOOLS = new Set(["create_note", "update_note", "get_note"]);
 
+// Strip roleplay stage directions from assistant messages. When the user has
+// a persona prompt that encourages "(轻轻摇晃着小扇子，眼睛亮晶晶地)" style
+// asides, we don't want those in the displayed answer (or read aloud later).
+// Heuristic:
+//   - Full-width Chinese parens `（...）` are almost always stage directions in
+//     this codebase; strip unconditionally.
+//   - ASCII `(...)` only when the contents contain a Han character — leaves
+//     English parentheticals like "(Beijing)" or "(Ctrl+C)" untouched.
+function stripStageDirections(s: string): string {
+  let out = s.replace(/（[^（）]*）/g, "");
+  out = out.replace(/\([^()]*\)/g, (m) => (/[\u4e00-\u9fff]/.test(m) ? "" : m));
+  // Tidy up double spaces and floating punctuation left behind.
+  out = out.replace(/[ \t]{2,}/g, " ").replace(/\s+([，。；：！？、])/g, "$1");
+  out = out.replace(/^[ \t\n]+|[ \t\n]+$/g, "");
+  return out;
+}
+
 function ToolCallStep({ toolCall }: { toolCall: ToolCallInfo }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
@@ -195,9 +212,14 @@ export function ChatMessage({
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
+  // Assistant messages may carry persona stage directions from the user's
+  // custom agentSystemPrompt; strip them before display and before copy so
+  // the user gets the clean answer.
+  const displayContent = role === "assistant" ? stripStageDirections(content) : content;
+
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(content);
+      await navigator.clipboard.writeText(displayContent);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -226,7 +248,7 @@ export function ChatMessage({
   }
 
   const hasToolCalls = toolCalls && toolCalls.length > 0;
-  const hasContent = content.length > 0;
+  const hasContent = displayContent.length > 0;
   const noteCards = extractNoteCards(toolCalls);
 
   return (
@@ -256,7 +278,7 @@ export function ChatMessage({
 
         {hasContent && (
           <MarkdownRenderer
-            content={content}
+            content={displayContent}
             className="text-[13px] leading-relaxed [&_p]:text-[13px] [&_li]:text-[13px]"
           />
         )}

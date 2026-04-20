@@ -569,6 +569,35 @@ class DatabaseManager {
         "CREATE INDEX IF NOT EXISTS idx_reminders_status_fire_at ON reminders(status, fire_at)"
       );
 
+      // Scheduled actions — (时间, 动作, 内容) triples. Unified storage for
+      // timed skill dispatches:
+      //   when_type  = immediate | absolute | relative | recurring
+      //   when_expr  = original natural-language fragment for display
+      //   fire_at    = resolved epoch ms (for immediate rows: created_at)
+      //   cron_expr  = RFC-style cron when recurring (else null)
+      //   skill      = target skill name (e.g. "play_music", "reminder")
+      //   slots      = JSON-stringified slot object for the skill
+      //   group_id   = optional tag to link multiple actions emitted from a
+      //                single utterance (e.g. "3点开灯,5点放音乐")
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS scheduled_actions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          skill TEXT NOT NULL,
+          slots TEXT,
+          when_type TEXT NOT NULL,
+          when_expr TEXT,
+          fire_at INTEGER NOT NULL,
+          cron_expr TEXT,
+          status TEXT NOT NULL DEFAULT 'pending',
+          fired_at INTEGER,
+          created_at INTEGER NOT NULL,
+          group_id TEXT
+        )
+      `);
+      this.db.exec(
+        "CREATE INDEX IF NOT EXISTS idx_scheduled_actions_status_fire_at ON scheduled_actions(status, fire_at)"
+      );
+
       return true;
     } catch (error) {
       debugLogger.error("Database initialization failed", { error: error.message }, "database");
@@ -2543,6 +2572,106 @@ class DatabaseManager {
     const info = this.db
       .prepare(
         `DELETE FROM reminders WHERE status IN ('fired','cancelled') AND COALESCE(fired_at, created_at) < ?`
+      )
+      .run(cutoff);
+    return info.changes;
+  }
+
+  // ----- Scheduled actions (unified skill dispatch queue) -----
+  createScheduledAction({
+    skill,
+    slots = null,
+    whenType,
+    whenExpr = null,
+    fireAt,
+    cronExpr = null,
+    groupId = null,
+  } = {}) {
+    if (!this.db) throw new Error("Database not initialized");
+    if (!skill || typeof skill !== "string") throw new Error("invalid_skill");
+    if (!whenType || typeof whenType !== "string") throw new Error("invalid_when_type");
+    if (!Number.isFinite(fireAt)) throw new Error("invalid_fire_at");
+    const slotsStr =
+      slots == null ? null : typeof slots === "string" ? slots : JSON.stringify(slots);
+    const info = this.db
+      .prepare(
+        `INSERT INTO scheduled_actions
+           (skill, slots, when_type, when_expr, fire_at, cron_expr, status, created_at, group_id)
+         VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`
+      )
+      .run(skill, slotsStr, whenType, whenExpr, Math.floor(fireAt), cronExpr, Date.now(), groupId);
+    return info.lastInsertRowid;
+  }
+
+  getScheduledAction(id) {
+    if (!this.db) throw new Error("Database not initialized");
+    return this.db.prepare(`SELECT * FROM scheduled_actions WHERE id = ?`).get(id) || null;
+  }
+
+  listScheduledActions({ status = "pending", limit = 200, groupId = null } = {}) {
+    if (!this.db) throw new Error("Database not initialized");
+    if (groupId) {
+      return this.db
+        .prepare(
+          `SELECT * FROM scheduled_actions WHERE group_id = ? ORDER BY fire_at ASC LIMIT ?`
+        )
+        .all(groupId, limit);
+    }
+    if (status === "all") {
+      return this.db
+        .prepare(`SELECT * FROM scheduled_actions ORDER BY fire_at ASC LIMIT ?`)
+        .all(limit);
+    }
+    return this.db
+      .prepare(
+        `SELECT * FROM scheduled_actions WHERE status = ? ORDER BY fire_at ASC LIMIT ?`
+      )
+      .all(status, limit);
+  }
+
+  listPendingScheduledActionsAfter(nowMs) {
+    if (!this.db) throw new Error("Database not initialized");
+    return this.db
+      .prepare(
+        `SELECT * FROM scheduled_actions WHERE status = 'pending' AND fire_at > ? ORDER BY fire_at ASC`
+      )
+      .all(nowMs);
+  }
+
+  markScheduledActionFired(id, firedAt = Date.now()) {
+    if (!this.db) throw new Error("Database not initialized");
+    this.db
+      .prepare(`UPDATE scheduled_actions SET status = 'fired', fired_at = ? WHERE id = ?`)
+      .run(firedAt, id);
+  }
+
+  cancelScheduledAction(id) {
+    if (!this.db) throw new Error("Database not initialized");
+    const info = this.db
+      .prepare(
+        `UPDATE scheduled_actions SET status = 'cancelled' WHERE id = ? AND status = 'pending'`
+      )
+      .run(id);
+    return info.changes > 0;
+  }
+
+  cancelScheduledActionGroup(groupId) {
+    if (!this.db) throw new Error("Database not initialized");
+    if (!groupId) return 0;
+    const info = this.db
+      .prepare(
+        `UPDATE scheduled_actions SET status = 'cancelled' WHERE group_id = ? AND status = 'pending'`
+      )
+      .run(groupId);
+    return info.changes;
+  }
+
+  purgeOldScheduledActions(olderThanMs = 7 * 24 * 3600 * 1000) {
+    if (!this.db) throw new Error("Database not initialized");
+    const cutoff = Date.now() - olderThanMs;
+    const info = this.db
+      .prepare(
+        `DELETE FROM scheduled_actions WHERE status IN ('fired','cancelled') AND COALESCE(fired_at, created_at) < ?`
       )
       .run(cutoff);
     return info.changes;

@@ -20,6 +20,7 @@ import {
   renderDispatchMessage as renderRouterDispatch,
   renderUnclearMessage as renderRouterUnclear,
 } from "../../services/skills/router";
+import { parseWhenFast, stripForEcho } from "../../services/skills/timeResolver";
 import type { Message, AgentState, ToolCallInfo } from "./types";
 
 const RAG_NOTE_LIMIT = 5;
@@ -136,6 +137,47 @@ export function useChatStreaming({
       mountedRef.current = false;
       ReasoningService.cancelActiveStream();
     };
+  }, []);
+
+  // Listen for main-process scheduled-action fires. Main emits
+  // `scheduled-action:fire` at the row's fire_at; the handler executes the
+  // skill (or re-asks the LLM for __chat__) and renders a chat bubble.
+  //
+  // Indirection through `fireHandlerRef`: Vite Fast Refresh preserves the
+  // already-registered IPC subscription across hot reloads. If we closed over
+  // the handler directly, HMR would keep the stale closure alive and new
+  // branches (like __chat__) wouldn't activate until a full window reload.
+  // The ref is reassigned every render, so the listener always calls the
+  // current version of the logic.
+  type FirePayload = {
+    id: number;
+    skill: string;
+    slots: Record<string, unknown>;
+    whenExpr?: string;
+    whenType?: string;
+    fireAt: number;
+    groupId?: string | null;
+  };
+  const fireHandlerRef = useRef<(p: FirePayload) => Promise<void>>(async () => {});
+
+  useEffect(() => {
+    const api = window.electronAPI as unknown as {
+      onScheduledActionFire?: (
+        cb: (payload: FirePayload) => void
+      ) => () => void;
+    };
+    if (!api?.onScheduledActionFire) return;
+    const dispose = api.onScheduledActionFire((payload) => {
+      void fireHandlerRef.current?.(payload);
+    });
+    return () => {
+      try {
+        dispose?.();
+      } catch {
+        /* ignore */
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cancelStream = useCallback(() => {
@@ -272,7 +314,61 @@ export function useChatStreaming({
           setActiveToolName("");
           return;
         }
-        // intent=chat: fall through to full LLM streaming below
+
+        // intent=chat but with a future time modifier ("两分钟后查股价",
+        // "明早告诉我新闻") — the LLM would otherwise answer right now and
+        // silently drop the time. Real-time queries (stock/weather/news)
+        // actually want the answer at the fire time so it's fresh — so
+        // schedule a "__chat__" action carrying the original prompt; the
+        // fire listener below re-runs it through the LLM when the time
+        // arrives. Skip when parsed time is within the immediate window.
+        if (decision.intent === "chat") {
+          const parsed = parseWhenFast(userText);
+          if (parsed && parsed.fireAt - Date.now() > 2000) {
+            const api = window.electronAPI as unknown as {
+              scheduledActionCreate?: (p: {
+                skill: string;
+                slots: Record<string, unknown>;
+                whenType: string;
+                whenExpr: string;
+                fireAt: number;
+              }) => Promise<{ success: boolean; id?: number; error?: string }>;
+            };
+            const d = new Date(parsed.fireAt);
+            const hhmm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+            let content: string;
+            if (api?.scheduledActionCreate) {
+              const r = await api.scheduledActionCreate({
+                skill: "__chat__",
+                slots: { prompt: userText },
+                whenType: parsed.whenType,
+                whenExpr: userText,
+                fireAt: parsed.fireAt,
+              });
+              // Echo format: "好的，HH:MM，<stripped request>". Strip the
+              // already-resolved time phrase and first-person polite prefix
+              // so the echo reads naturally — "一分钟后,帮我查一下北京的天气"
+              // becomes "好的，19:26，查一下北京的天气".
+              const echo = stripForEcho(userText) || userText;
+              content = r?.success
+                ? `好的，${hhmm}，${echo}`
+                : `定时查询安排失败：${r?.error || "unknown"}`;
+            } else {
+              content = "定时查询不可用（IPC 未就绪）";
+            }
+            const assistantId = crypto.randomUUID();
+            setMessages((prev) => [
+              ...prev,
+              { id: assistantId, role: "assistant", content, isStreaming: false },
+            ]);
+            onStreamComplete?.(assistantId, content);
+            setAgentState("idle");
+            setToolStatus("");
+            setActiveToolName("");
+            return;
+          }
+        }
+        // intent=chat (no time modifier): fall through to full LLM streaming below
       }
 
       const ragContext = await buildRAGContext(userText);
@@ -460,6 +556,84 @@ export function useChatStreaming({
     },
     [t, setMessages, onStreamComplete]
   );
+
+  // Scheduled-action fire handler. Assigned here (after sendToAI is defined)
+  // so the __chat__ branch can call sendToAI directly — the UX model the
+  // user picked: treat a fire as if they had pressed a hotkey, pasted the
+  // time-stripped text into the chat box, and hit enter. This reuses the
+  // full streaming pipeline (tool registry, persona, web_search, etc.) with
+  // zero duplicated logic.
+  fireHandlerRef.current = async (payload: FirePayload) => {
+    try {
+      if (payload.skill === "__chat__") {
+        const raw = String(payload.slots?.prompt || "").trim();
+        const stripped = stripForEcho(raw);
+        const question = stripped || raw;
+        if (!question) return;
+        const userMsg: Message = {
+          id: crypto.randomUUID(),
+          role: "user",
+          content: question,
+          isStreaming: false,
+        };
+        setMessages((prev) => [...prev, userMsg]);
+        await sendToAI(question, [...messagesRef.current, userMsg]);
+        return;
+      }
+
+      // Non-chat skill: execute the skill handler directly, render one
+      // "⏰ <when>：<result>" bubble.
+      const [email, password, folder, vlc] = await Promise.all([
+        window.electronAPI?.getVeSyncEmail?.(),
+        window.electronAPI?.getVeSyncPassword?.(),
+        window.electronAPI?.getMusicFolder?.(),
+        window.electronAPI?.musicVlcStatus?.(),
+      ]);
+      const skills = await loadAllSkills({
+        music_folder_configured: Boolean(folder),
+        vlc_installed: Boolean(vlc?.available),
+        vesync_logged_in: Boolean(email && password),
+      });
+      const skill = skills.find((s) => s.name === payload.skill);
+      if (!skill) {
+        const assistantId = crypto.randomUUID();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: assistantId,
+            role: "assistant",
+            content: `⏰ 到时间了，但找不到技能「${payload.skill}」`,
+            isStreaming: false,
+          },
+        ]);
+        return;
+      }
+      const result = await skill.tool.execute(payload.slots || {});
+      const display =
+        result.displayText || (typeof result.data === "string" ? result.data : "");
+      const assistantId = crypto.randomUUID();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: assistantId,
+          role: "assistant",
+          content: `⏰ ${payload.whenExpr || ""}：${display || "(已执行)"}`.trim(),
+          isStreaming: false,
+        },
+      ]);
+    } catch (err) {
+      const assistantId = crypto.randomUUID();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: assistantId,
+          role: "assistant",
+          content: `⏰ 计划执行出错：${(err as Error).message}`,
+          isStreaming: false,
+        },
+      ]);
+    }
+  };
 
   return {
     agentState,

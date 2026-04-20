@@ -273,6 +273,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
   reminderList: (filter) => ipcRenderer.invoke("reminder:list", filter),
   reminderCancel: (id) => ipcRenderer.invoke("reminder:cancel", id),
 
+  // Scheduled actions — timed (时间,动作,内容) skill dispatches
+  scheduledActionCreate: (payload) => ipcRenderer.invoke("scheduled-action:create", payload),
+  scheduledActionList: (filter) => ipcRenderer.invoke("scheduled-action:list", filter),
+  scheduledActionCancel: (id) => ipcRenderer.invoke("scheduled-action:cancel", id),
+  scheduledActionCancelGroup: (groupId) =>
+    ipcRenderer.invoke("scheduled-action:cancel-group", groupId),
+  onScheduledActionFire: registerListener(
+    "scheduled-action:fire",
+    (callback) => (_e, data) => callback(data)
+  ),
+
   // Whisper server functions (faster repeated transcriptions)
   whisperServerStart: (modelName) => ipcRenderer.invoke("whisper-server-start", modelName),
   whisperServerStop: () => ipcRenderer.invoke("whisper-server-stop"),
@@ -761,6 +772,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ),
   showAvatarOverlay: () => ipcRenderer.invoke("show-avatar-overlay"),
   hideAvatarOverlay: () => ipcRenderer.invoke("hide-avatar-overlay"),
+  getAvatarWindowBounds: () => ipcRenderer.invoke("get-avatar-window-bounds"),
+  setAvatarWindowPosition: (x, y) => ipcRenderer.invoke("set-avatar-window-position", x, y),
+  moveAvatarWindowBy: (dx, dy) => ipcRenderer.send("move-avatar-window-by", dx, dy),
+  showOrbContextMenu: () => ipcRenderer.send("show-orb-context-menu"),
 
   // Voice bubble overlay (wake-word conversational surface).
   // Agent renderer → main → bubble renderer. Fire-and-forget for streaming

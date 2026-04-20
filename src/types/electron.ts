@@ -1547,6 +1547,15 @@ declare global {
       ) => () => void;
       showAvatarOverlay?: () => Promise<void>;
       hideAvatarOverlay?: () => Promise<void>;
+      getAvatarWindowBounds?: () => Promise<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      } | null>;
+      setAvatarWindowPosition?: (x: number, y: number) => Promise<void>;
+      moveAvatarWindowBy?: (dx: number, dy: number) => void;
+      showOrbContextMenu?: () => void;
 
       // Voice bubble overlay (wake-word conversational surface)
       updateVoiceBubble?: (state: {

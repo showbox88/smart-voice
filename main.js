@@ -376,6 +376,17 @@ function initializeCoreManagers() {
       "main"
     );
   }
+
+  // Same pattern for scheduled_actions (timed skill dispatches).
+  try {
+    ipcHandlers.restorePendingScheduledActions();
+  } catch (err) {
+    require("./src/helpers/debugLogger").warn(
+      "scheduled-action restore failed",
+      { error: err?.message },
+      "main"
+    );
+  }
 }
 
 // Phase 2: Non-critical setup after windows are visible

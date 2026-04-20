@@ -108,8 +108,87 @@ export default function AvatarOverlayApp() {
 
   const active = isRecording || isThinking || isSpeaking;
 
+  // JS-based window drag + double-click to open the agent chat. We can't use
+  // `-webkit-app-region: drag` here because that region swallows mousedown, so
+  // `dblclick` never fires.
+  //
+  // Pointer Events + setPointerCapture is load-bearing: the orb window is only
+  // 90×90, so during a drag the cursor leaves the window within a few pixels
+  // and plain `mousemove` stops firing. Capturing the pointer forces all move
+  // events for this gesture to keep coming back to the capturing element,
+  // regardless of where the cursor physically is.
+  //
+  // We send *relative* deltas (moveAvatarWindowBy) instead of absolute
+  // coordinates — main process reads the window's current position and
+  // offsets. This avoids an async bounds-fetch race where pointermove events
+  // fire before we know the starting position.
+  const dragRef = useRef<{
+    lastScreenX: number;
+    lastScreenY: number;
+    totalDx: number;
+    totalDy: number;
+    moved: boolean;
+  } | null>(null);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    try {
+      (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore — some platforms throw if capture already held */
+    }
+    dragRef.current = {
+      lastScreenX: e.screenX,
+      lastScreenY: e.screenY,
+      totalDx: 0,
+      totalDy: 0,
+      moved: false,
+    };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const dx = e.screenX - d.lastScreenX;
+    const dy = e.screenY - d.lastScreenY;
+    if (dx === 0 && dy === 0) return;
+    d.lastScreenX = e.screenX;
+    d.lastScreenY = e.screenY;
+    d.totalDx += dx;
+    d.totalDy += dy;
+    // Don't start moving the window until cumulative movement crosses a small
+    // threshold, so genuine double-clicks (with jitter) don't turn into drags.
+    if (!d.moved && Math.abs(d.totalDx) < 3 && Math.abs(d.totalDy) < 3) return;
+    d.moved = true;
+    window.electronAPI?.moveAvatarWindowBy?.(dx, dy);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    try {
+      (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    dragRef.current = null;
+  };
+
+  const handleDoubleClick = () => {
+    window.electronAPI?.toggleAgentOverlay?.();
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.electronAPI?.showOrbContextMenu?.();
+  };
+
   return (
     <div
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={handleContextMenu}
       style={{
         width: "100vw",
         height: "100vh",
@@ -122,8 +201,6 @@ export default function AvatarOverlayApp() {
         overflow: "hidden",
         userSelect: "none",
         WebkitUserSelect: "none",
-        // Drag anywhere on the orb window to move it around the desktop.
-        WebkitAppRegion: "drag",
         cursor: "grab",
       } as React.CSSProperties}
     >
