@@ -445,11 +445,16 @@ class LlamaServerManager {
       throw new Error("llama-server is not running");
     }
 
+    // cache_prompt=true lets llama.cpp reuse the KV cache for any shared
+    // prefix (e.g. the XiaoZhi skill-router system prompt is stable across
+    // requests — first call pays prompt eval, subsequent calls ~skip it).
+    // This turns router latency from ~14s → ~1-2s on Vulkan.
     const body = JSON.stringify({
       messages,
       temperature: options.temperature ?? 0.7,
       max_tokens: options.max_tokens ?? 512,
       stream: false,
+      cache_prompt: true,
     });
 
     return new Promise((resolve, reject) => {
@@ -486,6 +491,18 @@ class LlamaServerManager {
             try {
               const response = JSON.parse(data);
               const text = response.choices?.[0]?.message?.content || "";
+              // llama.cpp reports prompt/prediction split in `timings`.
+              // Expose it so we can tell if prompt caching is effective.
+              const t = response.timings;
+              if (t) {
+                debugLogger.debug("llama-server timings", {
+                  prompt_ms: Math.round(t.prompt_ms || 0),
+                  prompt_tokens: t.prompt_n,
+                  predicted_ms: Math.round(t.predicted_ms || 0),
+                  predicted_tokens: t.predicted_n,
+                  cached_tokens: t.cache_n ?? t.prompt_cached_n,
+                });
+              }
               resolve(text.trim());
             } catch (e) {
               reject(new Error(`Failed to parse llama-server response: ${e.message}`));
