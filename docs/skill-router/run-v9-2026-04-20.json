@@ -1,0 +1,2677 @@
+{
+  "variant": "v9",
+  "model": "Qwen3-4B-Q4_K_M.gguf",
+  "endpoint": "http://127.0.0.1:8200/v1/chat/completions",
+  "pass": 119,
+  "total": 124,
+  "latencies": {
+    "min": 1486,
+    "p50": 3626,
+    "avg": 3534,
+    "p95": 4550,
+    "max": 32052
+  },
+  "rows": [
+    {
+      "n": 1,
+      "q": "今天天气真好啊",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"今天天气真好啊，看来是个好日子！\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "今天天气真好啊，看来是个好日子！"
+      },
+      "latency": 32052,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 2,
+      "q": "你觉得人为什么会焦虑",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"这是一个值得探讨的问题，焦虑往往与压力、不确定性、自我期望过高或生活中的挑战有关。不同人可能有不同原因，但通常需要综合多种因素来理解。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "这是一个值得探讨的问题，焦虑往往与压力、不确定性、自我期望过高或生活中的挑战有关。不同人可能有不同原因，但通常需要综合多种因素来理解。"
+      },
+      "latency": 4244,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 3,
+      "q": "讲个冷笑话听听",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"为什么鸡过马路？因为鸡过马路。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "为什么鸡过马路？因为鸡过马路。"
+      },
+      "latency": 2223,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 4,
+      "q": "我饿了",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"我饿了\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "我饿了"
+      },
+      "latency": 1619,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 5,
+      "q": "什么是量子纠缠",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"量子纠缠是量子力学中的一个现象，指的是两个或多个粒子在某种方式上相互关联，即使它们相隔很远，对其中一个粒子的测量会立即影响另一个粒子的状态。这种现象挑战了经典物理的局域性观念，是量子力学中一个非常重要的概念。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "量子纠缠是量子力学中的一个现象，指的是两个或多个粒子在某种方式上相互关联，即使它们相隔很远，对其中一个粒子的测量会立即影响另一个粒子的状态。这种现象挑战了经典物理的局域性观念，是量子力学中一个非常重要的概念。"
+      },
+      "latency": 6084,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 6,
+      "q": "帮我想个周末计划",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"好的，我们可以一起规划一个有趣的周末计划。您有什么特别想做的事情吗？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "好的，我们可以一起规划一个有趣的周末计划。您有什么特别想做的事情吗？"
+      },
+      "latency": 2765,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 7,
+      "q": "最近睡眠不太好，有什么建议",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"睡眠不好可以尝试在睡前放松身心，比如冥想、深呼吸或者听轻音乐。保持规律的作息时间，避免睡前使用电子设备，创造一个安静舒适的睡眠环境也有帮助。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "睡眠不好可以尝试在睡前放松身心，比如冥想、深呼吸或者听轻音乐。保持规律的作息时间，避免睡前使用电子设备，创造一个安静舒适的睡眠环境也有帮助。"
+      },
+      "latency": 4599,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 8,
+      "q": "这首歌挺好听的",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"这首歌真好听\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "这首歌真好听"
+      },
+      "latency": 1717,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 9,
+      "q": "放首歌",
+      "want": {
+        "intent": "action",
+        "skill": "play_music"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"play_music\", \"slots\": {\"query\": \"\", \"shuffle\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "play_music",
+        "slots": {
+          "query": "",
+          "shuffle": true
+        },
+        "confidence": 1
+      },
+      "latency": 3588,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 10,
+      "q": "播放周杰伦的夜曲",
+      "want": {
+        "intent": "action",
+        "skill": "play_music"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"play_music\", \"slots\": {\"query\": \"夜曲\", \"shuffle\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "play_music",
+        "slots": {
+          "query": "夜曲",
+          "shuffle": true
+        },
+        "confidence": 1
+      },
+      "latency": 3850,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 11,
+      "q": "暂停",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "pause"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"pause\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "pause"
+        },
+        "confidence": 1
+      },
+      "latency": 3225,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 12,
+      "q": "继续播放",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "pause"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"shuffle\", \"value\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "shuffle",
+          "value": true
+        },
+        "confidence": 1
+      },
+      "latency": 3625,
+      "result": {
+        "pass": false,
+        "reason": "slot.action=shuffle want=pause"
+      }
+    },
+    {
+      "n": 13,
+      "q": "循环播放",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "repeat"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"repeat\", \"value\": \"all\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "repeat",
+          "value": "all"
+        },
+        "confidence": 1
+      },
+      "latency": 3694,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 14,
+      "q": "放第三首",
+      "want": {
+        "intent": "action",
+        "skill": "play_music"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"play_music\", \"slots\": {\"query\": \"第三首\", \"shuffle\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "play_music",
+        "slots": {
+          "query": "第三首",
+          "shuffle": true
+        },
+        "confidence": 1
+      },
+      "latency": 3766,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 15,
+      "q": "随便放点轻音乐",
+      "want": {
+        "intent": "action",
+        "skill": "play_music"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"play_music\", \"slots\": {\"query\": \"轻音乐\", \"shuffle\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "play_music",
+        "slots": {
+          "query": "轻音乐",
+          "shuffle": true
+        },
+        "confidence": 1
+      },
+      "latency": 3781,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 16,
+      "q": "声音大一点",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "volume"
+        },
+        "alt": [
+          "unclear"
+        ]
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"volume\", \"value\": 30}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "volume",
+          "value": 30
+        },
+        "confidence": 1
+      },
+      "latency": 3794,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 17,
+      "q": "开灯",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"on\", \"device\": \"灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on",
+          "device": "灯"
+        },
+        "confidence": 1
+      },
+      "latency": 3787,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 18,
+      "q": "关掉客厅的灯",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"off\", \"device\": \"客厅 灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off",
+          "device": "客厅 灯"
+        },
+        "confidence": 1
+      },
+      "latency": 4065,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 19,
+      "q": "把卧室灯调暗一点",
+      "want": {
+        "intent": "action",
+        "skill": "light_dim"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"light_dim\", \"slots\": {\"device\": \"卧室 灯\", \"level\": 30}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "light_dim",
+        "slots": {
+          "device": "卧室 灯",
+          "level": 30
+        },
+        "confidence": 1
+      },
+      "latency": 4157,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 20,
+      "q": "开空气净化器",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"on\", \"device\": \"空气净化器\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on",
+          "device": "空气净化器"
+        },
+        "confidence": 1
+      },
+      "latency": 3881,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 21,
+      "q": "把灯光调到暖色",
+      "want": {
+        "intent": "chat",
+        "alt": [
+          "unclear"
+        ]
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"灯光调色功能暂未开放，建议您尝试其他灯光控制指令。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "灯光调色功能暂未开放，建议您尝试其他灯光控制指令。"
+      },
+      "latency": 2672,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 22,
+      "q": "关掉所有灯",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"off\", \"device\": \"所有 灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off",
+          "device": "所有 灯"
+        },
+        "confidence": 1
+      },
+      "latency": 4052,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 23,
+      "q": "把风扇关掉",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"off\", \"device\": \"风扇\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off",
+          "device": "风扇"
+        },
+        "confidence": 1
+      },
+      "latency": 3832,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 24,
+      "q": "我心情不好，想听首歌",
+      "want": {
+        "intent": "action",
+        "skill": "play_music",
+        "alt": [
+          "chat"
+        ]
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"play_music\", \"slots\": {\"query\": \"\", \"shuffle\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "play_music",
+        "slots": {
+          "query": "",
+          "shuffle": true
+        },
+        "confidence": 1
+      },
+      "latency": 3597,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 25,
+      "q": "好烦，把它关了吧",
+      "want": {
+        "intent": "unclear"
+      },
+      "raw": "{\"intent\": \"unclear\", \"ask\": \"您是指关什么？\"}",
+      "json": {
+        "intent": "unclear",
+        "ask": "您是指关什么？"
+      },
+      "latency": 1902,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 26,
+      "q": "灯光能不能再柔和点",
+      "want": {
+        "intent": "action",
+        "skill": "light_dim"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"light_dim\", \"slots\": {\"device\": \"灯\", \"level\": 40}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "light_dim",
+        "slots": {
+          "device": "灯",
+          "level": 40
+        },
+        "confidence": 1
+      },
+      "latency": 3918,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 27,
+      "q": "帮我订明天去北京的机票",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"我无法帮助您订票，这需要通过航空公司或在线旅行平台进行操作。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "我无法帮助您订票，这需要通过航空公司或在线旅行平台进行操作。"
+      },
+      "latency": 2822,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 28,
+      "q": "那个…放个…算了",
+      "want": {
+        "intent": "unclear",
+        "alt": [
+          "chat"
+        ]
+      },
+      "raw": "{\"intent\": \"unclear\", \"ask\": \"您是想放音乐还是其他操作？\"}",
+      "json": {
+        "intent": "unclear",
+        "ask": "您是想放音乐还是其他操作？"
+      },
+      "latency": 2194,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 29,
+      "q": "帮我…",
+      "want": {
+        "intent": "unclear"
+      },
+      "raw": "{\"intent\": \"unclear\", \"ask\": \"您需要帮忙什么？\"}",
+      "json": {
+        "intent": "unclear",
+        "ask": "您需要帮忙什么？"
+      },
+      "latency": 1812,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 30,
+      "q": "嗯",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"嗯？有什么可以帮您的吗？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "嗯？有什么可以帮您的吗？"
+      },
+      "latency": 1952,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 31,
+      "q": "你说呢",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"你说呢？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "你说呢？"
+      },
+      "latency": 1577,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 32,
+      "q": "把空调调到 26 度",
+      "want": {
+        "intent": "action",
+        "skill": "aircon",
+        "slots": {
+          "action": "set_temp"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"climate\", \"skill\": \"aircon\", \"slots\": {\"action\": \"set_temp\", \"value\": 26}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "climate",
+        "skill": "aircon",
+        "slots": {
+          "action": "set_temp",
+          "value": 26
+        },
+        "confidence": 1
+      },
+      "latency": 4009,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 33,
+      "q": "给张三发个微信说我迟到了",
+      "want": {
+        "intent": "action",
+        "skill": "messaging",
+        "slots": {
+          "platform": "wechat"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"messaging\", \"skill\": \"messaging\", \"slots\": {\"platform\": \"wechat\", \"recipient\": \"张三\", \"content\": \"我迟到了\"}}}",
+      "json": {
+        "intent": "action",
+        "category": "messaging",
+        "skill": "messaging",
+        "slots": {
+          "platform": "wechat",
+          "recipient": "张三",
+          "content": "我迟到了"
+        }
+      },
+      "latency": 4083,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 34,
+      "q": "帮我打车去机场",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"system\", \"skill\": \"app_launcher\", \"slots\": {\"app_name\": \"打车去机场\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "system",
+        "skill": "app_launcher",
+        "slots": {
+          "app_name": "打车去机场"
+        },
+        "confidence": 1
+      },
+      "latency": 3626,
+      "result": {
+        "pass": false,
+        "reason": "intent=action want=chat"
+      }
+    },
+    {
+      "n": 35,
+      "q": "设个 7 点的闹钟",
+      "want": {
+        "intent": "action",
+        "skill": "reminder"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"system\", \"skill\": \"reminder\", \"slots\": {\"message\": \"闹钟\", \"when\": \"7点\"}}}",
+      "json": {
+        "intent": "action",
+        "category": "system",
+        "skill": "reminder",
+        "slots": {
+          "message": "闹钟",
+          "when": "7点"
+        }
+      },
+      "latency": 3412,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 36,
+      "q": "现在几点",
+      "want": {
+        "intent": "action",
+        "skill": "info_query",
+        "slots": {
+          "type": "time"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"info\", \"skill\": \"info_query\", \"slots\": {\"type\": \"time\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "info",
+        "skill": "info_query",
+        "slots": {
+          "type": "time"
+        },
+        "confidence": 1
+      },
+      "latency": 3252,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 37,
+      "q": "今天是几号",
+      "want": {
+        "intent": "action",
+        "skill": "info_query",
+        "slots": {
+          "type": "date"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"info\", \"skill\": \"info_query\", \"slots\": {\"type\": \"date\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "info",
+        "skill": "info_query",
+        "slots": {
+          "type": "date"
+        },
+        "confidence": 1
+      },
+      "latency": 3286,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 38,
+      "q": "纽约现在的天气怎么样",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"当前无法提供纽约的天气信息，建议您查看天气应用或网站获取最新预报。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "当前无法提供纽约的天气信息，建议您查看天气应用或网站获取最新预报。"
+      },
+      "latency": 2852,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 39,
+      "q": "明天会下雨吗",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"明天的天气情况需要查询，我无法提供具体信息。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "明天的天气情况需要查询，我无法提供具体信息。"
+      },
+      "latency": 2379,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 40,
+      "q": "美股今天怎么样",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"美股今天的情况需要查询实时数据，但根据现有技能，我无法提供天气、股价、新闻等信息，建议您通过专业金融平台获取最新行情。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "美股今天的情况需要查询实时数据，但根据现有技能，我无法提供天气、股价、新闻等信息，建议您通过专业金融平台获取最新行情。"
+      },
+      "latency": 3959,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 41,
+      "q": "播放",
+      "want": {
+        "intent": "unclear"
+      },
+      "raw": "{\"intent\": \"unclear\", \"ask\": \"您是想播放音乐还是其他内容？\"}",
+      "json": {
+        "intent": "unclear",
+        "ask": "您是想播放音乐还是其他内容？"
+      },
+      "latency": 2079,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 42,
+      "q": "开",
+      "want": {
+        "intent": "unclear"
+      },
+      "raw": "{\"intent\": \"unclear\", \"ask\": \"您想开什么？\"}",
+      "json": {
+        "intent": "unclear",
+        "ask": "您想开什么？"
+      },
+      "latency": 1775,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 43,
+      "q": "把音乐关了",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "stop"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"stop\", \"value\": \"\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "stop",
+          "value": ""
+        },
+        "confidence": 1
+      },
+      "latency": 3673,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 44,
+      "q": "开卧室灯",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"on\", \"device\": \"卧室 灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on",
+          "device": "卧室 灯"
+        },
+        "confidence": 1
+      },
+      "latency": 4036,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 45,
+      "q": "你叫什么名字",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"我叫小智，是您的智能助手。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "我叫小智，是您的智能助手。"
+      },
+      "latency": 2158,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 46,
+      "q": "你是什么模型",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"我是通义千问，一个大型语言模型，可以帮助您回答问题、创作内容等。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "我是通义千问，一个大型语言模型，可以帮助您回答问题、创作内容等。"
+      },
+      "latency": 2953,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 47,
+      "q": "介绍一下你自己",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"你好！我是XiaoZhi，一个中文为主的语音助手。我可以帮助你控制音乐、智能家居设备、设置提醒、发送消息、查询时间日期等。如果你有任何问题或需要帮助，随时告诉我！\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "你好！我是XiaoZhi，一个中文为主的语音助手。我可以帮助你控制音乐、智能家居设备、设置提醒、发送消息、查询时间日期等。如果你有任何问题或需要帮助，随时告诉我！"
+      },
+      "latency": 4688,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 48,
+      "q": "我今天心情有点低落",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"听起来你今天心情不太好，需要我帮你做点什么吗？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "听起来你今天心情不太好，需要我帮你做点什么吗？"
+      },
+      "latency": 2513,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 49,
+      "q": "最近工作压力好大",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"听起来你最近压力很大，需要我帮你放松一下吗？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "听起来你最近压力很大，需要我帮你放松一下吗？"
+      },
+      "latency": 2403,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 50,
+      "q": "你会做饭吗",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"我会做饭，可以教你一些简单的菜谱。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "我会做饭，可以教你一些简单的菜谱。"
+      },
+      "latency": 2135,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 51,
+      "q": "给我推荐一本书",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"好的，我可以给你推荐一些书籍。你对哪个领域感兴趣呢？比如小说、非虚构类、科幻类或者历史类？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "好的，我可以给你推荐一些书籍。你对哪个领域感兴趣呢？比如小说、非虚构类、科幻类或者历史类？"
+      },
+      "latency": 3582,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 52,
+      "q": "人生的意义是什么",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"人生的意义是一个深刻且个人化的问题，不同的人可能会有不同的答案。它可能与追求幸福、成长、贡献社会、寻找目的或自我实现有关。你或许可以从中找到属于自己的答案。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "人生的意义是一个深刻且个人化的问题，不同的人可能会有不同的答案。它可能与追求幸福、成长、贡献社会、寻找目的或自我实现有关。你或许可以从中找到属于自己的答案。"
+      },
+      "latency": 4550,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 53,
+      "q": "我该不该换工作",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"这是一个个人决策问题，建议你根据自己的职业规划、工作满意度和未来发展前景来综合考虑。如果你需要帮助分析，可以告诉我更多细节。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "这是一个个人决策问题，建议你根据自己的职业规划、工作满意度和未来发展前景来综合考虑。如果你需要帮助分析，可以告诉我更多细节。"
+      },
+      "latency": 3758,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 54,
+      "q": "解释一下深度学习",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"深度学习是人工智能的一个分支，它模仿人脑的结构和功能，通过多层次的网络来学习和理解数据。深度学习模型由多个隐藏层组成，每一层都能自动从数据中学习到更复杂的特征，最终实现对数据的高效处理和预测。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "深度学习是人工智能的一个分支，它模仿人脑的结构和功能，通过多层次的网络来学习和理解数据。深度学习模型由多个隐藏层组成，每一层都能自动从数据中学习到更复杂的特征，最终实现对数据的高效处理和预测。"
+      },
+      "latency": 5786,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 55,
+      "q": "来首周杰伦",
+      "want": {
+        "intent": "action",
+        "skill": "play_music"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"play_music\", \"slots\": {\"query\": \"周杰伦\", \"shuffle\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "play_music",
+        "slots": {
+          "query": "周杰伦",
+          "shuffle": true
+        },
+        "confidence": 1
+      },
+      "latency": 3849,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 56,
+      "q": "播放一下最近的新歌",
+      "want": {
+        "intent": "action",
+        "skill": "play_music"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"play_music\", \"slots\": {\"query\": \"最近的新歌\", \"shuffle\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "play_music",
+        "slots": {
+          "query": "最近的新歌",
+          "shuffle": true
+        },
+        "confidence": 1
+      },
+      "latency": 3846,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 57,
+      "q": "放点安静的音乐",
+      "want": {
+        "intent": "action",
+        "skill": "play_music"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"play_music\", \"slots\": {\"query\": \"安静的音乐\", \"shuffle\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "play_music",
+        "slots": {
+          "query": "安静的音乐",
+          "shuffle": true
+        },
+        "confidence": 1
+      },
+      "latency": 3842,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 58,
+      "q": "放一首摇滚乐",
+      "want": {
+        "intent": "action",
+        "skill": "play_music"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"play_music\", \"slots\": {\"query\": \"摇滚乐\", \"shuffle\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "play_music",
+        "slots": {
+          "query": "摇滚乐",
+          "shuffle": true
+        },
+        "confidence": 1
+      },
+      "latency": 3713,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 59,
+      "q": "切到下一首",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "next"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"next\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "next"
+        },
+        "confidence": 1
+      },
+      "latency": 3296,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 60,
+      "q": "跳过这首",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "next"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"next\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "next"
+        },
+        "confidence": 1
+      },
+      "latency": 3276,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 61,
+      "q": "回到上一首",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "previous"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"previous\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "previous"
+        },
+        "confidence": 1
+      },
+      "latency": 3271,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 62,
+      "q": "音量调到 50",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "volume"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"volume\", \"value\": 50}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "volume",
+          "value": 50
+        },
+        "confidence": 1
+      },
+      "latency": 3878,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 63,
+      "q": "静音",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "volume"
+        },
+        "alt": [
+          "unclear",
+          "chat"
+        ]
+      },
+      "raw": "{\"intent\": \"unclear\", \"ask\": \"您是指静音哪个设备？\"}",
+      "json": {
+        "intent": "unclear",
+        "ask": "您是指静音哪个设备？"
+      },
+      "latency": 1959,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 64,
+      "q": "放大声点",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "volume"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"volume\", \"value\": 80}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "volume",
+          "value": 80
+        },
+        "confidence": 1
+      },
+      "latency": 3802,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 65,
+      "q": "单曲循环这首",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "repeat"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"repeat\", \"value\": \"one\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "repeat",
+          "value": "one"
+        },
+        "confidence": 1
+      },
+      "latency": 3745,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 66,
+      "q": "取消循环",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "repeat"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"repeat\", \"value\": \"off\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "repeat",
+          "value": "off"
+        },
+        "confidence": 1
+      },
+      "latency": 3709,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 67,
+      "q": "随机播放",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "shuffle"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"shuffle\", \"value\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "shuffle",
+          "value": true
+        },
+        "confidence": 1
+      },
+      "latency": 3666,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 68,
+      "q": "按顺序播放",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "shuffle"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"shuffle\", \"value\": false}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "shuffle",
+          "value": false
+        },
+        "confidence": 1
+      },
+      "latency": 3691,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 69,
+      "q": "停止播放",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "stop"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"stop\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "stop"
+        },
+        "confidence": 1
+      },
+      "latency": 3317,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 70,
+      "q": "打开书房的灯",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"on\", \"device\": \"书房的灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on",
+          "device": "书房的灯"
+        },
+        "confidence": 1
+      },
+      "latency": 4043,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 71,
+      "q": "关上厨房的灯",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"off\", \"device\": \"厨房的灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off",
+          "device": "厨房的灯"
+        },
+        "confidence": 1
+      },
+      "latency": 4096,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 72,
+      "q": "打开走廊的灯",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"on\", \"device\": \"走廊 灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on",
+          "device": "走廊 灯"
+        },
+        "confidence": 1
+      },
+      "latency": 4140,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 73,
+      "q": "把阳台灯关了",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"off\", \"device\": \"阳台 灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off",
+          "device": "阳台 灯"
+        },
+        "confidence": 1
+      },
+      "latency": 4191,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 74,
+      "q": "开电扇",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"on\", \"device\": \"电扇\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on",
+          "device": "电扇"
+        },
+        "confidence": 1
+      },
+      "latency": 3982,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 75,
+      "q": "关掉所有插座",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"off\", \"device\": \"所有 插座\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off",
+          "device": "所有 插座"
+        },
+        "confidence": 1
+      },
+      "latency": 4118,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 76,
+      "q": "开饮水机",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"on\", \"device\": \"饮水机\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on",
+          "device": "饮水机"
+        },
+        "confidence": 1
+      },
+      "latency": 3939,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 77,
+      "q": "关加湿器",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"off\", \"device\": \"加湿器\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off",
+          "device": "加湿器"
+        },
+        "confidence": 1
+      },
+      "latency": 4030,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 78,
+      "q": "把所有设备都关了",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"off\", \"device\": \"全部\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off",
+          "device": "全部"
+        },
+        "confidence": 1
+      },
+      "latency": 3942,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 79,
+      "q": "看看我有哪些设备",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "list"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"list\", \"device\": \"全部\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "list",
+          "device": "全部"
+        },
+        "confidence": 1
+      },
+      "latency": 3865,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 80,
+      "q": "我都有什么音乐",
+      "want": {
+        "intent": "action",
+        "skill": "list_music"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"list_music\", \"slots\": {}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "list_music",
+        "slots": {},
+        "confidence": 1
+      },
+      "latency": 2966,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 81,
+      "q": "开主卧灯和客厅灯",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"on\", \"device\": \"主卧灯和客厅灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on",
+          "device": "主卧灯和客厅灯"
+        },
+        "confidence": 1
+      },
+      "latency": 4337,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 82,
+      "q": "把全屋灯都打开",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"on\", \"device\": \"全部\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on",
+          "device": "全部"
+        },
+        "confidence": 1
+      },
+      "latency": 3890,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 83,
+      "q": "打开卫生间的灯",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"on\", \"device\": \"卫生间 灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on",
+          "device": "卫生间 灯"
+        },
+        "confidence": 1
+      },
+      "latency": 4057,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 84,
+      "q": "关灯",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"off\", \"device\": \"灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off",
+          "device": "灯"
+        },
+        "confidence": 1
+      },
+      "latency": 3805,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 85,
+      "q": "帮我放首歌吧，我想静一静",
+      "want": {
+        "intent": "action",
+        "skill": "play_music",
+        "alt": [
+          "chat"
+        ]
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"play_music\", \"slots\": {\"query\": \"\", \"shuffle\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "play_music",
+        "slots": {
+          "query": "",
+          "shuffle": true
+        },
+        "confidence": 1
+      },
+      "latency": 3673,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 86,
+      "q": "好累，来点轻音乐",
+      "want": {
+        "intent": "action",
+        "skill": "play_music",
+        "alt": [
+          "chat"
+        ]
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"play_music\", \"slots\": {\"query\": \"轻音乐\", \"shuffle\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "play_music",
+        "slots": {
+          "query": "轻音乐",
+          "shuffle": true
+        },
+        "confidence": 1
+      },
+      "latency": 3879,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 87,
+      "q": "灯太亮了",
+      "want": {
+        "intent": "chat",
+        "alt": [
+          "unclear"
+        ]
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"灯太亮了，您想调暗一些吗？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "灯太亮了，您想调暗一些吗？"
+      },
+      "latency": 2356,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 88,
+      "q": "灯有点暗",
+      "want": {
+        "intent": "chat",
+        "alt": [
+          "unclear"
+        ]
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"灯有点暗，是否需要调亮一些？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "灯有点暗，是否需要调亮一些？"
+      },
+      "latency": 2165,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 89,
+      "q": "音乐太吵了",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "alt": [
+          "chat"
+        ]
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"音乐太吵了，您是否想要调小音量？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "音乐太吵了，您是否想要调小音量？"
+      },
+      "latency": 2415,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 90,
+      "q": "背景音乐换一下",
+      "want": {
+        "intent": "action",
+        "skill": "play_music",
+        "alt": [
+          "unclear"
+        ]
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"shuffle\", \"value\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "shuffle",
+          "value": true
+        },
+        "confidence": 1
+      },
+      "latency": 3696,
+      "result": {
+        "pass": false,
+        "reason": "skill=music_control want=play_music"
+      }
+    },
+    {
+      "n": 91,
+      "q": "能不能把灯关一下",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"off\", \"device\": \"灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off",
+          "device": "灯"
+        },
+        "confidence": 1
+      },
+      "latency": 3874,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 92,
+      "q": "帮我把音乐声音关小",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "volume"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"volume\", \"value\": 30}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "volume",
+          "value": 30
+        },
+        "confidence": 1
+      },
+      "latency": 3894,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 93,
+      "q": "音乐听着好烦",
+      "want": {
+        "intent": "chat",
+        "alt": [
+          "action"
+        ]
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"这首歌真好听\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "这首歌真好听"
+      },
+      "latency": 1709,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 94,
+      "q": "这歌真的好听，别停",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"这首歌真好听，但您是想继续听还是需要暂停呢？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "这首歌真好听，但您是想继续听还是需要暂停呢？"
+      },
+      "latency": 2711,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 95,
+      "q": "那个",
+      "want": {
+        "intent": "unclear"
+      },
+      "raw": "{\"intent\": \"unclear\", \"ask\": \"您想表达什么？\"}",
+      "json": {
+        "intent": "unclear",
+        "ask": "您想表达什么？"
+      },
+      "latency": 1792,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 96,
+      "q": "呃…",
+      "want": {
+        "intent": "unclear",
+        "alt": [
+          "chat"
+        ]
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"你好，有什么我可以帮你的吗？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "你好，有什么我可以帮你的吗？"
+      },
+      "latency": 1970,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 97,
+      "q": "我想…",
+      "want": {
+        "intent": "unclear"
+      },
+      "raw": "{\"intent\": \"unclear\", \"ask\": \"你想做什么？\"}",
+      "json": {
+        "intent": "unclear",
+        "ask": "你想做什么？"
+      },
+      "latency": 1673,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 98,
+      "q": "等等",
+      "want": {
+        "intent": "chat",
+        "alt": [
+          "unclear"
+        ]
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"好的，您需要我帮您做些什么吗？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "好的，您需要我帮您做些什么吗？"
+      },
+      "latency": 2207,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 99,
+      "q": "嗯嗯嗯",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"嗯嗯嗯\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "嗯嗯嗯"
+      },
+      "latency": 1616,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 100,
+      "q": "哦",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"嗯？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "嗯？"
+      },
+      "latency": 1486,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 101,
+      "q": "算了",
+      "want": {
+        "intent": "chat",
+        "alt": [
+          "unclear"
+        ]
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"好的，有什么可以帮您的吗？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "好的，有什么可以帮您的吗？"
+      },
+      "latency": 1959,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 102,
+      "q": "好吧",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"嗯，有什么我可以帮你的吗？\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "嗯，有什么我可以帮你的吗？"
+      },
+      "latency": 1937,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 103,
+      "q": "帮我订一个饭店",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"unclear\", \"ask\": \"您是想订餐厅还是想推荐餐厅？\"}",
+      "json": {
+        "intent": "unclear",
+        "ask": "您是想订餐厅还是想推荐餐厅？"
+      },
+      "latency": 2236,
+      "result": {
+        "pass": false,
+        "reason": "intent=unclear want=chat"
+      }
+    },
+    {
+      "n": 104,
+      "q": "查一下我的快递",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"您需要查询快递信息，但此功能目前无法使用，请尝试其他方式。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "您需要查询快递信息，但此功能目前无法使用，请尝试其他方式。"
+      },
+      "latency": 2696,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 105,
+      "q": "查我的日历",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"system\", \"skill\": \"reminder\", \"slots\": {\"message\": \"查我的日历\", \"when\": \"现在\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "system",
+        "skill": "reminder",
+        "slots": {
+          "message": "查我的日历",
+          "when": "现在"
+        },
+        "confidence": 1
+      },
+      "latency": 3891,
+      "result": {
+        "pass": false,
+        "reason": "intent=action want=chat"
+      }
+    },
+    {
+      "n": 106,
+      "q": "提醒我下午 3 点开会",
+      "want": {
+        "intent": "action",
+        "skill": "reminder"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"system\", \"skill\": \"reminder\", \"slots\": {\"message\": \"开会\", \"when\": \"下午3点\"}}}",
+      "json": {
+        "intent": "action",
+        "category": "system",
+        "skill": "reminder",
+        "slots": {
+          "message": "开会",
+          "when": "下午3点"
+        }
+      },
+      "latency": 3400,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 107,
+      "q": "定个 10 分钟的计时器",
+      "want": {
+        "intent": "action",
+        "skill": "reminder"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"system\", \"skill\": \"reminder\", \"slots\": {\"message\": \"计时器\", \"when\": \"10分钟后\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "system",
+        "skill": "reminder",
+        "slots": {
+          "message": "计时器",
+          "when": "10分钟后"
+        },
+        "confidence": 1
+      },
+      "latency": 4139,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 108,
+      "q": "帮我翻译一下这句话",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"帮你翻译这句话。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "帮你翻译这句话。"
+      },
+      "latency": 1708,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 109,
+      "q": "转账给张三 100 元",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"转账给张三100元需要通过银行或支付平台操作，建议您使用支付宝、微信或银行转账功能完成。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "转账给张三100元需要通过银行或支付平台操作，建议您使用支付宝、微信或银行转账功能完成。"
+      },
+      "latency": 3684,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 110,
+      "q": "帮我写邮件给老板",
+      "want": {
+        "intent": "action",
+        "skill": "messaging",
+        "slots": {
+          "platform": "email"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"messaging\", \"skill\": \"messaging\", \"slots\": {\"platform\": \"email\", \"recipient\": \"老板\", \"content\": \"帮我写邮件给老板\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "messaging",
+        "skill": "messaging",
+        "slots": {
+          "platform": "email",
+          "recipient": "老板",
+          "content": "帮我写邮件给老板"
+        },
+        "confidence": 1
+      },
+      "latency": 4614,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 111,
+      "q": "打开网易云音乐 app",
+      "want": {
+        "intent": "action",
+        "skill": "app_launcher"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"system\", \"skill\": \"app_launcher\", \"slots\": {\"app_name\": \"网易云音乐\"}}}",
+      "json": {
+        "intent": "action",
+        "category": "system",
+        "skill": "app_launcher",
+        "slots": {
+          "app_name": "网易云音乐"
+        }
+      },
+      "latency": 3041,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 112,
+      "q": "开 QQ 音乐",
+      "want": {
+        "intent": "action",
+        "skill": "app_launcher"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"system\", \"skill\": \"app_launcher\", \"slots\": {\"app_name\": \"QQ 音乐\"}}}",
+      "json": {
+        "intent": "action",
+        "category": "system",
+        "skill": "app_launcher",
+        "slots": {
+          "app_name": "QQ 音乐"
+        }
+      },
+      "latency": 3095,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 113,
+      "q": "上海现在几点了",
+      "want": {
+        "intent": "action",
+        "skill": "info_query",
+        "slots": {
+          "type": "time"
+        },
+        "alt": [
+          "chat"
+        ]
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"info\", \"skill\": \"info_query\", \"slots\": {\"type\": \"time\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "info",
+        "skill": "info_query",
+        "slots": {
+          "type": "time"
+        },
+        "confidence": 1
+      },
+      "latency": 3317,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 114,
+      "q": "今天星期几",
+      "want": {
+        "intent": "action",
+        "skill": "info_query",
+        "slots": {
+          "type": "weekday"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"info\", \"skill\": \"info_query\", \"slots\": {\"type\": \"weekday\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "info",
+        "skill": "info_query",
+        "slots": {
+          "type": "weekday"
+        },
+        "confidence": 1
+      },
+      "latency": 3280,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 115,
+      "q": "下周一是几号",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"下周一是几号需要计算相对日期，但当前系统不支持相对日期计算，建议通过其他方式获取信息。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "下周一是几号需要计算相对日期，但当前系统不支持相对日期计算，建议通过其他方式获取信息。"
+      },
+      "latency": 3324,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 116,
+      "q": "北京明天最高气温多少",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"北京明天的最高气温信息需要通过天气服务获取，目前无法直接提供。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "北京明天的最高气温信息需要通过天气服务获取，目前无法直接提供。"
+      },
+      "latency": 2717,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 117,
+      "q": "苹果股价多少",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"苹果股价的信息需要通过主要的LLM来获取，因为info_query技能不处理天气、股价、新闻等信息。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "苹果股价的信息需要通过主要的LLM来获取，因为info_query技能不处理天气、股价、新闻等信息。"
+      },
+      "latency": 3361,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 118,
+      "q": "比特币现在多少钱",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"比特币的价格需要查询实时数据，我无法提供当前价格信息。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "比特币的价格需要查询实时数据，我无法提供当前价格信息。"
+      },
+      "latency": 2453,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 119,
+      "q": "汇率怎么查",
+      "want": {
+        "intent": "chat"
+      },
+      "raw": "{\"intent\": \"chat\", \"reply\": \"汇率查询需要使用专门的工具或服务，建议您通过银行、财经网站或货币转换应用进行查询。\"}",
+      "json": {
+        "intent": "chat",
+        "reply": "汇率查询需要使用专门的工具或服务，建议您通过银行、财经网站或货币转换应用进行查询。"
+      },
+      "latency": 3216,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 120,
+      "q": "麻烦把灯打开",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"on\", \"device\": \"灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "on",
+          "device": "灯"
+        },
+        "confidence": 1
+      },
+      "latency": 3835,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 121,
+      "q": "请播放音乐",
+      "want": {
+        "intent": "action",
+        "skill": "play_music"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"play_music\", \"slots\": {\"query\": \"\", \"shuffle\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "play_music",
+        "slots": {
+          "query": "",
+          "shuffle": true
+        },
+        "confidence": 1
+      },
+      "latency": 3516,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 122,
+      "q": "可以把音量调大吗",
+      "want": {
+        "intent": "action",
+        "skill": "music_control",
+        "slots": {
+          "action": "volume"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"music_control\", \"slots\": {\"action\": \"volume\", \"value\": 80}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "music_control",
+        "slots": {
+          "action": "volume",
+          "value": 80
+        },
+        "confidence": 1
+      },
+      "latency": 3888,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 123,
+      "q": "关下客厅灯好吗",
+      "want": {
+        "intent": "action",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off"
+        }
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"smart_home\", \"skill\": \"smart_device\", \"slots\": {\"action\": \"off\", \"device\": \"客厅 灯\"}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "smart_home",
+        "skill": "smart_device",
+        "slots": {
+          "action": "off",
+          "device": "客厅 灯"
+        },
+        "confidence": 1
+      },
+      "latency": 4101,
+      "result": {
+        "pass": true
+      }
+    },
+    {
+      "n": 124,
+      "q": "能帮我放首歌吗",
+      "want": {
+        "intent": "action",
+        "skill": "play_music"
+      },
+      "raw": "{\"intent\": \"action\", \"category\": \"music\", \"skill\": \"play_music\", \"slots\": {\"query\": \"\", \"shuffle\": true}, \"confidence\": 1.0}",
+      "json": {
+        "intent": "action",
+        "category": "music",
+        "skill": "play_music",
+        "slots": {
+          "query": "",
+          "shuffle": true
+        },
+        "confidence": 1
+      },
+      "latency": 3582,
+      "result": {
+        "pass": true
+      }
+    }
+  ]
+}
