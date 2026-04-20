@@ -334,6 +334,56 @@ export async function runRouterDryRun(
   return { ok, latencyMs, model, provider, rawText, json, parseError };
 }
 
+// Once-per-app-session prewarm. Fires a tiny inference with the full router
+// system prompt so llama.cpp's KV cache absorbs the ~2900-token prefix in the
+// background while the user is still settling into the chat UI. With
+// `cache_prompt: true` in llamaServer.js, the first real router call after
+// this drops from ~14s (cold) to ~1s (warm).
+//
+// Cloud providers don't benefit (no shared KV cache across requests and
+// prewarming would cost real API tokens), so we bail out on those.
+let prewarmPromise: Promise<void> | null = null;
+
+export function isRouterPrewarmed(): boolean {
+  return prewarmPromise !== null;
+}
+
+export async function prewarmRouter(skills: LoadedSkill[]): Promise<void> {
+  if (prewarmPromise) return prewarmPromise;
+  const settings = getSettings();
+  const provider = settings.agentProvider || "";
+  // Skip cloud — they don't share KV cache between requests.
+  if (["openai", "anthropic", "gemini", "groq", "custom"].includes(provider)) {
+    return;
+  }
+  // Skip if no skills loaded yet — prewarming with an empty catalog would
+  // build a KV cache that doesn't match the real router prompt prefix.
+  if (!skills || skills.length === 0) return;
+
+  const model = settings.agentModel || "";
+  const systemPrompt = buildRouterSystemPrompt(skills);
+  const t0 = performance.now();
+  prewarmPromise = (async () => {
+    try {
+      // `你好` is a trivial utterance; max_tokens=8 keeps the response short.
+      // We throw away the output — the only thing we care about is that the
+      // system-prompt prefix is now resident in llama.cpp's KV cache.
+      await ReasoningService.processText("你好", model, null, {
+        systemPrompt,
+        maxTokens: 8,
+      });
+      const ms = Math.round(performance.now() - t0);
+      console.info("[router-prewarm] warm-up done", { ms, provider, model });
+    } catch (err) {
+      console.warn("[router-prewarm] warm-up failed", (err as Error).message);
+      // Reset so a later mount can retry (e.g. if llama-server was still
+      // booting the first time).
+      prewarmPromise = null;
+    }
+  })();
+  return prewarmPromise;
+}
+
 export function renderDryRunMessage(r: RouterResult): string {
   const modelLabel = r.model || "(default)";
   const header = `🧪 **Router Dry-Run** · ⏱ ${r.latencyMs}ms · \`${r.provider}/${modelLabel}\``;

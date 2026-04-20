@@ -9,6 +9,7 @@ import { loadAllSkills, type LoadedSkill } from "../../services/skills/skillLoad
 import { SkillResponseMap } from "../../services/skills/skillExecutor";
 import {
   isDryRunEnabled as isRouterDryRunEnabled,
+  prewarmRouter,
   renderDryRunMessage as renderRouterDryRun,
   runRouterDryRun,
 } from "../../services/skills/routerDryRun";
@@ -107,6 +108,25 @@ export function useChatStreaming({
         Boolean(tavilyKey) &&
         tavilyEnabled !== false &&
         (!tavilyUsage || tavilyUsage.count < tavilyUsage.cap);
+
+      // Prewarm the local skill-router so its ~2900-token system prompt is
+      // sitting in llama.cpp's KV cache before the user's first utterance.
+      // Cold first call is ~14s on Vulkan; with this warm-up the user's
+      // real message gets the warm ~1s path. Fire-and-forget — if it fails
+      // the real router call just pays the cold cost once. Module-level
+      // guard in prewarmRouter() makes this idempotent across remounts.
+      if (isRouterDryRunEnabled() || isRouterDispatchEnabled()) {
+        try {
+          const skills = await loadAllSkills({
+            music_folder_configured: Boolean(folder),
+            vlc_installed: Boolean(vlc?.available),
+            vesync_logged_in: Boolean(email && password),
+          });
+          void prewarmRouter(skills);
+        } catch (err) {
+          console.warn("[router-prewarm] skill load failed", err);
+        }
+      }
     })();
   }, []);
 
