@@ -146,7 +146,7 @@
     "flatted": "^3.4.2",
     "gray-matter": "^4.0.3",
     "i18next": "^26.0.4",
-    "kysely": "^0.28.14",
+    "kysely": "^0.28.16",
     "lucide-react": "^1.7.0",
     "msedge-tts": "^2.0.5",
     "object-assign": "^4.1.1",
