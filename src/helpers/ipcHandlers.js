@@ -128,6 +128,7 @@ class IPCHandlers {
     this.audioTapManager = managers.audioTapManager;
     this.linuxPortalAudioManager = managers.linuxPortalAudioManager;
     this.meetingAecManager = managers.meetingAecManager;
+    this.gameModeManager = managers.gameModeManager;
     this.sessionId = crypto.randomUUID();
     this.assemblyAiStreaming = null;
     this.deepgramStreaming = null;
@@ -7114,6 +7115,7 @@ class IPCHandlers {
     ipcMain.on("show-orb-context-menu", (event) => {
       const cp = this.windowManager?.controlPanelWindow;
       const isVisible = !!(cp && !cp.isDestroyed() && cp.isVisible());
+      const gameModeOn = !!this.gameModeManager?.isEnabled?.();
       const template = [
         {
           label: isVisible
@@ -7136,6 +7138,23 @@ class IPCHandlers {
                 created.show();
                 created.focus();
               }
+            }
+          },
+        },
+        { type: "separator" },
+        {
+          label: gameModeOn
+            ? i18nMain.t("orb.exitGameMode", { defaultValue: "退出游戏模式" })
+            : i18nMain.t("orb.enterGameMode", { defaultValue: "进入游戏模式" }),
+          click: async () => {
+            try {
+              await this.gameModeManager?.toggle();
+            } catch (err) {
+              debugLogger.warn(
+                "Game mode toggle failed",
+                { error: err?.message },
+                "game-mode"
+              );
             }
           },
         },

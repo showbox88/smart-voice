@@ -214,6 +214,7 @@ const LinuxPortalAudioManager = require("./src/helpers/linuxPortalAudioManager")
 const MeetingAecManager = require("./src/helpers/meetingAecManager");
 const MeetingDetectionEngine = require("./src/helpers/meetingDetectionEngine");
 const WakeWordManager = require("./src/helpers/wakeWordManager");
+const GameModeManager = require("./src/helpers/gameModeManager");
 const { i18nMain, changeLanguage } = require("./src/helpers/i18nMain");
 const { ensureYdotool } = require("./src/helpers/ensureYdotool");
 
@@ -247,6 +248,7 @@ let meetingAecManager = null;
 let qdrantManager = null;
 let windowsMcpManager = null;
 let wakeWordManager = null;
+let gameModeManager = null;
 let ipcHandlers = null;
 let globeKeyAlertShown = false;
 let authBridgeServer = null;
@@ -338,6 +340,16 @@ function initializeCoreManagers() {
   meetingAecManager = new MeetingAecManager();
   windowManager.textEditMonitor = textEditMonitor;
 
+  // Game mode toggle — built here so IPCHandlers can wire it into the orb
+  // right-click menu. Uses getters because wakeWordManager is created later in
+  // whenReady — direct refs would be null at construction time.
+  gameModeManager = new GameModeManager({
+    getWakeWordManager: () => wakeWordManager,
+    getWhisperManager: () => whisperManager,
+    getEnvironmentManager: () => environmentManager,
+    getWhisperCudaManager: () => whisperCudaManager,
+  });
+
   // IPC handlers must be registered before window content loads
   ipcHandlers = new IPCHandlers({
     environmentManager,
@@ -363,6 +375,7 @@ function initializeCoreManagers() {
     linuxPortalAudioManager,
     meetingAecManager,
     getWindowsMcpManager: () => windowsMcpManager,
+    gameModeManager,
     getTrayManager: () => trayManager,
   });
 
