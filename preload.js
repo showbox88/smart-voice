@@ -896,6 +896,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("gcal-get-upcoming-events", windowMinutes),
   gcalGetEvent: (eventId) => ipcRenderer.invoke("gcal-get-event", eventId),
 
+  // Calendar skill — query + create events via skill-router
+  calendarIsConnected: () => ipcRenderer.invoke("calendar:is-connected"),
+  calendarQueryEvents: (payload) => ipcRenderer.invoke("calendar:query-events", payload),
+  calendarCreateEvent: (payload) => ipcRenderer.invoke("calendar:create-event", payload),
+
   // Contacts
   searchContacts: (query) => ipcRenderer.invoke("search-contacts", query),
   upsertContact: (contact) => ipcRenderer.invoke("upsert-contact", contact),

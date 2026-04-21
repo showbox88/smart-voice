@@ -2134,14 +2134,14 @@
     "googleCalendar": {
       "title": "Google Calendar",
       "optional": "Opcional",
-      "description": "Rellena automáticamente los títulos y asistentes de las reuniones desde tu calendario.",
+      "description": "Consulta tu agenda y crea eventos por voz.",
       "connect": "Conectar Google Calendar",
       "connecting": "Conectando...",
       "connected": "Conectado",
       "addAnother": "Añadir otro calendario",
       "disconnect": "Desconectar",
       "disconnectConfirm": "¿Desconectar {{email}}?",
-      "disconnectDescription": "Ya no se grabarán notas de reuniones de este calendario.",
+      "disconnectDescription": "Los comandos de voz ya no podrán consultar ni crear eventos en este calendario.",
       "systemAudioRequired": "Se requiere permiso de Audio del Sistema",
       "systemAudioDescription": "Para transcribir reuniones, OpenWhispr necesita el permiso de Audio del Sistema para capturar el audio de otros participantes. Nunca grabamos tu pantalla. Serás dirigido a Ajustes del Sistema para activarlo.",
       "openSettings": "Abrir Ajustes del Sistema"

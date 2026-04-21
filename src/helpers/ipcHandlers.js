@@ -7228,6 +7228,69 @@ class IPCHandlers {
       }
     });
 
+    // Skill-router calendar IPC — query local SQLite for a date range.
+    // `from` / `to` are ms epochs; returns plain event rows for the handler to format.
+    ipcMain.handle("calendar:query-events", async (_event, payload) => {
+      try {
+        if (!this.googleCalendarManager.isConnected()) {
+          return { success: false, error: "not_connected", events: [] };
+        }
+        const from = Number(payload?.from) || Date.now();
+        const to = Number(payload?.to) || from + 24 * 60 * 60 * 1000;
+        const events = await this.googleCalendarManager.queryEvents({ from, to });
+        return { success: true, events };
+      } catch (error) {
+        debugLogger.error("calendar:query-events failed", { error: error.message }, "calendar");
+        return { success: false, error: error.message, events: [] };
+      }
+    });
+
+    // Create a new event on the user's primary Google calendar.
+    ipcMain.handle("calendar:create-event", async (_event, payload) => {
+      try {
+        if (!this.googleCalendarManager.isConnected()) {
+          return { success: false, error: "not_connected" };
+        }
+        const { summary, startMs, endMs, description } = payload || {};
+        if (!summary || typeof summary !== "string") {
+          return { success: false, error: "missing_summary" };
+        }
+        if (typeof startMs !== "number" || typeof endMs !== "number") {
+          return { success: false, error: "missing_time" };
+        }
+        if (endMs <= startMs) {
+          return { success: false, error: "invalid_time_range" };
+        }
+        const created = await this.googleCalendarManager.createEvent({
+          summary,
+          startMs,
+          endMs,
+          description,
+        });
+        return {
+          success: true,
+          event: {
+            id: created.id,
+            summary: created.summary,
+            htmlLink: created.htmlLink,
+            start: created.start?.dateTime || created.start?.date,
+            end: created.end?.dateTime || created.end?.date,
+          },
+        };
+      } catch (error) {
+        debugLogger.error("calendar:create-event failed", { error: error.message }, "calendar");
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle("calendar:is-connected", async () => {
+      try {
+        return { connected: this.googleCalendarManager.isConnected() };
+      } catch {
+        return { connected: false };
+      }
+    });
+
     ipcMain.handle("gcal-get-event", async (_event, eventId) => {
       try {
         const event = this.databaseManager.getCalendarEventById(eventId);

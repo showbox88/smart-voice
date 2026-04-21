@@ -2086,14 +2086,14 @@
     "googleCalendar": {
       "title": "Google Calendar",
       "optional": "Opzionale",
-      "description": "Compila automaticamente titoli e partecipanti delle riunioni dal tuo calendario.",
+      "description": "Consulta l'agenda e crea eventi con la voce.",
       "connect": "Collega Google Calendar",
       "connecting": "Connessione...",
       "connected": "Connesso",
       "addAnother": "Aggiungi un altro calendario",
       "disconnect": "Disconnetti",
       "disconnectConfirm": "Disconnettere {{email}}?",
-      "disconnectDescription": "Le note delle riunioni non saranno più registrate da questo calendario.",
+      "disconnectDescription": "I comandi vocali non potranno più consultare né creare eventi su questo calendario.",
       "systemAudioRequired": "Autorizzazione Audio di Sistema richiesta",
       "systemAudioDescription": "Per trascrivere le riunioni, OpenWhispr necessita dell'autorizzazione Audio di Sistema per catturare l'audio degli altri partecipanti. Non registriamo mai il tuo schermo. Verrai reindirizzato alle Impostazioni di Sistema per attivarla.",
       "openSettings": "Apri Impostazioni di Sistema"

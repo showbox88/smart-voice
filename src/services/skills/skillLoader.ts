@@ -40,6 +40,7 @@ export interface AvailabilityContext {
   music_folder_configured: boolean;
   vlc_installed: boolean;
   vesync_logged_in: boolean;
+  google_calendar_connected: boolean;
 }
 
 // Convert skill `parameters` array to JSON Schema object, matching the shape

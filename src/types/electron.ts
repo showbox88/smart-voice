@@ -1647,6 +1647,36 @@ declare global {
         } | null;
       }>;
 
+      // Calendar skill (voice-driven query + create)
+      calendarIsConnected?: () => Promise<{ connected: boolean }>;
+      calendarQueryEvents?: (payload: { from: number; to: number }) => Promise<{
+        success: boolean;
+        events: Array<{
+          id: string;
+          summary: string | null;
+          start_time: string;
+          end_time: string;
+          is_all_day?: boolean;
+        }>;
+        error?: string;
+      }>;
+      calendarCreateEvent?: (payload: {
+        summary: string;
+        startMs: number;
+        endMs: number;
+        description?: string;
+      }) => Promise<{
+        success: boolean;
+        event?: {
+          id: string;
+          summary: string;
+          htmlLink?: string;
+          start: string;
+          end: string;
+        };
+        error?: string;
+      }>;
+
       // Contacts
       searchContacts: (query: string) => Promise<{
         success: boolean;

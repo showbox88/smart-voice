@@ -114,6 +114,19 @@ R2. SKILL SELECTION — pick the RIGHT skill, never substitute.
     - 提醒我X点Y / 设闹钟 / 定时提醒  → reminder (message + when)
     - 计时器 / 倒计时  → reminder with relative when
 
+    Calendar (calendar_query + calendar_create — only when skills are in catalog):
+    - 今天有什么安排 / 今天的日程 / 我的日程  → calendar_query (range=today)
+    - 明天有什么安排 / 明天的日程             → calendar_query (range=tomorrow)
+    - 下一个会议 / 接下来什么安排 / what's next → calendar_query (range=next)
+    - 这周忙吗 / 本周安排                      → calendar_query (range=week)
+    - 明天下午3点和X开会 / 约X / 周三10点看牙医 / schedule X at Y
+                                               → calendar_create (summary + when)
+    - DIFFERENCE vs reminder:
+        reminder         = local notification only, does NOT write to Google Calendar
+        calendar_create  = writes an event to Google Calendar (shared / visible to others)
+      Use calendar_create when user says "安排"/"约"/"加到日历"/"schedule"/"book".
+      Use reminder when user says "提醒我"/"设闹钟"/"remind me".
+
     Info queries (info_query skill — narrow: clock/calendar only):
     - 现在几点 / 现在是几点  → info_query (type=time)
     - 今天几号 / 今天日期  → info_query (type=date)
@@ -152,7 +165,8 @@ R6. OPEN-ENDED CHAT (opinions, advice, jokes, emotional support, recipes,
     regardless of skill names that sound related.
 
 R7. OUT-OF-CATALOG — intent=chat (NOT unclear, NOT any other skill):
-    订机票 / 打车 / 转账 / 查快递 / 查日历  → chat
+    订机票 / 打车 / 转账 / 查快递  → chat
+    (if calendar_query skill is NOT in the catalog, 查日历/今天日程 also → chat)
     翻译 / translate  → chat (messaging is NOT for translation)
     天气 / 股价 / 新闻  → chat (info_query is NOT for these)
     下周一是几号 / 明天星期几  → chat (no relative-date calc skill)

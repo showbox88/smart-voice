@@ -2086,14 +2086,14 @@
     "googleCalendar": {
       "title": "Google Calendar",
       "optional": "Optional",
-      "description": "Meeting-Titel und Teilnehmer automatisch aus deinem Kalender übernehmen.",
+      "description": "Termine per Sprache abfragen und Ereignisse erstellen.",
       "connect": "Google Calendar verbinden",
       "connecting": "Verbinde...",
       "connected": "Verbunden",
       "addAnother": "Weiteren Kalender hinzufügen",
       "disconnect": "Trennen",
       "disconnectConfirm": "{{email}} trennen?",
-      "disconnectDescription": "Besprechungsnotizen werden von diesem Kalender nicht mehr aufgezeichnet.",
+      "disconnectDescription": "Sprachbefehle können Ereignisse in diesem Kalender nicht mehr abfragen oder erstellen.",
       "systemAudioRequired": "Systemaudio-Berechtigung erforderlich",
       "systemAudioDescription": "Zum Transkribieren von Meetings benötigt OpenWhispr die Systemaudio-Berechtigung, um den Ton anderer Teilnehmer aufzunehmen. Wir nehmen Ihren Bildschirm nie auf. Sie werden zu den Systemeinstellungen weitergeleitet, um diese zu aktivieren.",
       "openSettings": "Systemeinstellungen öffnen"

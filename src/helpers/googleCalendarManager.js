@@ -383,6 +383,105 @@ class GoogleCalendarManager {
     return this.databaseManager.getUpcomingEvents(windowMinutes);
   }
 
+  // Query local SQLite for events between [from, to] (ms timestamps). Falls back
+  // to getUpcomingEvents when the DB manager lacks a range helper, so we can
+  // ship before database.js has the dedicated method.
+  async queryEvents({ from, to }) {
+    const fromMs = typeof from === "number" ? from : Date.now();
+    const toMs = typeof to === "number" ? to : fromMs + 24 * 60 * 60 * 1000;
+    if (typeof this.databaseManager.getEventsInRange === "function") {
+      return this.databaseManager.getEventsInRange(fromMs, toMs);
+    }
+    // Fallback: pull a week out and filter in-memory.
+    const windowMinutes = Math.max(1, Math.ceil((toMs - Date.now()) / 60_000));
+    const events = this.databaseManager.getUpcomingEvents(windowMinutes);
+    return events.filter((e) => {
+      const start = new Date(e.start_time).getTime();
+      return start >= fromMs && start <= toMs;
+    });
+  }
+
+  // Create an event on Google Calendar. `calendarId` defaults to "primary".
+  // `startMs` and `endMs` are millisecond timestamps. Returns the created event
+  // payload so the caller can echo details back to the user.
+  async createEvent({ summary, startMs, endMs, description, calendarId, accountEmail }) {
+    if (!this.isConnected()) {
+      const err = new Error("no_account_connected");
+      err.code = "no_account";
+      throw err;
+    }
+    const email = accountEmail || this._getAccountEmails()[0];
+    if (!email) {
+      const err = new Error("no_account_connected");
+      err.code = "no_account";
+      throw err;
+    }
+    const cal = calendarId || "primary";
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    const body = {
+      summary: summary || "(No title)",
+      start: { dateTime: new Date(startMs).toISOString(), timeZone: tz },
+      end: { dateTime: new Date(endMs).toISOString(), timeZone: tz },
+    };
+    if (description) body.description = description;
+
+    const result = await this._apiPost(
+      `/calendars/${encodeURIComponent(cal)}/events`,
+      body,
+      email
+    );
+    // Fire-and-forget resync so the new event shows up in local queries.
+    this.syncEvents().catch(() => {});
+    return result;
+  }
+
+  async _apiPost(path, bodyObj, accountEmail = null) {
+    const accessToken = await this.oauth.getValidAccessToken(accountEmail);
+    const urlString = path.startsWith("http") ? path : `${CALENDAR_API_BASE}${path}`;
+    const url = new URL(urlString);
+    const body = JSON.stringify(bodyObj);
+
+    return new Promise((resolve, reject) => {
+      const req = https.request(
+        {
+          hostname: url.hostname,
+          port: 443,
+          path: url.pathname + url.search,
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(body),
+          },
+        },
+        (res) => {
+          let data = "";
+          res.on("data", (chunk) => (data += chunk));
+          res.on("end", () => {
+            try {
+              const parsed = JSON.parse(data);
+              if (res.statusCode >= 400) {
+                const err = new Error(parsed.error?.message || `API error ${res.statusCode}`);
+                err.statusCode = res.statusCode;
+                reject(err);
+                return;
+              }
+              resolve(parsed);
+            } catch (e) {
+              reject(new Error(`Invalid JSON response: ${data.slice(0, 200)}`));
+            }
+          });
+        }
+      );
+      req.on("error", reject);
+      req.setTimeout(10000, () => {
+        req.destroy(new Error("Request timed out after 10s"));
+      });
+      req.write(body);
+      req.end();
+    });
+  }
+
   broadcastToWindows(channel, data) {
     const windows = BrowserWindow.getAllWindows();
     windows.forEach((win) => {

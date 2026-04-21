@@ -118,10 +118,12 @@ export function useChatStreaming({
       // guard in prewarmRouter() makes this idempotent across remounts.
       if (isRouterDryRunEnabled() || isRouterDispatchEnabled()) {
         try {
+          const gcal = await window.electronAPI?.calendarIsConnected?.();
           const skills = await loadAllSkills({
             music_folder_configured: Boolean(folder),
             vlc_installed: Boolean(vlc?.available),
             vesync_logged_in: Boolean(email && password),
+            google_calendar_connected: Boolean(gcal?.connected),
           });
           void prewarmRouter(skills);
         } catch (err) {
@@ -246,10 +248,12 @@ export function useChatStreaming({
           tavilyAvailable,
         });
         try {
+          const gcalConn = await window.electronAPI?.calendarIsConnected?.();
           loadedSkills = await loadAllSkills({
             music_folder_configured: Boolean(folder),
             vlc_installed: Boolean(vlc?.available),
             vesync_logged_in: Boolean(email && password),
+            google_calendar_connected: Boolean(gcalConn?.connected),
           });
           for (const s of loadedSkills) {
             registry.register(s.tool);
@@ -583,16 +587,18 @@ export function useChatStreaming({
 
       // Non-chat skill: execute the skill handler directly, render one
       // "⏰ <when>：<result>" bubble.
-      const [email, password, folder, vlc] = await Promise.all([
+      const [email, password, folder, vlc, gcalConn] = await Promise.all([
         window.electronAPI?.getVeSyncEmail?.(),
         window.electronAPI?.getVeSyncPassword?.(),
         window.electronAPI?.getMusicFolder?.(),
         window.electronAPI?.musicVlcStatus?.(),
+        window.electronAPI?.calendarIsConnected?.(),
       ]);
       const skills = await loadAllSkills({
         music_folder_configured: Boolean(folder),
         vlc_installed: Boolean(vlc?.available),
         vesync_logged_in: Boolean(email && password),
+        google_calendar_connected: Boolean(gcalConn?.connected),
       });
       const skill = skills.find((s) => s.name === payload.skill);
       if (!skill) {

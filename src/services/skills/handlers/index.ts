@@ -5,6 +5,7 @@ import * as systemHandlers from "./system";
 import * as infoHandlers from "./info";
 import * as climateHandlers from "./climate";
 import * as messagingHandlers from "./messaging";
+import * as calendarHandlers from "./calendar";
 
 export type SkillHandler = (args: Record<string, unknown>) => Promise<ToolResult>;
 
@@ -21,6 +22,8 @@ const REGISTRY: Record<string, SkillHandler> = {
   "info.query": infoHandlers.query,
   "climate.aircon": climateHandlers.aircon,
   "messaging.send": messagingHandlers.send,
+  "calendar.query": calendarHandlers.query,
+  "calendar.create": calendarHandlers.create,
 };
 
 export function getHandler(name: string): SkillHandler | undefined {

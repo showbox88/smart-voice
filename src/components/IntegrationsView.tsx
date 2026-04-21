@@ -6,8 +6,6 @@ import { Badge } from "./ui/badge";
 import { SettingsPanel, SettingsPanelRow } from "./ui/SettingsSection";
 import { ConfirmDialog } from "./ui/dialog";
 import { useSettingsStore } from "../stores/settingsStore";
-import { useSystemAudioPermission } from "../hooks/useSystemAudioPermission";
-import { canManageSystemAudioInApp } from "../utils/systemAudioAccess";
 import googleCalendarIcon from "../assets/icons/google-calendar.svg";
 
 export default function IntegrationsView() {
@@ -16,13 +14,9 @@ export default function IntegrationsView() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [disconnectingEmail, setDisconnectingEmail] = useState<string | null>(null);
   const [confirmDisconnectEmail, setConfirmDisconnectEmail] = useState<string | null>(null);
-  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
-  const systemAudio = useSystemAudioPermission();
-  const { request: requestSystemAudioAccess } = systemAudio;
   const hasAccounts = gcalAccounts.length > 0;
-  const needsSystemAudioGrant = !systemAudio.granted && canManageSystemAudioInApp(systemAudio);
 
-  const startOAuth = useCallback(async () => {
+  const handleConnect = useCallback(async () => {
     setIsConnecting(true);
     try {
       const result = await window.electronAPI?.gcalStartOAuth?.();
@@ -37,17 +31,6 @@ export default function IntegrationsView() {
       setIsConnecting(false);
     }
   }, [setGcalAccounts]);
-
-  const handleConnect = useCallback(async () => {
-    if (needsSystemAudioGrant) {
-      const granted = await requestSystemAudioAccess();
-      if (!granted) {
-        setShowPermissionDialog(true);
-        return;
-      }
-    }
-    await startOAuth();
-  }, [needsSystemAudioGrant, requestSystemAudioAccess, startOAuth]);
 
   const handleDisconnect = useCallback(
     async (email: string) => {
@@ -202,19 +185,6 @@ export default function IntegrationsView() {
         onConfirm={() => {
           if (confirmDisconnectEmail) handleDisconnect(confirmDisconnectEmail);
         }}
-      />
-
-      <ConfirmDialog
-        open={showPermissionDialog}
-        onOpenChange={setShowPermissionDialog}
-        title={t("integrations.googleCalendar.systemAudioRequired")}
-        description={t("integrations.googleCalendar.systemAudioDescription")}
-        confirmText={
-          systemAudio.mode === "native"
-            ? t("integrations.googleCalendar.openSettings")
-            : t("onboarding.permissions.grantAccess")
-        }
-        onConfirm={systemAudio.mode === "native" ? systemAudio.openSettings : systemAudio.request}
       />
     </div>
   );
