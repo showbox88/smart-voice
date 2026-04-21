@@ -25,6 +25,7 @@ const REGISTRY: Record<string, SkillHandler> = {
   "messaging.send": messagingHandlers.send,
   "calendar.query": calendarHandlers.query,
   "calendar.create": calendarHandlers.create,
+  "calendar.cancel": calendarHandlers.cancel,
   "windowsControl.execute": windowsControlHandlers.execute,
 };
 

@@ -435,6 +435,86 @@ class GoogleCalendarManager {
     return result;
   }
 
+  // Delete an event from a Google calendar. `calendarId` defaults to "primary".
+  // Returns `{ ok: true }` on 204. Caller should confirm the event id exists
+  // (via local SQLite) before calling, to avoid 404 surprises.
+  async deleteEvent({ eventId, calendarId, accountEmail }) {
+    if (!this.isConnected()) {
+      const err = new Error("no_account_connected");
+      err.code = "no_account";
+      throw err;
+    }
+    if (!eventId || typeof eventId !== "string") {
+      throw new Error("missing_event_id");
+    }
+    const email = accountEmail || this._getAccountEmails()[0];
+    if (!email) {
+      const err = new Error("no_account_connected");
+      err.code = "no_account";
+      throw err;
+    }
+    const cal = calendarId || "primary";
+    await this._apiDelete(
+      `/calendars/${encodeURIComponent(cal)}/events/${encodeURIComponent(eventId)}`,
+      email
+    );
+    // Remove from local SQLite right away so subsequent queries don't list it.
+    try {
+      if (typeof this.databaseManager.removeCalendarEvents === "function") {
+        this.databaseManager.removeCalendarEvents([eventId]);
+      }
+    } catch {}
+    // Fire-and-forget resync to reconcile with server-side state.
+    this.syncEvents().catch(() => {});
+    return { ok: true, eventId };
+  }
+
+  async _apiDelete(path, accountEmail = null) {
+    const accessToken = await this.oauth.getValidAccessToken(accountEmail);
+    const urlString = path.startsWith("http") ? path : `${CALENDAR_API_BASE}${path}`;
+    const url = new URL(urlString);
+
+    return new Promise((resolve, reject) => {
+      const req = https.request(
+        {
+          hostname: url.hostname,
+          port: 443,
+          path: url.pathname + url.search,
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+        (res) => {
+          let data = "";
+          res.on("data", (chunk) => (data += chunk));
+          res.on("end", () => {
+            // 204 No Content is the success case; 410 Gone means already deleted.
+            if (res.statusCode === 204 || res.statusCode === 410) {
+              resolve({ ok: true });
+              return;
+            }
+            try {
+              const parsed = data ? JSON.parse(data) : {};
+              const err = new Error(parsed.error?.message || `API error ${res.statusCode}`);
+              err.statusCode = res.statusCode;
+              reject(err);
+            } catch {
+              const err = new Error(`API error ${res.statusCode}: ${data.slice(0, 200)}`);
+              err.statusCode = res.statusCode;
+              reject(err);
+            }
+          });
+        }
+      );
+      req.on("error", reject);
+      req.setTimeout(10000, () => {
+        req.destroy(new Error("Request timed out after 10s"));
+      });
+      req.end();
+    });
+  }
+
   async _apiPost(path, bodyObj, accountEmail = null) {
     const accessToken = await this.oauth.getValidAccessToken(accountEmail);
     const urlString = path.startsWith("http") ? path : `${CALENDAR_API_BASE}${path}`;

@@ -7365,6 +7365,24 @@ class IPCHandlers {
       }
     });
 
+    // Delete an event from the user's primary Google calendar by event id.
+    ipcMain.handle("calendar:delete-event", async (_event, payload) => {
+      try {
+        if (!this.googleCalendarManager.isConnected()) {
+          return { success: false, error: "not_connected" };
+        }
+        const { eventId, calendarId } = payload || {};
+        if (!eventId || typeof eventId !== "string") {
+          return { success: false, error: "missing_event_id" };
+        }
+        await this.googleCalendarManager.deleteEvent({ eventId, calendarId });
+        return { success: true, eventId };
+      } catch (error) {
+        debugLogger.error("calendar:delete-event failed", { error: error.message }, "calendar");
+        return { success: false, error: error.message };
+      }
+    });
+
     ipcMain.handle("calendar:is-connected", async () => {
       try {
         return { connected: this.googleCalendarManager.isConnected() };

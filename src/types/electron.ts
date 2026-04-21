@@ -1729,6 +1729,14 @@ declare global {
         };
         error?: string;
       }>;
+      calendarDeleteEvent?: (payload: {
+        eventId: string;
+        calendarId?: string;
+      }) => Promise<{
+        success: boolean;
+        eventId?: string;
+        error?: string;
+      }>;
 
       // Windows-MCP fallback skill
       windowsMcpIsAvailable?: () => Promise<{ available: boolean }>;

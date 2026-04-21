@@ -33,6 +33,11 @@ type CalendarApi = {
     };
     error?: string;
   }>;
+  calendarDeleteEvent?: (payload: { eventId: string; calendarId?: string }) => Promise<{
+    success: boolean;
+    eventId?: string;
+    error?: string;
+  }>;
 };
 
 function getApi(): CalendarApi | null {
@@ -202,5 +207,114 @@ export async function create(args: Record<string, unknown>): Promise<ToolResult>
     success: true,
     data: r.event,
     displayText: `好的，已在日历添加：${dayLabel} ${time} ${summary}`,
+  };
+}
+
+// Case-insensitive substring match on event title. If `match` is empty, every
+// event passes (caller is responsible for `all`/disambiguation logic).
+function titleMatches(summary: string | null, match: string): boolean {
+  if (!match) return true;
+  const hay = (summary || "").toLowerCase();
+  return hay.includes(match.toLowerCase());
+}
+
+// Cancel one or more events in the user's primary calendar. Filter flow:
+//   1. Pull events in `range` from local SQLite.
+//   2. If `match` is set, narrow by fuzzy title.
+//   3. If `all` is true, delete every remaining candidate.
+//      Otherwise: exactly-1 → delete; >1 → list for disambiguation (no delete);
+//      0 → say "nothing to cancel".
+export async function cancel(args: Record<string, unknown>): Promise<ToolResult> {
+  const api = getApi();
+  if (!api?.calendarIsConnected || !api?.calendarQueryEvents || !api?.calendarDeleteEvent) {
+    return notReady("IPC 未注册");
+  }
+  const connected = await api.calendarIsConnected();
+  if (!connected.connected) {
+    return {
+      success: false,
+      data: null,
+      displayText: "还没连接 Google 日历，请先在 Integrations 里登录。",
+    };
+  }
+
+  const now = new Date();
+  const range = String(args.range || "today");
+  const match = String(args.match || "").trim();
+  const all = args.all === true || args.all === "true";
+  const { from, to, label } = resolveRange(range, now);
+
+  const q = await api.calendarQueryEvents({ from, to });
+  if (!q.success) {
+    return { success: false, data: null, displayText: `查询日历失败：${q.error || "unknown"}` };
+  }
+
+  const candidates = (q.events || []).filter((e) => titleMatches(e.summary, match));
+
+  if (candidates.length === 0) {
+    const matchSuffix = match ? `匹配「${match}」的` : "";
+    return {
+      success: true,
+      data: { deleted: [], candidates: [] },
+      displayText: `${label}没有${matchSuffix}安排可取消。`,
+    };
+  }
+
+  // Multiple candidates without `all` → surface the list, do NOT delete.
+  if (candidates.length > 1 && !all) {
+    const lines = candidates.slice(0, 5).map((e, i) => {
+      const d = new Date(e.start_time);
+      const dayLabel = formatDayLabel(d, now);
+      const time = e.is_all_day ? "全天" : formatHHMM(e.start_time);
+      return `${i + 1}. ${dayLabel} ${time} ${e.summary || "(无标题)"}`;
+    });
+    const header = match
+      ? `${label}有 ${candidates.length} 项匹配「${match}」的安排，要取消哪一个？`
+      : `${label}有 ${candidates.length} 项安排，要取消哪一个？（或说「都取消」）`;
+    return {
+      success: true,
+      data: { deleted: [], candidates },
+      displayText: `${header}\n${lines.join("\n")}`,
+    };
+  }
+
+  // Either exactly one candidate, or `all=true`. Delete them.
+  const deleted: Array<{ id: string; summary: string | null; start_time: string }> = [];
+  const failed: Array<{ id: string; error: string }> = [];
+  for (const e of candidates) {
+    const r = await api.calendarDeleteEvent({ eventId: e.id });
+    if (r.success) {
+      deleted.push({ id: e.id, summary: e.summary, start_time: e.start_time });
+    } else {
+      failed.push({ id: e.id, error: r.error || "unknown" });
+    }
+  }
+
+  if (deleted.length === 0) {
+    return {
+      success: false,
+      data: { deleted, failed },
+      displayText: `取消失败：${failed[0]?.error || "unknown"}`,
+    };
+  }
+
+  if (deleted.length === 1) {
+    const e = deleted[0];
+    const d = new Date(e.start_time);
+    const dayLabel = formatDayLabel(d, now);
+    const time = formatHHMM(e.start_time);
+    const title = e.summary || "(无标题)";
+    return {
+      success: true,
+      data: { deleted, failed },
+      displayText: `好的，已取消：${dayLabel} ${time} ${title}`,
+    };
+  }
+
+  const failTail = failed.length > 0 ? `（另有 ${failed.length} 项失败）` : "";
+  return {
+    success: true,
+    data: { deleted, failed },
+    displayText: `好的，已取消 ${label}的 ${deleted.length} 项安排${failTail}。`,
   };
 }

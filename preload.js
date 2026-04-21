@@ -910,6 +910,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   calendarIsConnected: () => ipcRenderer.invoke("calendar:is-connected"),
   calendarQueryEvents: (payload) => ipcRenderer.invoke("calendar:query-events", payload),
   calendarCreateEvent: (payload) => ipcRenderer.invoke("calendar:create-event", payload),
+  calendarDeleteEvent: (payload) => ipcRenderer.invoke("calendar:delete-event", payload),
 
   // Windows-MCP fallback skill
   windowsMcpIsAvailable: () => ipcRenderer.invoke("mcp:windows-is-available"),
