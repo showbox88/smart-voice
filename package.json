@@ -151,6 +151,7 @@
     "kysely": "^0.28.14",
     "lucide-react": "^1.7.0",
     "msedge-tts": "^2.0.5",
+    "music-metadata": "^11.12.3",
     "object-assign": "^4.1.1",
     "onnxruntime-node": "^1.21.0",
     "ps-list": "^9.0.0",

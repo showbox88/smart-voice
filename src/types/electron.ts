@@ -1075,6 +1075,59 @@ declare global {
         copied?: string[];
         skipped?: Array<{ src: string; reason: string }>;
       }>;
+      musicScan: () => Promise<{
+        success: boolean;
+        error?: string;
+        total?: number;
+        added?: number;
+        removed?: number;
+      }>;
+      musicGetIndex: () => Promise<{
+        success: boolean;
+        error?: string;
+        exists?: boolean;
+        index?: {
+          version: number;
+          root: string;
+          scanned_at: string;
+          tracks: Array<{
+            id: string;
+            rel: string;
+            name: string;
+            artist: string | null;
+            album: string | null;
+            genre: string | null;
+            year: number | null;
+            duration_sec: number | null;
+            mood: string | null;
+            tags: string[];
+            user_meta: Record<string, string | null>;
+          }>;
+        } | null;
+      }>;
+      musicUpdateTrack: (
+        id: string,
+        patch: {
+          mood?: string | null;
+          tags?: string[];
+          user_meta?: Record<string, string | null>;
+        }
+      ) => Promise<{ success: boolean; error?: string; track?: unknown }>;
+      onMusicScanProgress: (
+        cb: (payload: { done: number; total: number; current: string }) => void
+      ) => () => void;
+
+      // Cross-domain agent state (lastPlayedTrackId, etc.)
+      agentStateGet: () => Promise<{
+        success: boolean;
+        error?: string;
+        state?: Record<string, unknown>;
+      }>;
+      agentStateSet: (patch: Record<string, unknown>) => Promise<{
+        success: boolean;
+        error?: string;
+        state?: Record<string, unknown>;
+      }>;
 
       // Skills library — parsed SKILL.md files
       skillsLoadAll: () => Promise<{

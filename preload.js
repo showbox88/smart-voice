@@ -263,6 +263,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   musicSetShuffle: (on) => ipcRenderer.invoke("music:set-shuffle", on),
   musicStatus: () => ipcRenderer.invoke("music:status"),
   musicImportPaths: (paths) => ipcRenderer.invoke("music:import-paths", paths),
+  musicScan: () => ipcRenderer.invoke("music:scan"),
+  musicGetIndex: () => ipcRenderer.invoke("music:get-index"),
+  musicUpdateTrack: (id, patch) => ipcRenderer.invoke("music:update-track", { id, patch }),
+  agentStateGet: () => ipcRenderer.invoke("agent-state:get"),
+  agentStateSet: (patch) => ipcRenderer.invoke("agent-state:set", patch),
+  onMusicScanProgress: (cb) => {
+    const handler = (_e, payload) => cb(payload);
+    ipcRenderer.on("music:scan-progress", handler);
+    return () => ipcRenderer.removeListener("music:scan-progress", handler);
+  },
 
   // Skills library — parsed SKILL.md files from bundled + userData dirs
   skillsLoadAll: () => ipcRenderer.invoke("skills:load-all"),

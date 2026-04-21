@@ -2293,6 +2293,64 @@ class IPCHandlers {
       return this.musicManager.importFiles(root, Array.isArray(paths) ? paths : []);
     });
 
+    ipcMain.handle("music:scan", async (event) => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      const root = (this.environmentManager.getMusicFolder() || "").trim();
+      if (!root) return { success: false, error: "no_folder_configured" };
+      const senderWc = event.sender;
+      // Throttle progress events — one every ~150ms is plenty for a progress bar
+      // and keeps IPC traffic manageable on libraries with thousands of files.
+      let lastEmit = 0;
+      return this.musicManager.scan(root, {
+        onProgress: (p) => {
+          const now = Date.now();
+          if (now - lastEmit < 150 && p.done !== p.total) return;
+          lastEmit = now;
+          try {
+            if (senderWc && !senderWc.isDestroyed()) {
+              senderWc.send("music:scan-progress", p);
+            }
+          } catch {
+            /* ignore */
+          }
+        },
+      });
+    });
+
+    ipcMain.handle("music:get-index", async () => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      const root = (this.environmentManager.getMusicFolder() || "").trim();
+      if (!root) return { success: false, error: "no_folder_configured" };
+      return this.musicManager.getIndex(root);
+    });
+
+    ipcMain.handle("music:update-track", async (_e, payload = {}) => {
+      if (!this.musicManager) return { success: false, error: "not_init" };
+      const root = (this.environmentManager.getMusicFolder() || "").trim();
+      if (!root) return { success: false, error: "no_folder_configured" };
+      const id = typeof payload.id === "string" ? payload.id : "";
+      const patch = payload.patch && typeof payload.patch === "object" ? payload.patch : {};
+      return this.musicManager.updateTrack(root, id, patch);
+    });
+
+    // Cross-domain agent state (lastPlayedTrackId, etc.) — see agentState.js.
+    const agentState = require("./agentState");
+    ipcMain.handle("agent-state:get", async () => {
+      try {
+        return { success: true, state: agentState.get() };
+      } catch (err) {
+        return { success: false, error: err.message || "agent_state_get_failed" };
+      }
+    });
+    ipcMain.handle("agent-state:set", async (_e, patch) => {
+      try {
+        const next = agentState.set(patch || {});
+        return { success: true, state: next };
+      } catch (err) {
+        return { success: false, error: err.message || "agent_state_set_failed" };
+      }
+    });
+
     ipcMain.handle("tts-synthesize", async (_event, text, options = {}) => {
       if (!this.ttsManager) {
         return { success: false, error: "TTS manager not initialized" };

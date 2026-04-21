@@ -21,6 +21,7 @@ import {
   renderUnclearMessage as renderRouterUnclear,
 } from "../../services/skills/router";
 import { parseWhenFast, stripForEcho } from "../../services/skills/timeResolver";
+import { buildWorldContext } from "../../services/skills/worldContext";
 import type { Message, AgentState, ToolCallInfo } from "./types";
 
 const RAG_NOTE_LIMIT = 5;
@@ -412,8 +413,13 @@ export function useChatStreaming({
         // intent=chat (no time modifier): fall through to full LLM streaming below
       }
 
-      const ragContext = await buildRAGContext(userText);
-      const combinedContext = [noteContextRef.current, ragContext].filter(Boolean).join("\n\n");
+      const [ragContext, worldContext] = await Promise.all([
+        buildRAGContext(userText),
+        buildWorldContext(),
+      ]);
+      const combinedContext = [noteContextRef.current, worldContext, ragContext]
+        .filter(Boolean)
+        .join("\n\n");
       const systemPrompt = getAgentSystemPrompt(
         registry?.getAll().map((t) => t.name),
         combinedContext || undefined

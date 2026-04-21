@@ -40,6 +40,7 @@ const ChatView = React.lazy(() => import("./chat/ChatView"));
 const CommandSearch = React.lazy(() => import("./CommandSearch"));
 const ClaudeCodeView = React.lazy(() => import("./ClaudeCodeView"));
 const SmartHomeView = React.lazy(() => import("./SmartHomeView"));
+const MusicLibraryView = React.lazy(() => import("./MusicLibraryView"));
 
 export default function ControlPanel() {
   const { t } = useTranslation();
@@ -834,6 +835,11 @@ export default function ControlPanel() {
             {activeView === "smart-home" && (
               <Suspense fallback={null}>
                 <SmartHomeView />
+              </Suspense>
+            )}
+            {activeView === "music-library" && (
+              <Suspense fallback={null}>
+                <MusicLibraryView />
               </Suspense>
             )}
           </div>

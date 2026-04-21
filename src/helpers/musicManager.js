@@ -3,6 +3,7 @@ const path = require("path");
 const { spawn } = require("child_process");
 const http = require("http");
 const debugLogger = require("./debugLogger");
+const musicIndex = require("./musicIndex");
 
 const AUDIO_EXTS = new Set([".mp3", ".flac", ".m4a", ".aac", ".wav", ".ogg", ".opus", ".wma"]);
 const VLC_HTTP_PORT = 8765;
@@ -84,6 +85,22 @@ class MusicManager {
     if (!rootDir) return { success: false, error: "missing_root" };
     if (!fs.existsSync(rootDir)) return { success: false, error: "root_not_found" };
 
+    // Prefer the on-disk index when present — same shape (files=absolute paths),
+    // but zero filesystem traversal. Index is authoritative once the user has
+    // run a scan; listFiles stays as the live-walk fallback for first-run users
+    // and the import flow.
+    if (!refresh) {
+      try {
+        const idx = await musicIndex.loadIndex(rootDir);
+        if (idx && Array.isArray(idx.tracks) && idx.tracks.length > 0) {
+          const files = idx.tracks.map((t) => path.join(rootDir, t.rel));
+          return { success: true, files, fromIndex: true };
+        }
+      } catch {
+        /* fall through to live walk */
+      }
+    }
+
     const cacheFresh =
       !refresh &&
       this.fileCache.root === rootDir &&
@@ -98,6 +115,30 @@ class MusicManager {
     this.fileCache = { root: rootDir, files: out, scannedAt: Date.now() };
     this.lastRoot = rootDir;
     return { success: true, files: out };
+  }
+
+  // Persistent scan: walks the folder, extracts ID3/format metadata, and
+  // writes {root}/.openwhispr-music-index.json. Preserves user_meta/mood/tags
+  // from any existing index. Optional onProgress(cb) called per file.
+  async scan(rootDir, { onProgress } = {}) {
+    if (!rootDir) return { success: false, error: "missing_root" };
+    if (!fs.existsSync(rootDir)) return { success: false, error: "root_not_found" };
+    const result = await musicIndex.scan(rootDir, { onProgress });
+    // Invalidate the live-walk cache so listFiles picks up the fresh index.
+    this.fileCache = { root: null, files: [], scannedAt: 0 };
+    return result;
+  }
+
+  async getIndex(rootDir) {
+    if (!rootDir) return { success: false, error: "missing_root" };
+    const idx = await musicIndex.loadIndex(rootDir);
+    if (!idx) return { success: true, exists: false, index: null };
+    return { success: true, exists: true, index: idx };
+  }
+
+  async updateTrack(rootDir, id, patch) {
+    if (!rootDir) return { success: false, error: "missing_root" };
+    return musicIndex.updateTrack(rootDir, id, patch);
   }
 
   _vlcRequest(commandQuery) {
