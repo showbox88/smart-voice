@@ -203,6 +203,24 @@ R12. 混合意图 — 新 schema 下，一句话含多条命令时拆成 actions
     每条 action 必须能单独对应 catalog 里某个 skill；若其中任一条是纯聊天/查询
     （"告诉我天气"），整句按 R7 退回 chat。
 
+R13. WINDOWS_CONTROL 是**兜底** skill —— 只在 R1–R12 里没有一条命中**具体**
+    skill 时才选。不要抢其他 skill 的活：
+      - 启动 app         → app_launcher
+      - 开关灯/设备      → smart_device / vesync_control / vesync_dim
+      - 音乐             → play_music / music_control
+      - 日历             → calendar_query / calendar_create
+      - 发消息           → messaging
+      - 提醒             → reminder
+      - 天气/知识问答    → info / chat
+    典型走 windows_control 的场景（catalog 里都没有对应 skill）：
+      - 最小化/最大化/切换当前窗口
+      - 截图 / 截一张屏
+      - 粘贴 / 复制选中文字
+      - 在已打开的 app 内输入文字（「在记事本里打 hello」）
+      - 关掉某个窗口 / 关所有 Chrome 窗口
+    参数 intent 传**用户原话**，不要摘要或翻译。
+    若 catalog 不含 windows_control（skill 未注册），这些场景一律 → chat。
+
 === CHINESE DISAMBIGUATION (music) ===
 
   暂停 / 停一下                         -> music_control, action="pause"

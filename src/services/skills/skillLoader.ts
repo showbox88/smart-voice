@@ -41,6 +41,7 @@ export interface AvailabilityContext {
   vlc_installed: boolean;
   vesync_logged_in: boolean;
   google_calendar_connected: boolean;
+  windows_mcp_available: boolean;
 }
 
 // Convert skill `parameters` array to JSON Schema object, matching the shape
@@ -135,8 +136,12 @@ export async function loadAllSkills(
   if (!r?.success || !Array.isArray(r.skills)) return [];
 
   const out: LoadedSkill[] = [];
+  const filtered: string[] = [];
   for (const raw of r.skills as RawSkill[]) {
-    if (!isAvailable(raw, ctx)) continue;
+    if (!isAvailable(raw, ctx)) {
+      filtered.push(`${raw.name}(requires=${(raw.availability?.requires || []).join("+")})`);
+      continue;
+    }
     const tool = toToolDefinition(raw);
     if (!tool) continue;
     out.push({
@@ -147,5 +152,11 @@ export async function loadAllSkills(
       tool,
     });
   }
+  // eslint-disable-next-line no-console
+  console.info("[skills] catalog", {
+    loaded: out.map((s) => s.name),
+    filtered,
+    availability: ctx,
+  });
   return out;
 }

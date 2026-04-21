@@ -901,6 +901,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
   calendarQueryEvents: (payload) => ipcRenderer.invoke("calendar:query-events", payload),
   calendarCreateEvent: (payload) => ipcRenderer.invoke("calendar:create-event", payload),
 
+  // Windows-MCP fallback skill
+  windowsMcpIsAvailable: () => ipcRenderer.invoke("mcp:windows-is-available"),
+  windowsMcpExecute: (payload) => ipcRenderer.invoke("mcp:windows-execute", payload),
+  onWindowsMcpReady: (cb) => {
+    const listener = (_e, data) => cb(data);
+    ipcRenderer.on("windows-mcp-ready", listener);
+    return () => ipcRenderer.removeListener("windows-mcp-ready", listener);
+  },
+
   // Contacts
   searchContacts: (query) => ipcRenderer.invoke("search-contacts", query),
   upsertContact: (contact) => ipcRenderer.invoke("upsert-contact", contact),

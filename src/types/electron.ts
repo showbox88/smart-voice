@@ -1677,6 +1677,18 @@ declare global {
         error?: string;
       }>;
 
+      // Windows-MCP fallback skill
+      windowsMcpIsAvailable?: () => Promise<{ available: boolean }>;
+      windowsMcpExecute?: (payload: { intent: string }) => Promise<{
+        success: boolean;
+        summary: string;
+        toolUsed?: string;
+        toolArgs?: Record<string, unknown>;
+      }>;
+      onWindowsMcpReady?: (
+        cb: (data: { available: boolean; toolCount?: number }) => void
+      ) => () => void;
+
       // Contacts
       searchContacts: (query: string) => Promise<{
         success: boolean;

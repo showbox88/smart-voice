@@ -116,6 +116,7 @@ class IPCHandlers {
     this.linuxKeyManager = managers.linuxKeyManager;
     this.textEditMonitor = managers.textEditMonitor;
     this.getTrayManager = managers.getTrayManager;
+    this.getWindowsMcpManager = managers.getWindowsMcpManager;
     this.whisperCudaManager = managers.whisperCudaManager;
     this.ttsManager = managers.ttsManager;
     this.claudeCodeManager = managers.claudeCodeManager;
@@ -1970,6 +1971,10 @@ class IPCHandlers {
       if (!this.skillsManager) return { success: false, error: "not_init", skills: [] };
       try {
         const skills = await this.skillsManager.loadAll();
+        debugLogger.info("[skills] loaded", {
+          count: skills.length,
+          names: skills.map((s) => s.name),
+        });
         return { success: true, skills };
       } catch (err) {
         return { success: false, error: err.message || "load_failed", skills: [] };
@@ -7288,6 +7293,31 @@ class IPCHandlers {
         return { connected: this.googleCalendarManager.isConnected() };
       } catch {
         return { connected: false };
+      }
+    });
+
+    ipcMain.handle("mcp:windows-is-available", async () => {
+      try {
+        const mgr = this.getWindowsMcpManager?.();
+        return { available: Boolean(mgr?.isAvailable?.()) };
+      } catch {
+        return { available: false };
+      }
+    });
+
+    ipcMain.handle("mcp:windows-execute", async (_event, payload) => {
+      try {
+        const intent = typeof payload?.intent === "string" ? payload.intent.trim() : "";
+        if (!intent) {
+          return { success: false, summary: "intent is required" };
+        }
+        const mgr = this.getWindowsMcpManager?.();
+        if (!mgr || !mgr.isAvailable?.()) {
+          return { success: false, summary: "Windows MCP 尚未就绪" };
+        }
+        return await mgr.executeIntent(intent);
+      } catch (error) {
+        return { success: false, summary: `内部错误：${error?.message || "unknown"}` };
       }
     });
 

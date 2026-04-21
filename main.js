@@ -245,6 +245,7 @@ let audioTapManager = null;
 let linuxPortalAudioManager = null;
 let meetingAecManager = null;
 let qdrantManager = null;
+let windowsMcpManager = null;
 let wakeWordManager = null;
 let ipcHandlers = null;
 let globeKeyAlertShown = false;
@@ -361,6 +362,7 @@ function initializeCoreManagers() {
     audioTapManager,
     linuxPortalAudioManager,
     meetingAecManager,
+    getWindowsMcpManager: () => windowsMcpManager,
     getTrayManager: () => trayManager,
   });
 
@@ -924,6 +926,17 @@ async function startApp() {
       debugLogger.debug("Embedding model download error (non-fatal)", { error: err.message });
     });
   }
+
+  const WindowsMcpManager = require("./src/helpers/windowsMcpManager");
+  windowsMcpManager = new WindowsMcpManager({
+    getLlamaPort: () => {
+      const mm = require("./src/helpers/modelManagerBridge").default;
+      return mm?.serverManager?.port || null;
+    },
+  });
+  windowsMcpManager.start().catch((err) => {
+    debugLogger.debug("windows-mcp start error (non-fatal)", { error: err.message });
+  });
 
   if (process.platform === "win32") {
     const nircmdStatus = clipboardManager.getNircmdStatus();
@@ -1521,6 +1534,9 @@ if (gotSingleInstanceLock) {
     modelManager.stopServer().catch(() => {});
     if (qdrantManager) {
       qdrantManager.stop().catch(() => {});
+    }
+    if (windowsMcpManager) {
+      windowsMcpManager.stop().catch(() => {});
     }
     if (musicManager) {
       musicManager.shutdown().catch(() => {});

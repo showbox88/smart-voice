@@ -119,11 +119,13 @@ export function useChatStreaming({
       if (isRouterDryRunEnabled() || isRouterDispatchEnabled()) {
         try {
           const gcal = await window.electronAPI?.calendarIsConnected?.();
+          const mcp = await window.electronAPI?.windowsMcpIsAvailable?.();
           const skills = await loadAllSkills({
             music_folder_configured: Boolean(folder),
             vlc_installed: Boolean(vlc?.available),
             vesync_logged_in: Boolean(email && password),
             google_calendar_connected: Boolean(gcal?.connected),
+            windows_mcp_available: Boolean(mcp?.available),
           });
           void prewarmRouter(skills);
         } catch (err) {
@@ -249,11 +251,13 @@ export function useChatStreaming({
         });
         try {
           const gcalConn = await window.electronAPI?.calendarIsConnected?.();
+          const mcpStatus = await window.electronAPI?.windowsMcpIsAvailable?.();
           loadedSkills = await loadAllSkills({
             music_folder_configured: Boolean(folder),
             vlc_installed: Boolean(vlc?.available),
             vesync_logged_in: Boolean(email && password),
             google_calendar_connected: Boolean(gcalConn?.connected),
+            windows_mcp_available: Boolean(mcpStatus?.available),
           });
           for (const s of loadedSkills) {
             registry.register(s.tool);
@@ -263,6 +267,39 @@ export function useChatStreaming({
         }
       }
       const skillResponseMap = new SkillResponseMap(loadedSkills);
+
+      // Wake-word shortcut — bypass router and jump straight to the Windows-MCP
+      // fallback when the user prefixes their utterance with "cpu " / "CPU:" /
+      // "cpu，xxx". Testing aid: the router is less reliable at classifying
+      // long-tail desktop-control phrasings than a fixed prefix match. Strip
+      // the prefix before handing the intent to the planner.
+      const cpuMatch = userText.match(/^\s*cpu[\s,，:：]+(.+?)\s*$/i);
+      if (cpuMatch) {
+        const intent = cpuMatch[1];
+        console.info("[wake-word] cpu → windows-mcp", { intent });
+        const api = window.electronAPI as unknown as {
+          windowsMcpExecute?: (p: { intent: string }) => Promise<{
+            success: boolean;
+            summary?: string;
+            toolUsed?: string;
+          }>;
+        };
+        if (api?.windowsMcpExecute) {
+          setToolStatus("正在调用桌面控制…");
+          const res = await api.windowsMcpExecute({ intent });
+          const content = res?.summary || (res?.success ? "已完成" : "没做成");
+          const assistantId = crypto.randomUUID();
+          setMessages((prev) => [
+            ...prev,
+            { id: assistantId, role: "assistant", content, isStreaming: false },
+          ]);
+          onStreamComplete?.(assistantId, content);
+          setAgentState("idle");
+          setToolStatus("");
+          setActiveToolName("");
+          return;
+        }
+      }
 
       // Phase A: skill-router dry-run. Classifies intent only, no handler
       // dispatch. See docs/skill-router/test-sentences.md.
@@ -587,18 +624,20 @@ export function useChatStreaming({
 
       // Non-chat skill: execute the skill handler directly, render one
       // "⏰ <when>：<result>" bubble.
-      const [email, password, folder, vlc, gcalConn] = await Promise.all([
+      const [email, password, folder, vlc, gcalConn, mcpStatus] = await Promise.all([
         window.electronAPI?.getVeSyncEmail?.(),
         window.electronAPI?.getVeSyncPassword?.(),
         window.electronAPI?.getMusicFolder?.(),
         window.electronAPI?.musicVlcStatus?.(),
         window.electronAPI?.calendarIsConnected?.(),
+        window.electronAPI?.windowsMcpIsAvailable?.(),
       ]);
       const skills = await loadAllSkills({
         music_folder_configured: Boolean(folder),
         vlc_installed: Boolean(vlc?.available),
         vesync_logged_in: Boolean(email && password),
         google_calendar_connected: Boolean(gcalConn?.connected),
+        windows_mcp_available: Boolean(mcpStatus?.available),
       });
       const skill = skills.find((s) => s.name === payload.skill);
       if (!skill) {
