@@ -1,0 +1,12 @@
+{
+  "name": "openwhispr-lite",
+  "version": "1.0.0",
+  "description": "Minimal voice dictation: numpad . to start/stop, transcribe locally, paste into focused input.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^41.0.0"
+  }
+}

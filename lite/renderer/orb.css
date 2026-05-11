@@ -1,0 +1,55 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+#orb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin: 12px;
+  transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+/* Idle — soft violet, gently breathing */
+#orb.idle {
+  background: radial-gradient(circle at 35% 35%, #b48cff 0%, #6b3fbd 70%, #3d1f7a 100%);
+  box-shadow: 0 0 6px rgba(140, 90, 255, 0.55);
+  animation: idle-breath 4s ease-in-out infinite;
+}
+
+/* Listening — vivid blue, faster pulse */
+#orb.listening {
+  background: radial-gradient(circle at 35% 35%, #87d4ff 0%, #2196f3 65%, #0b4f9c 100%);
+  box-shadow: 0 0 8px rgba(33, 150, 243, 0.85);
+  animation: listening-pulse 1.1s ease-in-out infinite;
+}
+
+/* Processing — warm amber, rotating shimmer */
+#orb.processing {
+  background: conic-gradient(from 0deg, #ffd166, #ffa500, #ff6b35, #ffd166);
+  box-shadow: 0 0 8px rgba(255, 165, 0, 0.85);
+  animation: processing-spin 1.5s linear infinite;
+}
+
+@keyframes idle-breath {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%      { transform: scale(1.06); opacity: 1; }
+}
+
+@keyframes listening-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 6px rgba(33, 150, 243, 0.7); }
+  50%      { transform: scale(1.12); box-shadow: 0 0 10px rgba(33, 150, 243, 1); }
+}
+
+@keyframes processing-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
