@@ -1,0 +1,6 @@
+# Downloaded by scripts/setup.js — should never be committed
+bin/
+models/
+
+# npm
+node_modules/

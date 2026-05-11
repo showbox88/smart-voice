@@ -1,10 +1,15 @@
 {
   "name": "openwhispr-lite",
   "version": "1.0.0",
-  "description": "Minimal voice dictation: numpad . to start/stop, transcribe locally, paste into focused input.",
+  "description": "Minimal standalone voice dictation: numpad . to start/stop, transcribe locally, paste into focused input.",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "setup": "node scripts/setup.js",
+    "postinstall": "node scripts/setup.js"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0"
   },
   "devDependencies": {
     "electron": "^41.0.0"

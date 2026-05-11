@@ -72,6 +72,10 @@ function convertToWav(inputPath, outputPath) {
 }
 
 function modelPath(model) {
+  // Prefer lite's own models/ folder (downloaded by scripts/setup.js)
+  const local = path.join(__dirname, "models", `ggml-${model}.bin`);
+  if (fs.existsSync(local)) return local;
+  // Fall back to the shared cache used by the main app
   return path.join(os.homedir(), ".cache", "openwhispr", "whisper-models", `ggml-${model}.bin`);
 }
 
