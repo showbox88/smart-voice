@@ -50,8 +50,20 @@ function ToolCallStep({ toolCall }: { toolCall: ToolCallInfo }) {
   const isCompleted = toolCall.status === "completed";
   const isClipboard = toolCall.name === "copy_to_clipboard" && isCompleted;
 
-  const resultLines = toolCall.result?.split("\n") ?? [];
-  const hasDetail = resultLines.length > 1 && !isClipboard;
+  const fullText = (() => {
+    if (toolCall.metadata && typeof toolCall.metadata === "object") {
+      try {
+        return JSON.stringify(toolCall.metadata, null, 2);
+      } catch {
+        // fall through
+      }
+    }
+    return toolCall.result || "";
+  })();
+  const fullTextLines = fullText.split("\n");
+  const hasDetail =
+    !isClipboard &&
+    (fullTextLines.length > 1 || fullText.length > (toolCall.result?.length ?? 0) + 20);
 
   return (
     <div
@@ -132,10 +144,10 @@ function ToolCallStep({ toolCall }: { toolCall: ToolCallInfo }) {
       {hasDetail && !isExecuting && (
         <div
           className="overflow-hidden transition-all duration-200"
-          style={{ maxHeight: expanded ? `${resultLines.length * 16 + 12}px` : "0px" }}
+          style={{ maxHeight: expanded ? "320px" : "0px" }}
         >
-          <pre className="text-[10px] text-muted-foreground/60 px-2.5 pb-1.5 whitespace-pre-wrap leading-tight">
-            {toolCall.result}
+          <pre className="text-[10px] text-muted-foreground/60 px-2.5 pb-1.5 whitespace-pre-wrap break-all leading-tight overflow-y-auto max-h-[320px]">
+            {fullText}
           </pre>
         </div>
       )}

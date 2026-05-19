@@ -120,6 +120,19 @@ export default function ChatView() {
     [activeConversationId, handleNewChat, showConfirmDialog, t]
   );
 
+  const handleDeleteAll = useCallback(() => {
+    showConfirmDialog({
+      title: t("chat.deleteAll"),
+      description: t("chat.deleteAllConfirm"),
+      onConfirm: async () => {
+        await window.electronAPI?.deleteAllAgentConversations?.();
+        handleNewChat();
+        setRefreshKey((k) => k + 1);
+      },
+      variant: "destructive",
+    });
+  }, [handleNewChat, showConfirmDialog, t]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const mod = platform === "darwin" ? e.metaKey : e.ctrlKey;
@@ -164,6 +177,7 @@ export default function ChatView() {
             onOpenSearch={() => setShowSearch(true)}
             onArchive={handleArchive}
             onDelete={handleDelete}
+            onDeleteAll={handleDeleteAll}
             refreshKey={refreshKey}
           />
         </div>

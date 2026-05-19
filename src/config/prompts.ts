@@ -147,6 +147,44 @@ const DEFAULT_AGENT_SYSTEM_PROMPT =
   "Keep answers brief unless the user asks for detail. " +
   "You may be given a transcription of spoken input, so handle informal phrasing gracefully.";
 
+// Critical: appended to BOTH the default prompt and any custom user prompt so
+// the tool-result formatting rule cannot be silently overridden.
+const TOOL_RESULT_RULE =
+  "\n\n## Tool-result formatting (REQUIRED — non-negotiable)\n" +
+  "After EVERY tool call you MUST emit text content. The user only sees a " +
+  "collapsed status row in the UI; your text is the actual answer. Never end " +
+  "your turn with only tool calls.\n" +
+  "\n" +
+  "## Mode selection\n" +
+  "- **First fetch / broad query** → titles-only list (default)\n" +
+  "- **User picks one item** (says 详情/details/这条/那个/quotes a headline) → " +
+  "  detail mode: render ONLY that one item with its full summary. Do NOT " +
+  "  re-fetch the tool — reuse the previous tool result that's still in " +
+  "  conversation context. Pick the matching item by headline keyword overlap.\n" +
+  "\n" +
+  "## Titles-only mode format\n" +
+  "Output each item on its OWN line as a markdown bullet. Insert a real " +
+  "newline character between bullets — do NOT run them together on one line. " +
+  "Per-item shape:\n" +
+  "\n" +
+  "    - {timestamp} · **{category}** · {headline}\n" +
+  "\n" +
+  "Rules:\n" +
+  "- Include all items returned (not just top 3)\n" +
+  "- No per-item summaries, no URLs, no importance scores, no raw JSON\n" +
+  "- Keep timestamp (date or datetime) — bold the category tag only\n" +
+  "- End with one separate line: “想看哪条的详情？” (or English equivalent)\n" +
+  "\n" +
+  "## Detail mode format\n" +
+  "Render only the requested item:\n" +
+  "\n" +
+  "    ### {headline}\n" +
+  "    {timestamp} · **{category}**\n" +
+  "    \n" +
+  "    {full summary — reuse the item's `summary` field markdown verbatim if it has one}\n" +
+  "\n" +
+  "For single-value or error results, reply in 1 short sentence.";
+
 const TOOL_INSTRUCTIONS: Record<string, string> = {
   search_notes:
     "Use search_notes to find information from the user's past meetings, discussions, or personal notes before answering from memory.",
@@ -174,14 +212,17 @@ function getLocationContext(): string {
   try {
     const manualLocation = window.localStorage?.getItem("userLocation");
     const autoLocation = window.localStorage?.getItem("userLocationAuto");
-    const location = (manualLocation && manualLocation.trim()) || (autoLocation && autoLocation.trim());
+    const location =
+      (manualLocation && manualLocation.trim()) || (autoLocation && autoLocation.trim());
     if (location) {
       parts.push(`User location: ${location}.`);
     }
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (tz) parts.push(`Timezone: ${tz}.`);
     const now = new Date();
-    parts.push(`Current local time: ${now.toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })}.`);
+    parts.push(
+      `Current local time: ${now.toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })}.`
+    );
   } catch {
     // ignore
   }
@@ -196,7 +237,7 @@ function getLocationContext(): string {
 export function getAgentSystemPrompt(availableTools?: string[], noteContext?: string): string {
   if (typeof window !== "undefined" && window.localStorage) {
     const custom = window.localStorage.getItem("agentSystemPrompt");
-    if (custom) return custom + getLocationContext();
+    if (custom) return custom + TOOL_RESULT_RULE + getLocationContext();
   }
 
   let prompt = DEFAULT_AGENT_SYSTEM_PROMPT;
@@ -208,6 +249,7 @@ export function getAgentSystemPrompt(availableTools?: string[], noteContext?: st
     }
   }
 
+  prompt += TOOL_RESULT_RULE;
   prompt += getLocationContext();
 
   if (noteContext) {

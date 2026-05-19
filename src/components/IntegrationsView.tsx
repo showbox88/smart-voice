@@ -7,6 +7,7 @@ import { SettingsPanel, SettingsPanelRow } from "./ui/SettingsSection";
 import { ConfirmDialog } from "./ui/dialog";
 import { useSettingsStore } from "../stores/settingsStore";
 import googleCalendarIcon from "../assets/icons/google-calendar.svg";
+import McpServersSection from "./McpServersSection";
 
 export default function IntegrationsView() {
   const { t } = useTranslation();
@@ -156,6 +157,8 @@ export default function IntegrationsView() {
           </SettingsPanelRow>
         )}
       </SettingsPanel>
+
+      <McpServersSection />
 
       {!hasAccounts && (
         <div className="rounded-lg border border-border/40 dark:border-border-subtle/40 bg-muted/20 dark:bg-surface-2/30 p-4 flex items-start gap-3">

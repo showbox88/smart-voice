@@ -1011,7 +1011,12 @@
           "annualEquivalent": "$16.67",
           "includesPrefix": "所有 Pro 功能 +",
           "badge": "最熱門",
-          "features": ["無限會議錄製", "代理模式", "與您的資料對話", "優先支援"],
+          "features": [
+            "無限會議錄製",
+            "代理模式",
+            "與您的資料對話",
+            "優先支援"
+          ],
           "cta": "開始使用",
           "switchToAnnual": "切換為年付"
         },
@@ -1907,6 +1912,8 @@
     "unarchive": "取消封存",
     "delete": "刪除",
     "deleteConfirm": "此對話將被永久刪除，無法復原。",
+    "deleteAll": "清空全部對話",
+    "deleteAllConfirm": "全部對話將被永久刪除，無法復原。",
     "editTitle": "雙擊編輯標題",
     "untitled": "無標題",
     "searchChats": "搜尋聊天",
@@ -2092,6 +2099,28 @@
       "systemAudioRequired": "需要系統音訊權限",
       "systemAudioDescription": "要轉錄會議，OpenWhispr 需要系統音訊權限來錄製其他參與者的音訊。我們絕不會錄製您的螢幕。您將被引導至系統設定以啟用此權限。",
       "openSettings": "打開系統設定"
+    },
+    "mcp": {
+      "title": "MCP 伺服器",
+      "description": "貼上 Claude Desktop 風格的 mcpServers 設定，加入 AI 代理可呼叫的工具。",
+      "add": "新增",
+      "addTitle": "新增 MCP 伺服器",
+      "addDescription": "貼上格式為 {\"mcpServers\":{\"<name>\":{\"command\"|\"url\":...}}} 的 JSON，或單一伺服器設定。",
+      "emptyPasteError": "請先貼上伺服器設定。",
+      "unknownError": "未知錯誤",
+      "saveAndConnect": "儲存並連線",
+      "loading": "正在載入伺服器...",
+      "empty": "尚無 MCP 伺服器。點擊「新增」貼上設定。",
+      "connected_one": "已連線 · {{count}} 個工具",
+      "connected_other": "已連線 · {{count}} 個工具",
+      "error": "錯誤",
+      "disabled": "已停用",
+      "enable": "啟用",
+      "disable": "停用",
+      "reconnect": "重新連線",
+      "remove": "刪除",
+      "noTools": "伺服器未提供工具。",
+      "connectToSeeTools": "啟用並連線後可查看工具。"
     },
     "plan": {
       "title": "您的方案",

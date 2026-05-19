@@ -247,6 +247,7 @@ let linuxPortalAudioManager = null;
 let meetingAecManager = null;
 let qdrantManager = null;
 let windowsMcpManager = null;
+let mcpManager = null;
 let wakeWordManager = null;
 let gameModeManager = null;
 let ipcHandlers = null;
@@ -375,6 +376,7 @@ function initializeCoreManagers() {
     linuxPortalAudioManager,
     meetingAecManager,
     getWindowsMcpManager: () => windowsMcpManager,
+    getMcpManager: () => mcpManager,
     gameModeManager,
     getTrayManager: () => trayManager,
   });
@@ -940,6 +942,16 @@ async function startApp() {
     });
   }
 
+  const McpManager = require("./src/helpers/mcpManager");
+  mcpManager = new McpManager({ databaseManager });
+  mcpManager.init().catch((err) => {
+    require("./src/helpers/debugLogger").warn(
+      "MCP manager init failed",
+      { error: err.message },
+      "mcp"
+    );
+  });
+
   const WindowsMcpManager = require("./src/helpers/windowsMcpManager");
   windowsMcpManager = new WindowsMcpManager({
     getLlamaPort: () => {
@@ -1301,7 +1313,9 @@ async function startApp() {
     });
 
     linuxKeyManager.on("permission-denied", () => {
-      debugLogger.warn("[Push-to-Talk] Linux key listener has no permission to access input devices");
+      debugLogger.warn(
+        "[Push-to-Talk] Linux key listener has no permission to access input devices"
+      );
       if (isLiveWindow(windowManager.mainWindow)) {
         windowManager.mainWindow.webContents.send("linux-ptt-permission-denied");
       }
@@ -1550,6 +1564,9 @@ if (gotSingleInstanceLock) {
     }
     if (windowsMcpManager) {
       windowsMcpManager.stop().catch(() => {});
+    }
+    if (mcpManager) {
+      mcpManager.shutdown().catch(() => {});
     }
     if (musicManager) {
       musicManager.shutdown().catch(() => {});

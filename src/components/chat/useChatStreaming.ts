@@ -4,6 +4,7 @@ import ReasoningService, { type AgentStreamChunk } from "../../services/Reasonin
 import { getSettings } from "../../stores/settingsStore";
 import { getAgentSystemPrompt } from "../../config/prompts";
 import { createToolRegistry } from "../../services/tools";
+import { registerMcpTools } from "../../services/tools/mcpTools";
 import type { ToolRegistry } from "../../services/tools/ToolRegistry";
 import { loadAllSkills, type LoadedSkill } from "../../services/skills/skillLoader";
 import { SkillResponseMap } from "../../services/skills/skillExecutor";
@@ -167,9 +168,7 @@ export function useChatStreaming({
 
   useEffect(() => {
     const api = window.electronAPI as unknown as {
-      onScheduledActionFire?: (
-        cb: (payload: FirePayload) => void
-      ) => () => void;
+      onScheduledActionFire?: (cb: (payload: FirePayload) => void) => () => void;
     };
     if (!api?.onScheduledActionFire) return;
     const dispose = api.onScheduledActionFire((payload) => {
@@ -218,15 +217,17 @@ export function useChatStreaming({
         let tavilyEnabled: boolean | undefined;
         let tavilyUsage: { month: string; count: number; cap: number } | undefined;
         try {
-          [email, password, folder, vlc, tavilyKey, tavilyEnabled, tavilyUsage] = await Promise.all([
-            window.electronAPI?.getVeSyncEmail?.(),
-            window.electronAPI?.getVeSyncPassword?.(),
-            window.electronAPI?.getMusicFolder?.(),
-            window.electronAPI?.musicVlcStatus?.(),
-            window.electronAPI?.getTavilyKey?.(),
-            window.electronAPI?.getTavilyEnabled?.(),
-            window.electronAPI?.getTavilyUsage?.(),
-          ]);
+          [email, password, folder, vlc, tavilyKey, tavilyEnabled, tavilyUsage] = await Promise.all(
+            [
+              window.electronAPI?.getVeSyncEmail?.(),
+              window.electronAPI?.getVeSyncPassword?.(),
+              window.electronAPI?.getMusicFolder?.(),
+              window.electronAPI?.musicVlcStatus?.(),
+              window.electronAPI?.getTavilyKey?.(),
+              window.electronAPI?.getTavilyEnabled?.(),
+              window.electronAPI?.getTavilyUsage?.(),
+            ]
+          );
           vesyncAvailableRef.current = Boolean(email && password);
           musicAvailableRef.current = Boolean(folder && vlc?.available);
           tavilyAvailableRef.current =
@@ -265,6 +266,24 @@ export function useChatStreaming({
           }
         } catch (err) {
           console.warn("[skills] load failed", err);
+        }
+        try {
+          // MCP tool schemas can add thousands of tokens. Local providers
+          // (esp. small models with 8K context) overflow quickly. Skip by
+          // default for local; user opts in with localStorage.mcpInChatForLocal=1
+          // once they've raised llama-server --ctx-size.
+          const localOptIn =
+            typeof window !== "undefined" &&
+            window.localStorage?.getItem("mcpInChatForLocal") === "1";
+          if (!isLocalProvider || localOptIn) {
+            await registerMcpTools(registry);
+          } else {
+            console.info(
+              "[mcp] tools NOT registered for chat (local provider). Set localStorage.mcpInChatForLocal=1 after raising llama-server --ctx-size."
+            );
+          }
+        } catch (err) {
+          console.warn("[mcp] tool registration failed", err);
         }
       }
       const skillResponseMap = new SkillResponseMap(loadedSkills);
@@ -439,6 +458,11 @@ export function useChatStreaming({
 
       try {
         let fullContent = "";
+        const completedToolCalls: Array<{
+          name: string;
+          displayText: string;
+          metadata?: Record<string, unknown>;
+        }> = [];
         let stream: AsyncGenerator<AgentStreamChunk>;
 
         if (isCloudAgent) {
@@ -553,6 +577,12 @@ export function useChatStreaming({
             setToolStatus("");
             setActiveToolName("");
 
+            completedToolCalls.push({
+              name: chunk.toolName,
+              displayText: chunk.displayText,
+              metadata: chunk.metadata,
+            });
+
             // Skill-driven short-circuit: if response_mode is passthrough or
             // template, use the tool's displayText (or rendered template) as
             // the final assistant message and abort the LLM before it can
@@ -566,14 +596,71 @@ export function useChatStreaming({
               fullContent = decision.text;
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === assistantId
-                    ? { ...m, content: decision.text, isStreaming: false }
-                    : m
+                  m.id === assistantId ? { ...m, content: decision.text, isStreaming: false } : m
                 )
               );
               ReasoningService.cancelActiveStream();
               break;
             }
+          }
+        }
+
+        // Fallback: some models choose to stop after tool execution without
+        // emitting any text content. Re-invoke (without tools) using a
+        // synthesized follow-up prompt so the user always gets a summary.
+        if (
+          mountedRef.current &&
+          fullContent.trim().length === 0 &&
+          completedToolCalls.length > 0
+        ) {
+          try {
+            const toolResultsSummary = completedToolCalls
+              .map((r, i) => {
+                const payload = r.metadata ? JSON.stringify(r.metadata, null, 2) : r.displayText;
+                const trimmed =
+                  payload.length > 6000 ? payload.slice(0, 6000) + "\n…(truncated)" : payload;
+                return `### Tool call #${i + 1}: \`${r.name}\`\n\`\`\`json\n${trimmed}\n\`\`\``;
+              })
+              .join("\n\n");
+
+            const followUpMessages = [
+              { role: "system" as const, content: systemPrompt },
+              ...allMessages.slice(-10).map((m) => ({ role: m.role, content: m.content })),
+              {
+                role: "user" as const,
+                content:
+                  "You just called tools but did not produce any text response. " +
+                  "Below are the raw tool results. Now write the user-facing summary " +
+                  "per the formatting rule (markdown, in the user's language, top items " +
+                  "with date/category/headline/summary, key entities bolded). " +
+                  "Do not call any more tools — just produce the text.\n\n" +
+                  toolResultsSummary,
+              },
+            ];
+
+            const followUpStream = isCloudAgent
+              ? ReasoningService.processTextStreamingCloud(followUpMessages, {
+                  systemPrompt,
+                })
+              : ReasoningService.processTextStreamingAI(
+                  followUpMessages,
+                  settings.agentModel,
+                  settings.agentProvider,
+                  { systemPrompt, lanUrl: isLanAgent ? settings.remoteAgentUrl : undefined },
+                  undefined
+                );
+
+            for await (const chunk of followUpStream) {
+              if (!mountedRef.current) break;
+              if (chunk.type === "content") {
+                fullContent += chunk.text;
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === assistantId ? { ...m, content: fullContent } : m))
+                );
+              }
+            }
+          } catch (followUpErr) {
+            console.warn("[chat] tool-result follow-up failed", followUpErr);
           }
         }
 
@@ -660,8 +747,7 @@ export function useChatStreaming({
         return;
       }
       const result = await skill.tool.execute(payload.slots || {});
-      const display =
-        result.displayText || (typeof result.data === "string" ? result.data : "");
+      const display = result.displayText || (typeof result.data === "string" ? result.data : "");
       const assistantId = crypto.randomUUID();
       setMessages((prev) => [
         ...prev,

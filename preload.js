@@ -217,8 +217,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   claudeCodeConvCreate: (config) => ipcRenderer.invoke("claude-code:conv-create", config),
   claudeCodeConvSwitch: (id) => ipcRenderer.invoke("claude-code:conv-switch", id),
   claudeCodeConvGet: (id) => ipcRenderer.invoke("claude-code:conv-get", id),
-  claudeCodeConvRename: (id, title) =>
-    ipcRenderer.invoke("claude-code:conv-rename", id, title),
+  claudeCodeConvRename: (id, title) => ipcRenderer.invoke("claude-code:conv-rename", id, title),
   claudeCodeConvDelete: (id) => ipcRenderer.invoke("claude-code:conv-delete", id),
   claudeCodeConfigure: (config) => ipcRenderer.invoke("claude-code:configure", config),
   claudeCodeStatus: () => ipcRenderer.invoke("claude-code:status"),
@@ -849,6 +848,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getAgentConversations: (limit) => ipcRenderer.invoke("db-get-agent-conversations", limit),
   getAgentConversation: (id) => ipcRenderer.invoke("db-get-agent-conversation", id),
   deleteAgentConversation: (id) => ipcRenderer.invoke("db-delete-agent-conversation", id),
+  deleteAllAgentConversations: () => ipcRenderer.invoke("db-delete-all-agent-conversations"),
   updateAgentConversationTitle: (id, title) =>
     ipcRenderer.invoke("db-update-agent-conversation-title", id, title),
   addAgentMessage: (conversationId, role, content, metadata) =>
@@ -868,31 +868,40 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("db-semantic-search-conversations", query, limit),
 
   // Sync operations
-  getPendingNotes: () => ipcRenderer.invoke('db-get-pending-notes'),
-  getPendingNoteDeletes: () => ipcRenderer.invoke('db-get-pending-note-deletes'),
-  getNoteByClientId: (clientNoteId) => ipcRenderer.invoke('db-get-note-by-client-id', clientNoteId),
-  upsertNoteFromCloud: (cloudNote, localFolderId) => ipcRenderer.invoke('db-upsert-note-from-cloud', cloudNote, localFolderId),
-  markNoteSynced: (id, cloudId) => ipcRenderer.invoke('db-mark-note-synced', id, cloudId),
-  markNoteSyncError: (id) => ipcRenderer.invoke('db-mark-note-sync-error', id),
-  hardDeleteNote: (id) => ipcRenderer.invoke('db-hard-delete-note', id),
+  getPendingNotes: () => ipcRenderer.invoke("db-get-pending-notes"),
+  getPendingNoteDeletes: () => ipcRenderer.invoke("db-get-pending-note-deletes"),
+  getNoteByClientId: (clientNoteId) => ipcRenderer.invoke("db-get-note-by-client-id", clientNoteId),
+  upsertNoteFromCloud: (cloudNote, localFolderId) =>
+    ipcRenderer.invoke("db-upsert-note-from-cloud", cloudNote, localFolderId),
+  markNoteSynced: (id, cloudId) => ipcRenderer.invoke("db-mark-note-synced", id, cloudId),
+  markNoteSyncError: (id) => ipcRenderer.invoke("db-mark-note-sync-error", id),
+  hardDeleteNote: (id) => ipcRenderer.invoke("db-hard-delete-note", id),
 
-  getPendingFolders: () => ipcRenderer.invoke('db-get-pending-folders'),
-  getFolderByClientId: (clientFolderId) => ipcRenderer.invoke('db-get-folder-by-client-id', clientFolderId),
-  upsertFolderFromCloud: (cloudFolder) => ipcRenderer.invoke('db-upsert-folder-from-cloud', cloudFolder),
-  markFolderSynced: (id, cloudId) => ipcRenderer.invoke('db-mark-folder-synced', id, cloudId),
-  getFolderIdMap: () => ipcRenderer.invoke('db-get-folder-id-map'),
+  getPendingFolders: () => ipcRenderer.invoke("db-get-pending-folders"),
+  getFolderByClientId: (clientFolderId) =>
+    ipcRenderer.invoke("db-get-folder-by-client-id", clientFolderId),
+  upsertFolderFromCloud: (cloudFolder) =>
+    ipcRenderer.invoke("db-upsert-folder-from-cloud", cloudFolder),
+  markFolderSynced: (id, cloudId) => ipcRenderer.invoke("db-mark-folder-synced", id, cloudId),
+  getFolderIdMap: () => ipcRenderer.invoke("db-get-folder-id-map"),
 
-  getPendingConversations: () => ipcRenderer.invoke('db-get-pending-conversations'),
-  getPendingConversationDeletes: () => ipcRenderer.invoke('db-get-pending-conversation-deletes'),
-  getConversationByClientId: (clientId) => ipcRenderer.invoke('db-get-conversation-by-client-id', clientId),
-  upsertConversationFromCloud: (cloudConv, messages) => ipcRenderer.invoke('db-upsert-conversation-from-cloud', cloudConv, messages),
-  markConversationSynced: (id, cloudId) => ipcRenderer.invoke('db-mark-conversation-synced', id, cloudId),
-  hardDeleteConversation: (id) => ipcRenderer.invoke('db-hard-delete-conversation', id),
+  getPendingConversations: () => ipcRenderer.invoke("db-get-pending-conversations"),
+  getPendingConversationDeletes: () => ipcRenderer.invoke("db-get-pending-conversation-deletes"),
+  getConversationByClientId: (clientId) =>
+    ipcRenderer.invoke("db-get-conversation-by-client-id", clientId),
+  upsertConversationFromCloud: (cloudConv, messages) =>
+    ipcRenderer.invoke("db-upsert-conversation-from-cloud", cloudConv, messages),
+  markConversationSynced: (id, cloudId) =>
+    ipcRenderer.invoke("db-mark-conversation-synced", id, cloudId),
+  hardDeleteConversation: (id) => ipcRenderer.invoke("db-hard-delete-conversation", id),
 
-  getPendingTranscriptions: () => ipcRenderer.invoke('db-get-pending-transcriptions'),
-  getTranscriptionByClientId: (clientId) => ipcRenderer.invoke('db-get-transcription-by-client-id', clientId),
-  upsertTranscriptionFromCloud: (cloudTranscription) => ipcRenderer.invoke('db-upsert-transcription-from-cloud', cloudTranscription),
-  markTranscriptionSynced: (id, cloudId) => ipcRenderer.invoke('db-mark-transcription-synced', id, cloudId),
+  getPendingTranscriptions: () => ipcRenderer.invoke("db-get-pending-transcriptions"),
+  getTranscriptionByClientId: (clientId) =>
+    ipcRenderer.invoke("db-get-transcription-by-client-id", clientId),
+  upsertTranscriptionFromCloud: (cloudTranscription) =>
+    ipcRenderer.invoke("db-upsert-transcription-from-cloud", cloudTranscription),
+  markTranscriptionSynced: (id, cloudId) =>
+    ipcRenderer.invoke("db-mark-transcription-synced", id, cloudId),
 
   // Google Calendar
   gcalStartOAuth: () => ipcRenderer.invoke("gcal-start-oauth"),
@@ -920,6 +929,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("windows-mcp-ready", listener);
     return () => ipcRenderer.removeListener("windows-mcp-ready", listener);
   },
+
+  // Generic MCP servers (multi-server, stdio + http transports)
+  mcpListServers: () => ipcRenderer.invoke("mcp:list-servers"),
+  mcpAddServer: (rawInput) => ipcRenderer.invoke("mcp:add-server", rawInput),
+  mcpRemoveServer: (name) => ipcRenderer.invoke("mcp:remove-server", name),
+  mcpSetServerEnabled: (name, enabled) =>
+    ipcRenderer.invoke("mcp:set-server-enabled", name, enabled),
+  mcpTestServer: (name) => ipcRenderer.invoke("mcp:test-server", name),
+  mcpListServerTools: (name) => ipcRenderer.invoke("mcp:list-server-tools", name),
+  mcpCallServerTool: (serverName, toolName, args) =>
+    ipcRenderer.invoke("mcp:call-server-tool", serverName, toolName, args),
+  mcpAllActiveTools: () => ipcRenderer.invoke("mcp:all-active-tools"),
 
   // Contacts
   searchContacts: (query) => ipcRenderer.invoke("search-contacts", query),

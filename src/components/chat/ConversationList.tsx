@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { SquarePen, Search, Archive as ArchiveIcon } from "lucide-react";
+import { SquarePen, Search, Archive as ArchiveIcon, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "../lib/utils";
@@ -19,6 +19,7 @@ interface ConversationListProps {
   onOpenSearch: () => void;
   onArchive: (id: number) => void;
   onDelete: (id: number) => void;
+  onDeleteAll?: () => void;
   refreshKey: number;
 }
 
@@ -96,6 +97,7 @@ export default function ConversationList({
   onOpenSearch,
   onArchive,
   onDelete,
+  onDeleteAll,
   refreshKey,
 }: ConversationListProps) {
   const { t } = useTranslation();
@@ -257,6 +259,20 @@ export default function ConversationList({
           >
             <ArchiveIcon size={14} className="shrink-0" />
             {t("chat.archived")}
+          </button>
+        )}
+        {onDeleteAll && !showArchived && filtered.length > 0 && (
+          <button
+            onClick={onDeleteAll}
+            className={cn(
+              "flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-xs",
+              "text-muted-foreground/80 hover:text-destructive hover:bg-destructive/8",
+              "transition-colors duration-150",
+              "focus:outline-none focus-visible:ring-1 focus-visible:ring-destructive/30"
+            )}
+          >
+            <Trash2 size={14} className="shrink-0" />
+            {t("chat.deleteAll")}
           </button>
         )}
       </div>

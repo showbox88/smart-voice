@@ -390,8 +390,8 @@
         "rateLimited": "Download-Server begrenzt Anfragen. Bitte warten Sie einige Minuten und versuchen Sie es erneut.",
         "server": "Serverfehler ({{error}}). Bitte versuchen Sie es später erneut.",
         "generic": "Download fehlgeschlagen: {{error}}",
-        "extractionFailed": "Modell heruntergeladen, aber Installation fehlgeschlagen. Klicken Sie auf \u201EHerunterladen\u201C, um die Installation ohne erneuten Download zu wiederholen.",
-        "tlsError": "Zertifikatsfehler \u2014 Ihr Netzwerk verwendet m\u00F6glicherweise SSL-Inspektion, die Downloads blockiert. Versuchen Sie es \u00FCber ein anderes Netzwerk.",
+        "extractionFailed": "Modell heruntergeladen, aber Installation fehlgeschlagen. Klicken Sie auf „Herunterladen“, um die Installation ohne erneuten Download zu wiederholen.",
+        "tlsError": "Zertifikatsfehler — Ihr Netzwerk verwendet möglicherweise SSL-Inspektion, die Downloads blockiert. Versuchen Sie es über ein anderes Netzwerk.",
         "unknown": "Unbekannter Fehler"
       },
       "downloadFailed": {
@@ -1912,6 +1912,8 @@
     "unarchive": "Dearchivieren",
     "delete": "Löschen",
     "deleteConfirm": "Diese Unterhaltung wird dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden.",
+    "deleteAll": "Alle Chats löschen",
+    "deleteAllConfirm": "Alle Chats werden dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden.",
     "editTitle": "Doppelklick zum Bearbeiten des Titels",
     "untitled": "Ohne Titel",
     "searchChats": "Chats suchen",
@@ -2097,6 +2099,28 @@
       "systemAudioRequired": "Systemaudio-Berechtigung erforderlich",
       "systemAudioDescription": "Zum Transkribieren von Meetings benötigt OpenWhispr die Systemaudio-Berechtigung, um den Ton anderer Teilnehmer aufzunehmen. Wir nehmen Ihren Bildschirm nie auf. Sie werden zu den Systemeinstellungen weitergeleitet, um diese zu aktivieren.",
       "openSettings": "Systemeinstellungen öffnen"
+    },
+    "mcp": {
+      "title": "MCP-Server",
+      "description": "Fügen Sie eine Claude-Desktop-mcpServers-Konfiguration ein, um Tools für den KI-Agenten hinzuzufügen.",
+      "add": "Hinzufügen",
+      "addTitle": "MCP-Server hinzufügen",
+      "addDescription": "JSON im Format {\"mcpServers\":{\"<name>\":{\"command\"|\"url\":...}}} oder eine einzelne Serverdefinition einfügen.",
+      "emptyPasteError": "Bitte zuerst eine Serverkonfiguration einfügen.",
+      "unknownError": "Unbekannter Fehler",
+      "saveAndConnect": "Speichern & verbinden",
+      "loading": "Server werden geladen...",
+      "empty": "Noch keine MCP-Server. Klicken Sie auf Hinzufügen.",
+      "connected_one": "Verbunden · {{count}} Tool",
+      "connected_other": "Verbunden · {{count}} Tools",
+      "error": "Fehler",
+      "disabled": "Deaktiviert",
+      "enable": "Aktivieren",
+      "disable": "Deaktivieren",
+      "reconnect": "Neu verbinden",
+      "remove": "Entfernen",
+      "noTools": "Der Server stellt keine Tools bereit.",
+      "connectToSeeTools": "Aktivieren und verbinden, um Tools zu sehen."
     },
     "plan": {
       "title": "Dein Plan",

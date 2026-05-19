@@ -598,6 +598,20 @@ class DatabaseManager {
         "CREATE INDEX IF NOT EXISTS idx_scheduled_actions_status_fire_at ON scheduled_actions(status, fire_at)"
       );
 
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS mcp_servers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          transport TEXT NOT NULL,
+          config_json TEXT NOT NULL,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          status TEXT NOT NULL DEFAULT 'disconnected',
+          last_error TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
       return true;
     } catch (error) {
       debugLogger.error("Database initialization failed", { error: error.message }, "database");
@@ -1181,6 +1195,29 @@ class DatabaseManager {
       return { success: result.changes > 0 };
     } catch (error) {
       debugLogger.error("Error deleting agent conversation", { error: error.message }, "database");
+      throw error;
+    }
+  }
+
+  deleteAllAgentConversations() {
+    try {
+      if (!this.db) throw new Error("Database not initialized");
+      const rows = this.db
+        .prepare("SELECT id FROM agent_conversations WHERE deleted_at IS NULL")
+        .all();
+      const ids = rows.map((r) => r.id);
+      const result = this.db
+        .prepare(
+          "UPDATE agent_conversations SET deleted_at = datetime('now'), sync_status = 'pending', updated_at = datetime('now') WHERE deleted_at IS NULL"
+        )
+        .run();
+      return { success: true, deletedIds: ids, count: result.changes };
+    } catch (error) {
+      debugLogger.error(
+        "Error deleting all agent conversations",
+        { error: error.message },
+        "database"
+      );
       throw error;
     }
   }
@@ -2425,9 +2462,7 @@ class DatabaseManager {
 
   getClaudeConversation(id) {
     if (!this.db) throw new Error("Database not initialized");
-    const conv = this.db
-      .prepare(`SELECT * FROM claude_conversations WHERE id = ?`)
-      .get(id);
+    const conv = this.db.prepare(`SELECT * FROM claude_conversations WHERE id = ?`).get(id);
     if (!conv) return null;
     const messages = this.db
       .prepare(
@@ -2494,9 +2529,7 @@ class DatabaseManager {
     }
     if (fields.length === 0) return;
     values.push(id);
-    this.db
-      .prepare(`UPDATE claude_messages SET ${fields.join(", ")} WHERE id = ?`)
-      .run(...values);
+    this.db.prepare(`UPDATE claude_messages SET ${fields.join(", ")} WHERE id = ?`).run(...values);
   }
 
   // ----- Reminders (XiaoZhi skill) -----
@@ -2525,9 +2558,7 @@ class DatabaseManager {
   listReminders({ status = "pending", limit = 200 } = {}) {
     if (!this.db) throw new Error("Database not initialized");
     if (status === "all") {
-      return this.db
-        .prepare(`SELECT * FROM reminders ORDER BY fire_at ASC LIMIT ?`)
-        .all(limit);
+      return this.db.prepare(`SELECT * FROM reminders ORDER BY fire_at ASC LIMIT ?`).all(limit);
     }
     return this.db
       .prepare(`SELECT * FROM reminders WHERE status = ? ORDER BY fire_at ASC LIMIT ?`)
@@ -2560,9 +2591,7 @@ class DatabaseManager {
 
   setReminderGoogleEventId(id, googleEventId) {
     if (!this.db) throw new Error("Database not initialized");
-    this.db
-      .prepare(`UPDATE reminders SET google_event_id = ? WHERE id = ?`)
-      .run(googleEventId, id);
+    this.db.prepare(`UPDATE reminders SET google_event_id = ? WHERE id = ?`).run(googleEventId, id);
   }
 
   // Cleanup: drop fired/cancelled rows older than N days to keep table small.
@@ -2612,9 +2641,7 @@ class DatabaseManager {
     if (!this.db) throw new Error("Database not initialized");
     if (groupId) {
       return this.db
-        .prepare(
-          `SELECT * FROM scheduled_actions WHERE group_id = ? ORDER BY fire_at ASC LIMIT ?`
-        )
+        .prepare(`SELECT * FROM scheduled_actions WHERE group_id = ? ORDER BY fire_at ASC LIMIT ?`)
         .all(groupId, limit);
     }
     if (status === "all") {
@@ -2623,9 +2650,7 @@ class DatabaseManager {
         .all(limit);
     }
     return this.db
-      .prepare(
-        `SELECT * FROM scheduled_actions WHERE status = ? ORDER BY fire_at ASC LIMIT ?`
-      )
+      .prepare(`SELECT * FROM scheduled_actions WHERE status = ? ORDER BY fire_at ASC LIMIT ?`)
       .all(status, limit);
   }
 
@@ -2675,6 +2700,65 @@ class DatabaseManager {
       )
       .run(cutoff);
     return info.changes;
+  }
+
+  listMcpServers() {
+    if (!this.db) throw new Error("Database not initialized");
+    return this.db
+      .prepare(
+        "SELECT id, name, transport, config_json, enabled, status, last_error, created_at, updated_at FROM mcp_servers ORDER BY name"
+      )
+      .all()
+      .map((row) => ({ ...row, enabled: !!row.enabled }));
+  }
+
+  getMcpServer(name) {
+    if (!this.db) throw new Error("Database not initialized");
+    const row = this.db.prepare("SELECT * FROM mcp_servers WHERE name = ?").get(name);
+    if (!row) return null;
+    return { ...row, enabled: !!row.enabled };
+  }
+
+  upsertMcpServer({ name, transport, configJson, enabled = true }) {
+    if (!this.db) throw new Error("Database not initialized");
+    const existing = this.db.prepare("SELECT id FROM mcp_servers WHERE name = ?").get(name);
+    if (existing) {
+      this.db
+        .prepare(
+          "UPDATE mcp_servers SET transport = ?, config_json = ?, enabled = ?, updated_at = datetime('now') WHERE name = ?"
+        )
+        .run(transport, configJson, enabled ? 1 : 0, name);
+    } else {
+      this.db
+        .prepare(
+          "INSERT INTO mcp_servers (name, transport, config_json, enabled) VALUES (?, ?, ?, ?)"
+        )
+        .run(name, transport, configJson, enabled ? 1 : 0);
+    }
+    return this.getMcpServer(name);
+  }
+
+  deleteMcpServer(name) {
+    if (!this.db) throw new Error("Database not initialized");
+    const result = this.db.prepare("DELETE FROM mcp_servers WHERE name = ?").run(name);
+    return { success: result.changes > 0 };
+  }
+
+  setMcpServerEnabled(name, enabled) {
+    if (!this.db) throw new Error("Database not initialized");
+    this.db
+      .prepare("UPDATE mcp_servers SET enabled = ?, updated_at = datetime('now') WHERE name = ?")
+      .run(enabled ? 1 : 0, name);
+    return this.getMcpServer(name);
+  }
+
+  updateMcpServerStatus(name, status, lastError = null) {
+    if (!this.db) throw new Error("Database not initialized");
+    this.db
+      .prepare(
+        "UPDATE mcp_servers SET status = ?, last_error = ?, updated_at = datetime('now') WHERE name = ?"
+      )
+      .run(status, lastError, name);
   }
 }
 

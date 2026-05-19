@@ -117,6 +117,7 @@ class IPCHandlers {
     this.textEditMonitor = managers.textEditMonitor;
     this.getTrayManager = managers.getTrayManager;
     this.getWindowsMcpManager = managers.getWindowsMcpManager;
+    this.getMcpManager = managers.getMcpManager;
     this.whisperCudaManager = managers.whisperCudaManager;
     this.ttsManager = managers.ttsManager;
     this.claudeCodeManager = managers.claudeCodeManager;
@@ -262,8 +263,7 @@ class IPCHandlers {
     try {
       if (!this.databaseManager) return { restored: 0, missed: 0 };
       if (!this._scheduleScheduledActionTimer) {
-        if (debugLogger)
-          debugLogger.warn("[scheduled-action] restore skipped: handlers not ready");
+        if (debugLogger) debugLogger.warn("[scheduled-action] restore skipped: handlers not ready");
         return { restored: 0, missed: 0 };
       }
       const now = Date.now();
@@ -298,8 +298,7 @@ class IPCHandlers {
       }
       return { restored, missed };
     } catch (err) {
-      if (debugLogger)
-        debugLogger.error("[scheduled-action] restore failed", { err: err.message });
+      if (debugLogger) debugLogger.error("[scheduled-action] restore failed", { err: err.message });
       return { restored: 0, missed: 0, error: err.message };
     }
   }
@@ -968,6 +967,16 @@ class IPCHandlers {
         this.vectorIndex.deleteConversationChunks(id).catch(() => {});
       }
       return result;
+    });
+
+    ipcMain.handle("db-delete-all-agent-conversations", async () => {
+      const result = this.databaseManager.deleteAllAgentConversations();
+      if (this.vectorIndex?.isReady?.() && Array.isArray(result.deletedIds)) {
+        for (const id of result.deletedIds) {
+          this.vectorIndex.deleteConversationChunks(id).catch(() => {});
+        }
+      }
+      return { success: result.success, count: result.count };
     });
 
     ipcMain.handle("db-update-agent-conversation-title", async (event, id, title) => {
@@ -1849,9 +1858,7 @@ class IPCHandlers {
     ipcMain.handle("save-vesync-password", (_e, password) =>
       this.environmentManager.saveVeSyncPassword(password)
     );
-    ipcMain.handle("get-vesync-country-code", () =>
-      this.environmentManager.getVeSyncCountryCode()
-    );
+    ipcMain.handle("get-vesync-country-code", () => this.environmentManager.getVeSyncCountryCode());
     ipcMain.handle("save-vesync-country-code", (_e, code) =>
       this.environmentManager.saveVeSyncCountryCode(code)
     );
@@ -1918,7 +1925,9 @@ class IPCHandlers {
       if (!this.musicManager.isVlcAvailable()) {
         return { success: false, error: "vlc_not_found" };
       }
-      const files = Array.isArray(opts.files) ? opts.files.filter((f) => typeof f === "string") : [];
+      const files = Array.isArray(opts.files)
+        ? opts.files.filter((f) => typeof f === "string")
+        : [];
       return this.musicManager.play(files);
     });
 
@@ -2191,8 +2200,7 @@ class IPCHandlers {
 
     ipcMain.handle("scheduled-action:create", async (_e, payload) => {
       try {
-        const { skill, slots, whenType, whenExpr, fireAt, cronExpr, groupId } =
-          payload || {};
+        const { skill, slots, whenType, whenExpr, fireAt, cronExpr, groupId } = payload || {};
         if (!skill || typeof skill !== "string") {
           return { success: false, error: "invalid_skill" };
         }
@@ -7208,11 +7216,7 @@ class IPCHandlers {
             try {
               await this.gameModeManager?.toggle();
             } catch (err) {
-              debugLogger.warn(
-                "Game mode toggle failed",
-                { error: err?.message },
-                "game-mode"
-              );
+              debugLogger.warn("Game mode toggle failed", { error: err?.message }, "game-mode");
             }
           },
         },
@@ -7414,6 +7418,82 @@ class IPCHandlers {
       } catch (error) {
         return { success: false, summary: `内部错误：${error?.message || "unknown"}` };
       }
+    });
+
+    // Generic MCP servers (multi-server, stdio + http transports).
+    ipcMain.handle("mcp:list-servers", async () => {
+      const mgr = this.getMcpManager?.();
+      if (!mgr) return [];
+      return mgr.listWithRuntime();
+    });
+
+    ipcMain.handle("mcp:add-server", async (_event, rawInput) => {
+      const mgr = this.getMcpManager?.();
+      if (!mgr) return { success: false, error: "MCP manager not initialized" };
+      try {
+        const results = await mgr.addFromInput(rawInput, { autoConnect: true });
+        return { success: true, results };
+      } catch (error) {
+        return { success: false, error: error?.message || String(error) };
+      }
+    });
+
+    ipcMain.handle("mcp:remove-server", async (_event, name) => {
+      const mgr = this.getMcpManager?.();
+      if (!mgr) return { success: false, error: "MCP manager not initialized" };
+      try {
+        return await mgr.removeServer(name);
+      } catch (error) {
+        return { success: false, error: error?.message || String(error) };
+      }
+    });
+
+    ipcMain.handle("mcp:set-server-enabled", async (_event, name, enabled) => {
+      const mgr = this.getMcpManager?.();
+      if (!mgr) return { success: false, error: "MCP manager not initialized" };
+      try {
+        const row = await mgr.setEnabled(name, !!enabled);
+        return { success: true, server: row };
+      } catch (error) {
+        return { success: false, error: error?.message || String(error) };
+      }
+    });
+
+    ipcMain.handle("mcp:test-server", async (_event, name) => {
+      const mgr = this.getMcpManager?.();
+      if (!mgr) return { success: false, error: "MCP manager not initialized" };
+      const row = this.databaseManager?.getMcpServer?.(name);
+      if (!row) return { success: false, error: `Server "${name}" not found` };
+      try {
+        await mgr._connectFromRow(row);
+        const tools = mgr.listTools(name);
+        return { success: true, toolCount: tools.length, tools };
+      } catch (error) {
+        return { success: false, error: error?.message || String(error) };
+      }
+    });
+
+    ipcMain.handle("mcp:list-server-tools", async (_event, name) => {
+      const mgr = this.getMcpManager?.();
+      if (!mgr) return [];
+      return mgr.listTools(name);
+    });
+
+    ipcMain.handle("mcp:call-server-tool", async (_event, serverName, toolName, args) => {
+      const mgr = this.getMcpManager?.();
+      if (!mgr) return { success: false, error: "MCP manager not initialized" };
+      try {
+        const result = await mgr.callTool(serverName, toolName, args);
+        return { success: true, result };
+      } catch (error) {
+        return { success: false, error: error?.message || String(error) };
+      }
+    });
+
+    ipcMain.handle("mcp:all-active-tools", async () => {
+      const mgr = this.getMcpManager?.();
+      if (!mgr) return [];
+      return mgr.allTools();
     });
 
     ipcMain.handle("gcal-get-event", async (_event, eventId) => {

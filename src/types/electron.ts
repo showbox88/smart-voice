@@ -941,9 +941,7 @@ declare global {
         id: number,
         title: string
       ) => Promise<{ success: boolean; error?: string }>;
-      claudeCodeConvDelete: (
-        id: number
-      ) => Promise<{ success: boolean; error?: string }>;
+      claudeCodeConvDelete: (id: number) => Promise<{ success: boolean; error?: string }>;
       claudeCodeConfigure: (config: {
         cwd?: string;
         claudePath?: string;
@@ -1047,9 +1045,7 @@ declare global {
       musicPrevious: () => Promise<{ success: boolean; error?: string }>;
       musicStop: () => Promise<{ success: boolean; error?: string; alreadyStopped?: boolean }>;
       musicVolume: (v: number) => Promise<{ success: boolean; value?: number; error?: string }>;
-      musicSetRepeat: (
-        mode: "off" | "all" | "one"
-      ) => Promise<{
+      musicSetRepeat: (mode: "off" | "all" | "one") => Promise<{
         success: boolean;
         mode?: "off" | "all" | "one";
         loop?: boolean;
@@ -1491,6 +1487,7 @@ declare global {
         }>;
       } | null>;
       deleteAgentConversation?: (id: number) => Promise<{ success: boolean }>;
+      deleteAllAgentConversations?: () => Promise<{ success: boolean; count: number }>;
       updateAgentConversationTitle?: (id: number, title: string) => Promise<{ success: boolean }>;
       addAgentMessage?: (
         conversationId: number,
@@ -1729,10 +1726,7 @@ declare global {
         };
         error?: string;
       }>;
-      calendarDeleteEvent?: (payload: {
-        eventId: string;
-        calendarId?: string;
-      }) => Promise<{
+      calendarDeleteEvent?: (payload: { eventId: string; calendarId?: string }) => Promise<{
         success: boolean;
         eventId?: string;
         error?: string;
@@ -1749,6 +1743,57 @@ declare global {
       onWindowsMcpReady?: (
         cb: (data: { available: boolean; toolCount?: number }) => void
       ) => () => void;
+
+      // Generic MCP servers
+      mcpListServers?: () => Promise<
+        Array<{
+          id: number;
+          name: string;
+          transport: "stdio" | "http";
+          config_json: string;
+          enabled: boolean;
+          status: string;
+          last_error: string | null;
+          runtimeStatus: "connected" | "disconnected" | "error";
+          toolCount: number;
+          tools: Array<{ name: string; description?: string; inputSchema?: unknown }>;
+        }>
+      >;
+      mcpAddServer?: (rawInput: string) => Promise<{
+        success: boolean;
+        error?: string;
+        results?: Array<{
+          name: string;
+          status: "connected" | "error" | "saved";
+          error?: string;
+          toolCount?: number;
+        }>;
+      }>;
+      mcpRemoveServer?: (name: string) => Promise<{ success: boolean; error?: string }>;
+      mcpSetServerEnabled?: (
+        name: string,
+        enabled: boolean
+      ) => Promise<{ success: boolean; error?: string; server?: unknown }>;
+      mcpTestServer?: (name: string) => Promise<{
+        success: boolean;
+        error?: string;
+        toolCount?: number;
+        tools?: Array<{ name: string; description?: string }>;
+      }>;
+      mcpListServerTools?: (
+        name: string
+      ) => Promise<Array<{ name: string; description?: string; inputSchema?: unknown }>>;
+      mcpCallServerTool?: (
+        serverName: string,
+        toolName: string,
+        args: Record<string, unknown>
+      ) => Promise<{ success: boolean; result?: unknown; error?: string }>;
+      mcpAllActiveTools?: () => Promise<
+        Array<{
+          serverName: string;
+          tool: { name: string; description?: string; inputSchema?: unknown };
+        }>
+      >;
 
       // Contacts
       searchContacts: (query: string) => Promise<{
